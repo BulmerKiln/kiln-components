@@ -20,6 +20,6 @@ jobs:
       actions: read
       contents: write
       id-token: write
-    uses: BulmerKiln/cicd/.github/workflows/gradle-release.yml@v1.0.0
+    uses: BulmerKiln/cicd/.github/workflows/gradle-release.yml@v1.0.1
     with:
       version: ${{ github.event.release.tag_name }}

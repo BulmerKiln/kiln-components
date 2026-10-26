@@ -22,7 +22,7 @@ jobs:
     name: Build
     permissions:
       contents: read
-    uses: BulmerKiln/cicd/.github/workflows/gradle-build.yml@v1.0.0
+    uses: BulmerKiln/cicd/.github/workflows/gradle-build.yml@v1.0.1
     with:
       mutation-testing: true
 
@@ -32,7 +32,7 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    uses: BulmerKiln/cicd/.github/workflows/codeql.yml@v1.0.0
+    uses: BulmerKiln/cicd/.github/workflows/codeql.yml@v1.0.1
     with:
       languages: '["java-kotlin", "actions"]'
 
@@ -41,7 +41,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: BulmerKiln/cicd/.github/workflows/semgrep.yml@v1.0.0
+    uses: BulmerKiln/cicd/.github/workflows/semgrep.yml@v1.0.1
 
   dependencies:
     name: Dependencies
@@ -49,4 +49,4 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: BulmerKiln/cicd/.github/workflows/dependencies.yml@v1.0.0
+    uses: BulmerKiln/cicd/.github/workflows/dependencies.yml@v1.0.1
