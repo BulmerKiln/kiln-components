@@ -356,6 +356,8 @@ public abstract class BlobStoreContract {
     @Test
     void transfersToChannelsThatAcceptOnlyAFewBytesAtATime() throws Exception {
         byte[] content = new byte[200_000];
+        // Seeded on purpose, so the content is the same on every run; nothing here is a secret.
+        // nosemgrep: java.lang.security.audit.crypto.weak-random.weak-random
         new Random(3).nextBytes(content);
         Digest digest = in(acme, () -> push(content)).digest();
 

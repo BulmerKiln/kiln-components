@@ -118,5 +118,12 @@ Implemented: BUILD-1 to BUILD-20. PIT runs on demand and doesn't enforce a mutat
 Planned (M1): PGP signature verification alongside the checksums, CycloneDX SBOMs for every
 publication, and a fuzzing time budget for CI. CVE scanning, CodeQL and Semgrep run in CI.
 
-To change a version: edit `gradle/libs.versions.toml`, then run
-`./gradlew resolveAndLockAll --write-locks --write-verification-metadata sha256`.
+To change a version: edit `gradle/libs.versions.toml`, then regenerate the locks and checksums
+with an empty Gradle home, so Gradle downloads, and records, every file a fresh CI runner
+fetches (with a warm cache it skips the parent and BOM POMs, and CI then fails verification):
+
+```bash
+export GRADLE_USER_HOME=$(mktemp -d)
+./gradlew resolveAndLockAll --write-locks --write-verification-metadata sha256 --no-configuration-cache
+./gradlew build pitest stageRelease --write-verification-metadata sha256
+```
