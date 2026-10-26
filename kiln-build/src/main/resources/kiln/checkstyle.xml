@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN" "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  Kiln's structural rules (BUILD-9). Formatting itself is Palantir Java Format's job (BUILD-4);
+  these limit size, nesting and complexity, and keep a few hygiene rules the formatter can't.
+  Tests may be longer, but not deeper or more complex.
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+
+    <module name="SuppressionSingleFilter">
+        <property name="files" value="[/\\]src[/\\](test|testFixtures)[/\\]"/>
+        <property name="checks" value="FileLength|MethodLength|ExecutableStatementCount|ClassFanOutComplexity|ClassDataAbstractionCoupling|AnonInnerLength"/>
+    </module>
+
+    <module name="FileLength">
+        <property name="max" value="400"/>
+    </module>
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^(package|import) |https?://"/>
+    </module>
+    <module name="FileTabCharacter"/>
+    <module name="NewlineAtEndOfFile"/>
+
+    <module name="TreeWalker">
+        <!-- Size -->
+        <module name="MethodLength">
+            <property name="max" value="50"/>
+            <property name="countEmpty" value="false"/>
+        </module>
+        <module name="ExecutableStatementCount">
+            <property name="max" value="30"/>
+        </module>
+        <module name="AnonInnerLength">
+            <property name="max" value="30"/>
+        </module>
+        <module name="ParameterNumber">
+            <property name="max" value="7"/>
+            <property name="ignoreOverriddenMethods" value="true"/>
+        </module>
+        <module name="RecordComponentNumber">
+            <property name="max" value="10"/>
+        </module>
+
+        <!-- Nesting and complexity -->
+        <module name="NestedIfDepth">
+            <property name="max" value="2"/>
+        </module>
+        <module name="NestedForDepth">
+            <property name="max" value="2"/>
+        </module>
+        <module name="NestedTryDepth">
+            <property name="max" value="1"/>
+        </module>
+        <module name="CyclomaticComplexity">
+            <property name="max" value="10"/>
+            <property name="switchBlockAsSingleDecisionPoint" value="true"/>
+        </module>
+        <module name="NPathComplexity">
+            <property name="max" value="200"/>
+        </module>
+        <module name="BooleanExpressionComplexity">
+            <property name="max" value="4"/>
+        </module>
+        <module name="ClassFanOutComplexity">
+            <property name="max" value="20"/>
+        </module>
+        <module name="ClassDataAbstractionCoupling">
+            <property name="max" value="7"/>
+        </module>
+
+        <!-- Hygiene the formatter doesn't cover -->
+        <module name="AvoidStarImport"/>
+        <module name="IllegalImport"/>
+        <module name="NeedBraces"/>
+        <module name="AvoidNestedBlocks"/>
+        <module name="OneStatementPerLine"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="InnerAssignment"/>
+        <module name="EmptyStatement"/>
+        <module name="EmptyCatchBlock">
+            <property name="commentFormat" value=".+"/>
+        </module>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="StringLiteralEquality"/>
+        <module name="ModifiedControlVariable"/>
+        <module name="FallThrough"/>
+        <module name="DefaultComesLast"/>
+        <module name="NoFinalizer"/>
+        <module name="OneTopLevelClass"/>
+        <module name="OuterTypeFilename"/>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="FinalClass"/>
+        <module name="VisibilityModifier">
+            <property name="protectedAllowed" value="true"/>
+            <!-- JUnit injects these fields, so they can't be private. -->
+            <property name="ignoreAnnotationCanonicalNames" value="org.junit.jupiter.api.io.TempDir"/>
+        </module>
+        <module name="UpperEll"/>
+        <!-- A TODO names its issue, as in TODO(#123), or it doesn't exist. -->
+        <module name="TodoComment">
+            <property name="format" value="(TODO|FIXME|XXX)(?!\(#\d+\))"/>
+        </module>
+        <module name="ArrayTypeStyle"/>
+
+        <!-- Naming -->
+        <module name="PackageName"/>
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="ConstantName"/>
+        <module name="StaticVariableName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="LambdaParameterName">
+            <property name="format" value="^([a-z][a-zA-Z0-9]*|_)$"/>
+        </module>
+        <module name="LocalVariableName">
+            <property name="format" value="^([a-z][a-zA-Z0-9]*|_)$"/>
+        </module>
+    </module>
+</module>

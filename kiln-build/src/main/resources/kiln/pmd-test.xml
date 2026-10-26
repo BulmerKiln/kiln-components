@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<ruleset name="Kiln tests"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>
+        Rules for test code (BUILD-11): no fully qualified names an import would replace, no
+        unnecessary imports, nothing unused, no sleeping and no network. Tests aren't held to the
+        production smell rules.
+    </description>
+
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+
+    <rule name="KilnNoSleepInTests" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Don't sleep in tests: wait on a latch, a future or a condition instead">
+        <description>Sleeping makes tests slow and flaky.</description>
+        <priority>1</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//MethodCall[pmd-java:matchesSig('java.lang.Thread#sleep(_*)') or pmd-java:matchesSig('java.util.concurrent.TimeUnit#sleep(_*)')]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnNoNetworkInTests" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Unit tests don't use the network; use recorded responses">
+        <description>Tests must pass offline and without external services.</description>
+        <priority>1</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//ClassType[pmd-java:typeIs('java.net.Socket') or pmd-java:typeIs('java.net.ServerSocket')
+    or pmd-java:typeIs('java.net.URLConnection') or pmd-java:typeIs('java.net.http.HttpClient')
+    or pmd-java:typeIs('java.nio.channels.SocketChannel')]
+| //MethodCall[pmd-java:matchesSig('java.net.URL#openConnection(_*)') or pmd-java:matchesSig('java.net.URL#openStream()')]
+            ]]></value></property>
+        </properties>
+    </rule>
+</ruleset>

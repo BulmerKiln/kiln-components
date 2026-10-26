@@ -1,0 +1,61 @@
+# Every third-party version on the release train (DEP-1). kiln-dependencies publishes these as
+# the BOM; nothing else reads this catalog.
+#
+# Kiln imports only the Spring Boot artifacts it uses, not spring-boot-dependencies. The versions
+# marked "Boot" must match the ones spring-boot-dependencies declares at the spring-boot version,
+# so they move together on every Boot upgrade.
+
+[versions]
+spring-boot = "4.1.2"
+spring-framework = "7.0.10" # Boot
+micrometer = "1.17.2" # Boot
+jackson = "3.1.7" # Boot
+junit = "6.0.3" # Boot
+assertj = "3.27.7" # Boot
+byte-buddy = "1.18.15" # Boot
+jspecify = "1.0.1" # Boot
+commons-logging = "1.3.6" # Boot
+error-prone = "2.51.0"
+nullaway = "0.14.3"
+checkstyle = "14.3.0"
+pmd = "7.28.0"
+archunit = "1.5.1"
+spotbugs = "4.10.5"
+findsecbugs = "1.14.0"
+jacoco = "0.8.16"
+pitest = "1.30.1"
+pitest-junit5 = "1.2.3"
+jqwik = "1.10.2"
+jazzer = "0.30.0"
+
+[libraries]
+spring-boot = { module = "org.springframework.boot:spring-boot", version.ref = "spring-boot" }
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "spring-boot" }
+spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor", version.ref = "spring-boot" }
+spring-boot-test = { module = "org.springframework.boot:spring-boot-test", version.ref = "spring-boot" }
+spring-framework-bom = { module = "org.springframework:spring-framework-bom", version.ref = "spring-framework" }
+micrometer-bom = { module = "io.micrometer:micrometer-bom", version.ref = "micrometer" }
+jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+byte-buddy = { module = "net.bytebuddy:byte-buddy", version.ref = "byte-buddy" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+commons-logging = { module = "commons-logging:commons-logging", version.ref = "commons-logging" }
+error-prone-annotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "error-prone" }
+error-prone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "error-prone" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+checkstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
+pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
+pmd-ant = { module = "net.sourceforge.pmd:pmd-ant", version.ref = "pmd" }
+archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
+spotbugs = { module = "com.github.spotbugs:spotbugs", version.ref = "spotbugs" }
+spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version.ref = "spotbugs" }
+findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
+jacoco-agent = { module = "org.jacoco:org.jacoco.agent", version.ref = "jacoco" }
+jacoco-ant = { module = "org.jacoco:org.jacoco.ant", version.ref = "jacoco" }
+pitest = { module = "org.pitest:pitest", version.ref = "pitest" }
+pitest-command-line = { module = "org.pitest:pitest-command-line", version.ref = "pitest" }
+pitest-entry = { module = "org.pitest:pitest-entry", version.ref = "pitest" }
+pitest-junit5-plugin = { module = "org.pitest:pitest-junit5-plugin", version.ref = "pitest-junit5" }
+jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
+jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }

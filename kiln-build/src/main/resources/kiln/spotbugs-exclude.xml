@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs patterns that don't fit Kiln's design (BUILD-12). Each is excluded for a stated reason;
+  anything else SpotBugs or FindSecBugs reports fails the build.
+-->
+<FindBugsFilter>
+    <!--
+      Records and validated value types hand out what they hold; collections are copied
+      immutably in compact constructors, and arrays are copied explicitly where they're exposed.
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- Validating in constructors is how Kiln makes invalid values impossible to create. -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+</FindBugsFilter>

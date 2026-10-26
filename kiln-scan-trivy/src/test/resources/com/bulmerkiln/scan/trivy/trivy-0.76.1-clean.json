@@ -1,0 +1,42 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.76.1"
+  },
+  "ReportID": "01a17925-a7b7-7bb1-9268-715f15632c19",
+  "CreatedAt": "2026-10-26T16:57:53.335767232Z",
+  "ArtifactName": "/w/out/clean.cdx.json",
+  "ArtifactType": "cyclonedx",
+  "Results": [
+    {
+      "Target": "Node.js",
+      "Class": "lang-pkgs",
+      "Type": "node-pkg",
+      "Packages": [
+        {
+          "ID": "is-number@7.0.0",
+          "Name": "is-number",
+          "Identifier": {
+            "PURL": "pkg:npm/is-number@7.0.0",
+            "UID": "9e73bf12196d89db",
+            "BOMRef": "pkg:npm/is-number@7.0.0?package-id=28097104b00a35ff"
+          },
+          "Version": "7.0.0"
+        },
+        {
+          "ID": "sample@1.0.0",
+          "Name": "sample",
+          "Identifier": {
+            "PURL": "pkg:npm/sample@1.0.0",
+            "UID": "be2dc1cd42817e73",
+            "BOMRef": "pkg:npm/sample@1.0.0?package-id=4b6ec90da9558301"
+          },
+          "Version": "1.0.0",
+          "DependsOn": [
+            "is-number@7.0.0"
+          ]
+        }
+      ]
+    }
+  ]
+}

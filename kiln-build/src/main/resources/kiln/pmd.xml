@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<ruleset name="Kiln"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>
+        Kiln's code-smell rules (BUILD-10). Checkstyle limits size and nesting (BUILD-9); these catch
+        code that's hard to follow, and smells Error Prone doesn't cover. PreserveStackTrace is left
+        out on purpose: refusals drop causes so a client never sees a stack trace or its own input.
+    </description>
+
+    <rule ref="category/java/design.xml/CognitiveComplexity">
+        <properties>
+            <property name="reportLevel" value="15"/>
+        </properties>
+    </rule>
+    <rule ref="category/java/design.xml/GodClass"/>
+    <rule ref="category/java/design.xml/CollapsibleIfStatements"/>
+    <rule ref="category/java/design.xml/SimplifyBooleanReturns"/>
+    <rule ref="category/java/design.xml/SimplifiedTernary"/>
+    <rule ref="category/java/design.xml/SimplifyConditional"/>
+    <rule ref="category/java/design.xml/LogicInversion"/>
+    <rule ref="category/java/design.xml/SingularField"/>
+    <rule ref="category/java/design.xml/ImmutableField"/>
+    <rule ref="category/java/design.xml/UselessOverridingMethod"/>
+    <rule ref="category/java/design.xml/ExceptionAsFlowControl"/>
+    <rule ref="category/java/design.xml/AvoidThrowingNullPointerException"/>
+
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
+    <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+    <rule ref="category/java/bestpractices.xml/AvoidReassigningLoopVariables"/>
+    <rule ref="category/java/bestpractices.xml/LooseCoupling"/>
+    <rule ref="category/java/bestpractices.xml/ForLoopCanBeForeach"/>
+
+    <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
+        <properties>
+            <property name="allowCommentedBlocks" value="true"/>
+        </properties>
+    </rule>
+    <rule ref="category/java/errorprone.xml/ReturnEmptyCollectionRatherThanNull"/>
+    <rule ref="category/java/errorprone.xml/AvoidBranchingStatementAsLastInLoop"/>
+
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryLocalBeforeReturn"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+
+    <!-- Kiln's own rules (BUILD-13): input handling and likely-quadratic code -->
+    <rule name="KilnValidateWithMatches" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Validate with matches(), which anchors the pattern; find() accepts any input containing a match">
+        <description>Input validation must match the whole value.</description>
+        <priority>1</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//MethodCall[@MethodName='find'][MethodCall[@MethodName='matcher']]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnNoUrlDecoder" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Don't percent-decode with URLDecoder: decode only the escapes the protocol allows, exactly once">
+        <description>URLDecoder decodes every escape and treats '+' as a space.</description>
+        <priority>1</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//ClassType[pmd-java:typeIs('java.net.URLDecoder')]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnNoShell" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Run commands as an argument list with ProcessBuilder, never through Runtime.exec or a shell">
+        <description>A shell would interpret metacharacters in arguments.</description>
+        <priority>1</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//MethodCall[@MethodName='exec'][pmd-java:matchesSig('java.lang.Runtime#exec(_*)')]
+| //ConstructorCall[pmd-java:typeIs('java.lang.ProcessBuilder')]
+    //StringLiteral[@Image=('"sh"','"bash"','"/bin/sh"','"/bin/bash"','"cmd"','"cmd.exe"','"powershell"','"-c"')]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnNoHandBuiltJson" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Write JSON with a JSON writer such as FormatJson, never by joining strings">
+        <description>Concatenated JSON lets a value break out of its string.</description>
+        <priority>1</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//InfixExpression[@Operator='+'][StringLiteral[starts-with(@Image, '"{\"') or starts-with(@Image, '"[{') or starts-with(@Image, '"\":')]]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnCompilePatternsOnce" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Compile a Pattern once, in a static final field">
+        <description>Compiling a regex is expensive; doing it per call is avoidable work.</description>
+        <priority>2</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//MethodCall[@MethodName='compile'][pmd-java:matchesSig('java.util.regex.Pattern#compile(_*)')]
+    [not(ancestor::FieldDeclaration[pmd-java:modifiers() = 'static'][pmd-java:modifiers() = 'final'])]
+    [not(ancestor::ConstructorDeclaration[parent::*/parent::EnumDeclaration])]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnNoListSearchInLoop" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="Searching a List inside a loop is O(n^2); use a Set or Map lookup">
+        <description>contains, indexOf and remove(Object) scan the whole list.</description>
+        <priority>2</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//MethodCall[@MethodName=('contains','indexOf','lastIndexOf','remove','containsAll')]
+    [*[1][pmd-java:typeIs('java.util.List')]]
+    [ancestor::Block[parent::ForStatement or parent::ForeachStatement or parent::WhileStatement or parent::DoStatement]]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule name="KilnNoRegexInLoop" language="java" class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+          message="This compiles a regex on every iteration; use a static final Pattern">
+        <description>String.matches, replaceAll, replaceFirst and split compile their regex each call.</description>
+        <priority>2</priority>
+        <properties>
+            <property name="xpath"><value><![CDATA[
+//MethodCall[@MethodName=('matches','replaceAll','replaceFirst','split')][*[1][pmd-java:typeIs('java.lang.String')]]
+    [ancestor::Block[parent::ForStatement or parent::ForeachStatement or parent::WhileStatement or parent::DoStatement]]
+            ]]></value></property>
+        </properties>
+    </rule>
+    <rule ref="category/java/performance.xml/UseStringBufferForStringAppends"/>
+</ruleset>
