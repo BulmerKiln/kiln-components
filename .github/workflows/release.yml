@@ -1,0 +1,25 @@
+# Publishing a GitHub release whose tag is the version (such as 1.4.0) publishes every module, the
+# BOM and kiln-build's plugins to Maven Central, after a reviewer approves the release environment.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+    uses: BulmerKiln/cicd/.github/workflows/gradle-release.yml@v1
+    with:
+      version: ${{ github.event.release.tag_name }}

@@ -61,6 +61,7 @@ build logic, and a change to the rules reaches every repository on the next rele
 | BUILD-17 | Every resolved dependency must be locked (strict mode: a configuration without lock state fails), and every artifact verified against its SHA-256 in `gradle/verification-metadata.xml` | The build: dependency locking and verification |
 | BUILD-18 | Every module's tests must cover at least 80% of its lines and 80% of its branches, measured by JaCoCo over the module's own main classes. Contract suites in test fixtures count toward the module that runs them. The HTML report is `build/reports/jacoco/test/html` | The build: `jacocoTestCoverageVerification` |
 | BUILD-19 | `./gradlew pitest` must run PIT mutation testing over every module's main classes, with bounded memory: at most 3 modules at a time, 4 test JVMs each, 1 GB of heap per JVM. A module whose classes, tests and dependencies haven't changed reuses its cached result. The HTML report is `build/reports/pitest` | `./gradlew pitest` |
+| BUILD-20 | `./gradlew stageRelease` must write every published module, the BOM and kiln-build's plugins, with the POM metadata Maven Central requires (name, description, URL, license, developers, SCM), sources and javadoc jars, and checksums, to `build/staging-deploy` in Maven repository layout. With `KILN_SIGNING_KEY` set, every artifact is also signed. The release workflow refuses to publish an unsigned artifact | The release workflow (`BulmerKiln/cicd`, `gradle-release.yml`) |
 | BUILD-8 | `build` must fail when the READMEs and the code disagree: a module without a README, a requirement ID defined twice, a README naming a test that doesn't exist, or code citing a requirement ID no README defines | The build: `readmeCheck`, checked against each failure by hand when it was added |
 
 
@@ -112,7 +113,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: BUILD-1 to BUILD-19. PIT runs on demand and doesn't enforce a mutation score yet.
+Implemented: BUILD-1 to BUILD-20. PIT runs on demand and doesn't enforce a mutation score yet.
 
 Planned (M1): PGP signature verification alongside the checksums, CycloneDX SBOMs for every
 publication, and a fuzzing time budget for CI. CVE scanning, CodeQL and Semgrep run in CI.

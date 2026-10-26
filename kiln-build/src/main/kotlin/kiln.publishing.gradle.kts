@@ -1,5 +1,7 @@
 // Maven publication with the POM metadata Maven Central requires. Signing is on whenever a key is
 // provided (KILN_SIGNING_KEY and KILN_SIGNING_PASSWORD); the release workflow in cicd provides it.
+// Releases stage every publication in one directory, which the release workflow uploads to the
+// Central Portal as a single bundle (BUILD-20).
 
 plugins {
     `maven-publish`
@@ -40,6 +42,15 @@ publishing {
                     connection = "scm:git:https://github.com/BulmerKiln/kiln-components.git"
                 }
             }
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "staging"
+            url = uri(rootProject.layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
