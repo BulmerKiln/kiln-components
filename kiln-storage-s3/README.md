@@ -11,7 +11,7 @@ rules are built; the store itself comes next.
 | Artifact | `com.bulmerkiln:kiln-storage-s3` |
 | Runs in | Kiln's server |
 | Depends on | [`kiln-storage`](../kiln-storage) |
-| Used by | `kiln-oss-service` (with several replicas), `kiln-cloud-service` |
+| Used by | `kiln-oss-service` (with several replicas) |
 | Status | M3, Experimental: settings and rules only, no `BlobStore` yet |
 
 ## Purpose
@@ -24,14 +24,14 @@ module fixes how keys are laid out, how it's configured, and which clients may b
 
 **Does**
 
-- Lay out object keys (`S3Keys`) the same way the filesystem backend lays out paths
+- Lay out object keys (`S3KeyUtils`) the same way the filesystem backend lays out paths
 - Validate its settings (`S3StorageProperties`)
-- Decide which downloads redirect to a presigned URL and which are proxied (`RedirectPolicy`)
+- Decide which downloads redirect to a presigned URL and which are proxied (`S3RedirectPolicy`)
 
 **Does not**
 
 - Store anything yet: the `BlobStore` and its auto-configuration come with the AWS SDK
-- Provision buckets per organization; that's kiln-cloud's `StorageRouter`
+- Provision buckets per organization; that's an assembly's own `StorageRouter`
 
 ## Requirements
 

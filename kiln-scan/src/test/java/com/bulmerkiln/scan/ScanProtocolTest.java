@@ -9,6 +9,12 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.core.digest.Digest;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.Limits;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ScannerId;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.net.URI;

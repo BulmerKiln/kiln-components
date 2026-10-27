@@ -7,6 +7,12 @@ package com.bulmerkiln.scan;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.core.digest.Digest;
+import com.bulmerkiln.scan.domain.Limits;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -77,7 +83,7 @@ public abstract class ScannerAdapterContract {
 
     @Test
     void parsesARealReportCompletely() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(sampleOutput()));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput()));
         assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
         assertThat(result.scanner()).isEqualTo(adapter().scanner());
         assertThat(result.jobId()).isEqualTo(JOB.jobId());
@@ -86,7 +92,7 @@ public abstract class ScannerAdapterContract {
 
     @Test
     void recognisesACleanScan() {
-        ScanResult result = ScannerAdapters.run(
+        ScanResult result = ScannerAdapterRunner.run(
                 adapter(), JOB, new ToolRun(sampleToolVersion(), "db", 0, emptyOutput(), false, null));
         assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
         assertThat(result.findings()).isEmpty();
@@ -102,13 +108,13 @@ public abstract class ScannerAdapterContract {
 
     @Test
     void isDeterministic() {
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(sampleOutput())))
-                .isEqualTo(ScannerAdapters.run(adapter(), JOB, run(sampleOutput())));
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput())))
+                .isEqualTo(ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput())));
     }
 
     @Test
     void resultsSurviveTheProtocol() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(sampleOutput()));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput()));
         assertThat(ScanProtocol.readResult(ScanProtocol.write(result))).isEqualTo(result);
     }
 
@@ -128,7 +134,7 @@ public abstract class ScannerAdapterContract {
                 "{\"unexpected\":\"shape\"}",
                 "x".repeat(10_000_000));
         for (String output : broken) {
-            ScanResult result = ScannerAdapters.run(adapter(), JOB, run(output));
+            ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(output));
             assertThat(result.status())
                     .as(output.length() > 40 ? output.substring(0, 40) : output)
                     .isNotEqualTo(ScanResult.Status.COMPLETE);
@@ -138,25 +144,25 @@ public abstract class ScannerAdapterContract {
     @Test
     void aTruncatedReportIsNeverClean() {
         String sample = sampleOutput();
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(sample.substring(0, sample.length() / 2)));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sample.substring(0, sample.length() / 2)));
         assertThat(result.status()).isNotEqualTo(ScanResult.Status.COMPLETE);
     }
 
     @Test
     void aToolThatDidNotCompleteFails() {
         ToolRun crashed = new ToolRun(sampleToolVersion(), "db", 137, sampleOutput(), false, null);
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, crashed);
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, crashed);
         assertThat(result.status()).isEqualTo(ScanResult.Status.FAILED);
         assertThat(result.findings()).isEmpty();
     }
 
     @Test
     void limitsAndTimeoutsAreIncompleteNotClean() {
-        ScanResult limited = ScannerAdapters.run(
+        ScanResult limited = ScannerAdapterRunner.run(
                 adapter(), JOB, new ToolRun(sampleToolVersion(), "db", 2, sampleOutput(), false, "max files"));
         assertThat(limited.status()).isEqualTo(ScanResult.Status.INCOMPLETE);
         assertThat(limited.incompleteReason()).isEqualTo("max files");
-        ScanResult timedOut = ScannerAdapters.run(
+        ScanResult timedOut = ScannerAdapterRunner.run(
                 adapter(), JOB, new ToolRun(sampleToolVersion(), "db", 143, sampleOutput(), true, null));
         assertThat(timedOut.status()).isEqualTo(ScanResult.Status.INCOMPLETE);
     }
@@ -170,7 +176,7 @@ public abstract class ScannerAdapterContract {
                 sampleOutput(),
                 false,
                 null);
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run);
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run);
         assertThat(result.scannerVersion()).doesNotContain("\n").hasSizeLessThanOrEqualTo(128);
         assertThat(result.databaseVersion()).isEqualTo("unknown");
     }
@@ -181,7 +187,7 @@ public abstract class ScannerAdapterContract {
         if (output == null) {
             return;
         }
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(output));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(output));
         assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
         assertThat(result.findings()).isNotEmpty();
         assertThat(new String(ScanProtocol.write(result), StandardCharsets.UTF_8))

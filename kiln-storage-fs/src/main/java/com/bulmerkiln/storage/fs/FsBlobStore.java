@@ -6,14 +6,14 @@ package com.bulmerkiln.storage.fs;
 
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.Digester;
-import com.bulmerkiln.storage.BlobInfo;
 import com.bulmerkiln.storage.BlobRead;
 import com.bulmerkiln.storage.BlobStore;
-import com.bulmerkiln.storage.ByteRange;
 import com.bulmerkiln.storage.DigestMismatchException;
-import com.bulmerkiln.storage.UploadId;
 import com.bulmerkiln.storage.UploadNotFoundException;
 import com.bulmerkiln.storage.UploadOffsetException;
+import com.bulmerkiln.storage.domain.BlobInfo;
+import com.bulmerkiln.storage.domain.ByteRange;
+import com.bulmerkiln.storage.domain.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
 import java.io.IOException;
 import java.io.InputStream;

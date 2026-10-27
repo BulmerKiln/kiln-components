@@ -4,6 +4,8 @@
  */
 package com.bulmerkiln.permissions;
 
+import com.bulmerkiln.permissions.domain.Principal;
+import com.bulmerkiln.permissions.domain.RoleBinding;
 import java.util.List;
 
 /**

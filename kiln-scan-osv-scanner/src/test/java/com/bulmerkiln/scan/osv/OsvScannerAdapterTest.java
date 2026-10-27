@@ -6,12 +6,12 @@ package com.bulmerkiln.scan.osv;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.ScannerAdapterContract;
-import com.bulmerkiln.scan.ScannerAdapters;
-import com.bulmerkiln.scan.Severity;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -50,7 +50,7 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
 
     @Test
     void readsSeverityFromTheGroupsCvssScore() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(sampleOutput()));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput()));
         assertThat(result.findings()).hasSize(5);
         Finding template = result.findings().stream()
                 .filter(f -> f.id().equals("GHSA-35jh-r3h4-6jhm"))
@@ -66,7 +66,7 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
     @Test
     void reportsMaliciousPackagesAsCriticalMalware() {
         String output = sampleOutput().replace("GHSA-35jh-r3h4-6jhm", "MAL-2026-1234");
-        Finding malware = ScannerAdapters.run(adapter(), JOB, run(output)).findings().stream()
+        Finding malware = ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings().stream()
                 .filter(f -> f.id().equals("MAL-2026-1234"))
                 .findFirst()
                 .orElseThrow();
@@ -76,7 +76,7 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
 
     @Test
     void findingsAreACompletedScanNotAFailure() {
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(sampleOutput())).status())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput())).status())
                 .isEqualTo(ScanResult.Status.COMPLETE);
     }
 
@@ -96,7 +96,7 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
     @Test
     void reportsNoFixWhenNoRangeHasOne() {
         String output = sampleOutput().replace("\"fixed\": \"", "\"last_affected\": \"");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .hasSize(5)
                 .allSatisfy(f -> assertThat(f.fixedVersion()).isNull());
     }
@@ -105,7 +105,7 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
     @ValueSource(strings = {"\"npm/lodash@4.17.20\"", "42"})
     void dropsAPurlThatIsNotOne(String purl) {
         String output = sampleOutput().replace("\"purl\": \"pkg:npm/lodash@4.17.20\"", "\"purl\": " + purl);
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .isNotEmpty()
                 .allSatisfy(f -> assertThat(f.purl()).isNull());
     }
@@ -113,7 +113,7 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
     @Test
     void readsANullListAsEmpty() {
         String output = sampleOutput().replace("\"aliases\": [", "\"aliases\": null, \"x\": [");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .hasSize(5)
                 .allSatisfy(f -> assertThat(f.aliases()).isEmpty());
     }
@@ -121,11 +121,12 @@ class OsvScannerAdapterTest extends ScannerAdapterContract {
     @Test
     void refusesAListThatIsNotOne() {
         String output = sampleOutput().replace("\"aliases\": [", "\"aliases\": \"x\", \"y\": [");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).status()).isEqualTo(ScanResult.Status.FAILED);
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).status())
+                .isEqualTo(ScanResult.Status.FAILED);
     }
 
     private Finding find(String output, String id) {
-        return ScannerAdapters.run(adapter(), JOB, run(output)).findings().stream()
+        return ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings().stream()
                 .filter(f -> f.id().equals(id))
                 .findFirst()
                 .orElseThrow();

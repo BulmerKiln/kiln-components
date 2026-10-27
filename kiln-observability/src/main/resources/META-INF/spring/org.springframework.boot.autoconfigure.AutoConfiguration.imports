@@ -1,2 +1,2 @@
-com.bulmerkiln.observability.ObservabilityAutoConfiguration
-com.bulmerkiln.observability.FormatMetricsAutoConfiguration
+com.bulmerkiln.observability.autoconfigure.ObservabilityAutoConfiguration
+com.bulmerkiln.observability.autoconfigure.FormatMetricsAutoConfiguration

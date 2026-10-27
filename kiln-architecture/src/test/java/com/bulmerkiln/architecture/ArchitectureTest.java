@@ -19,6 +19,8 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.GeneralCodingRules;
+import com.tngtech.archunit.library.dependencies.SliceAssignment;
+import com.tngtech.archunit.library.dependencies.SliceIdentifier;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -39,35 +41,43 @@ class ArchitectureTest {
      */
     static final Map<String, Set<String>> ALLOWED = Map.ofEntries(
             Map.entry("core", Set.of()),
+            Map.entry("database", Set.of("core")),
             Map.entry("storage", Set.of("core")),
             Map.entry("storage.fs", Set.of("storage", "core")),
             Map.entry("storage.s3", Set.of("storage", "core")),
             Map.entry("format", Set.of("core")),
-            Map.entry("format.oci", Set.of("format", "core")),
-            Map.entry("format.npm", Set.of("format", "core")),
-            Map.entry("format.maven", Set.of("format", "core")),
-            Map.entry("format.cargo", Set.of("format", "core")),
+            Map.entry("format.oci", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry("format.npm", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry(
+                    "format.maven", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry(
+                    "format.cargo", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
             Map.entry("auth", Set.of()),
             Map.entry("auth.oidc", Set.of("auth")),
             Map.entry("auth.oauth2", Set.of("auth")),
-            Map.entry("permissions", Set.of("format", "core")),
+            Map.entry("permissions", Set.of("format", "database", "core")),
+            Map.entry("registry", Set.of("format", "permissions", "database", "core")),
             Map.entry("scan", Set.of("core")),
             Map.entry("scan.orchestration", Set.of("scan", "core")),
             Map.entry("scan.trivy", Set.of("scan", "core")),
             Map.entry("scan.grype", Set.of("scan", "core")),
             Map.entry("scan.osv", Set.of("scan", "core")),
             Map.entry("scan.gitleaks", Set.of("scan", "core")),
-            Map.entry("observability", Set.of("format", "core")));
+            Map.entry("observability", Set.of("format", "core")),
+            Map.entry("web", Set.of("format", "permissions", "core")));
 
     /**
      * Dependencies in {@link #ALLOWED} that are optional: the module works without them, and reaches
      * them only through an auto-configuration annotated with {@code @ConditionalOnClass} (ARCH-11).
      */
     static final Map<String, Set<String>> OPTIONAL =
-            Map.of("permissions", Set.of("format"), "observability", Set.of("format"));
+            Map.of("permissions", Set.of("format", "database"), "observability", Set.of("format"));
 
     /** Each contract, and the suffix its implementations are named with (ARCH-10). */
     static final Map<String, String> CONTRACT_NAMES = Map.ofEntries(
+            Map.entry("com.bulmerkiln.core.organization.OrganizationDirectory", "Directory"),
+            Map.entry("com.bulmerkiln.core.organization.OrganizationResolver", "Resolver"),
+            Map.entry("com.bulmerkiln.web.PrincipalResolver", "Resolver"),
             Map.entry("com.bulmerkiln.format.FormatModule", "FormatModule"),
             Map.entry("com.bulmerkiln.format.ArtifactAccess", "Access"),
             Map.entry("com.bulmerkiln.format.ArtifactEventListener", "Listener"),
@@ -119,7 +129,23 @@ class ArchitectureTest {
 
     @Test
     void subsystemsHaveNoCycles() {
-        slices().matching("com.bulmerkiln.(*)..").should().beFreeOfCycles().check(KILN_CLASSES);
+        // Per module, not per top-level package: kiln-format-oci may use kiln-web, which uses kiln-format.
+        slices().assignedFrom(new SliceAssignment() {
+                    @Override
+                    public SliceIdentifier getIdentifierOf(JavaClass javaClass) {
+                        return moduleOf(javaClass.getPackageName())
+                                .map(SliceIdentifier::of)
+                                .orElse(SliceIdentifier.ignore());
+                    }
+
+                    @Override
+                    public String getDescription() {
+                        return "Kiln modules";
+                    }
+                })
+                .should()
+                .beFreeOfCycles()
+                .check(KILN_CLASSES);
     }
 
     @Test
@@ -133,12 +159,14 @@ class ArchitectureTest {
     }
 
     @Test
-    void springIsOnlyInAutoConfigurationsAndProperties() {
+    void springIsOnlyInAutoConfigurationsPropertiesAndControllers() {
         noClasses()
                 .that()
                 .haveSimpleNameNotEndingWith("AutoConfiguration")
                 .and()
                 .haveSimpleNameNotEndingWith("Properties")
+                .and()
+                .haveSimpleNameNotEndingWith("Controller")
                 .should()
                 .dependOnClassesThat()
                 .resideInAPackage("org.springframework..")

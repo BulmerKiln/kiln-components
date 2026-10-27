@@ -6,7 +6,8 @@ package com.bulmerkiln.auth.oauth2;
 
 import com.bulmerkiln.auth.connector.IdentityConnector;
 import com.bulmerkiln.auth.connector.IdentityConnectorContract;
-import com.bulmerkiln.auth.connector.IdpResponse;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;

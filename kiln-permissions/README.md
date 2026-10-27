@@ -26,7 +26,7 @@ it answers "you may not" with `404` wherever `403` would reveal that a private r
 
 - The roles and what each allows (`Role`, `Action`)
 - Role bindings at organization, namespace or repository level (`RoleBinding`, `Scope`)
-- Teams from IdP groups (`TeamMembership`)
+- Teams from IdP groups (`TeamMembershipService`)
 - The decision: allow, ask to sign in, deny or hide (`PermissionPolicy`, `RoleBasedPolicy`)
 - The current principal for each request (`CurrentPrincipal`)
 - `PermissionPolicyContract`, the authorization matrix every policy passes
@@ -53,6 +53,7 @@ it answers "you may not" with `404` wherever `403` would reveal that a private r
 | PERM-10 | The current principal must be bound for each request, explicitly as anonymous when there are no credentials. Reading it unbound fails, and a request can't switch principal | `RoleBasedPolicyTest` |
 | PERM-11 | There must be no default for stored bindings or visibility: without a `RoleBindingRepository`, or a `VisibilityLookup` when formats are present, the boot fails | `RoleBasedPolicyTest` |
 | PERM-12 | When the format subsystem is present, this module must answer its `ArtifactAccess` port with the same decisions | `RoleBasedPolicyTest` |
+| PERM-13 | When the database module is present, role bindings must be kept there per organization, reading only the principal's own bindings and its teams'. Granting a binding that's held changes nothing. Workloads and anonymous callers read none | `RoleBindingStoreTest` |
 
 ## Contract *(subsystem only)*
 
@@ -121,7 +122,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: PERM-1 to PERM-12.
+Implemented: PERM-1 to PERM-13.
 
 Planned (M1): the Postgres-backed `RoleBindingRepository`, `VisibilityLookup` and team
 membership; the API and web-app endpoints' own authorization-matrix tests against every role and

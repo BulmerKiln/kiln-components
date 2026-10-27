@@ -4,13 +4,17 @@
  */
 package com.bulmerkiln.auth.oauth2;
 
-import com.bulmerkiln.auth.connector.ConnectorId;
-import com.bulmerkiln.auth.connector.Domains;
-import com.bulmerkiln.auth.connector.Endpoints;
-import com.bulmerkiln.auth.connector.ExternalIdentity;
 import com.bulmerkiln.auth.connector.IdentityConnector;
-import com.bulmerkiln.auth.connector.IdpResponse;
-import com.bulmerkiln.auth.connector.SecretRef;
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.connector.domain.SecretRef;
+import com.bulmerkiln.auth.connector.util.DomainUtils;
+import com.bulmerkiln.auth.connector.util.EndpointUtils;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
+import com.bulmerkiln.auth.oauth2.constant.OAuth2Preset;
+import com.bulmerkiln.auth.oauth2.domain.OAuth2JsonPath;
+import com.bulmerkiln.auth.oauth2.service.OAuth2UserMapper;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +43,10 @@ public record OAuth2Connector(
 
     /** Where the user-info response holds each value (AUTH-OAUTH2-3). */
     public record UserPaths(
-            JsonPath userId,
-            @Nullable JsonPath email,
-            @Nullable JsonPath emailVerified,
-            @Nullable JsonPath groups) {}
+            OAuth2JsonPath userId,
+            @Nullable OAuth2JsonPath email,
+            @Nullable OAuth2JsonPath emailVerified,
+            @Nullable OAuth2JsonPath groups) {}
 
     public OAuth2Connector {
         Objects.requireNonNull(id, "id");
@@ -69,7 +73,7 @@ public record OAuth2Connector(
                 Objects.requireNonNullElse(config.scopes(), preset.scopes()),
                 required(config.clientId(), "client-id", id),
                 SecretRef.parse(required(config.clientSecret(), "client-secret", id)),
-                Domains.normalize(config.domains() == null ? List.of() : config.domains()));
+                DomainUtils.normalize(config.domains() == null ? List.of() : config.domains()));
     }
 
     private static Urls urls(OAuth2Properties.@Nullable Urls config, OAuth2Preset preset, ConnectorId id) {
@@ -84,7 +88,7 @@ public record OAuth2Connector(
     private static UserPaths paths(OAuth2Properties.@Nullable Paths config, OAuth2Preset preset, ConnectorId id) {
         OAuth2Properties.Paths paths = config == null ? new OAuth2Properties.Paths(null, null, null, null) : config;
         return new UserPaths(
-                JsonPath.parse(required(or(paths.userId(), preset.userIdPath()), "paths.user-id", id)),
+                OAuth2JsonPath.parse(required(or(paths.userId(), preset.userIdPath()), "paths.user-id", id)),
                 path(paths.email()),
                 path(paths.emailVerified()),
                 path(paths.groups()));
@@ -121,11 +125,11 @@ public record OAuth2Connector(
     }
 
     private static URI endpoint(@Nullable URI uri, String setting, ConnectorId id, boolean insecure) {
-        return Endpoints.requireSecure(required(uri, setting, id), insecure, "Connector " + id + " " + setting);
+        return EndpointUtils.requireSecure(required(uri, setting, id), insecure, "Connector " + id + " " + setting);
     }
 
-    private static @Nullable JsonPath path(@Nullable String path) {
-        return path == null ? null : JsonPath.parse(path);
+    private static @Nullable OAuth2JsonPath path(@Nullable String path) {
+        return path == null ? null : OAuth2JsonPath.parse(path);
     }
 
     private static <T> @Nullable T or(@Nullable T configured, @Nullable T preset) {

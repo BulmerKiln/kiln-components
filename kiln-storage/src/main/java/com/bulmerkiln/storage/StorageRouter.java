@@ -5,10 +5,11 @@
 package com.bulmerkiln.storage;
 
 import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.storage.service.SingleStoreRouter;
 
 /**
- * Finds the store that holds an organization's blobs: one store for every organization in
- * kiln-oss, and a bucket or prefix per organization in kiln-cloud (STO-13).
+ * Finds the store that holds an organization's blobs. {@link SingleStoreRouter} uses one store for
+ * every organization; an assembly can provide its own router instead (STO-13).
  */
 public interface StorageRouter {
 

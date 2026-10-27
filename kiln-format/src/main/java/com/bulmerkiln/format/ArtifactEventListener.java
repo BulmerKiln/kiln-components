@@ -4,6 +4,8 @@
  */
 package com.bulmerkiln.format;
 
+import com.bulmerkiln.format.domain.ArtifactRef;
+
 /**
  * Receives every push and pull, from every format. Subsystems implement it: metrics now, and the
  * audit log, events outbox and usage counters as they arrive. A listener that must not lose an

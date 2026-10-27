@@ -9,10 +9,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.organization.Organization;
-import com.bulmerkiln.storage.BlobInfo;
 import com.bulmerkiln.storage.BlobStore;
 import com.bulmerkiln.storage.BlobStoreContract;
-import com.bulmerkiln.storage.UploadId;
+import com.bulmerkiln.storage.domain.BlobInfo;
+import com.bulmerkiln.storage.domain.UploadId;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;

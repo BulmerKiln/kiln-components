@@ -4,6 +4,8 @@
  */
 package com.bulmerkiln.scan;
 
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;
@@ -43,7 +45,7 @@ public final class ScanProtocol {
         return read(json, ScanResult.class);
     }
 
-    static void requireVersion(int protocol) {
+    public static void requireVersion(int protocol) {
         if (protocol != VERSION) {
             throw new UnsupportedProtocolException(protocol);
         }

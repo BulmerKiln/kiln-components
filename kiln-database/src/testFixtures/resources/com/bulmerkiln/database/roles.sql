@@ -1,0 +1,4 @@
+-- The three roles, as an operator creates them before Kiln's first start.
+CREATE ROLE kiln_migrator LOGIN PASSWORD 'migrator';
+CREATE ROLE kiln_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+CREATE ROLE kiln_ops LOGIN PASSWORD 'ops' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;

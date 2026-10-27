@@ -1,1 +1,1 @@
-com.bulmerkiln.auth.oidc.OidcAutoConfiguration
+com.bulmerkiln.auth.oidc.autoconfigure.OidcAutoConfiguration

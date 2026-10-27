@@ -115,6 +115,11 @@ val generateBuildInfo = tasks.register("generateBuildInfo") {
     }
 }
 
+// The Spring Boot plugin for kiln.service, at the Spring Boot version the release train uses.
+dependencies {
+    implementation("org.springframework.boot:spring-boot-gradle-plugin:${catalogVersion("spring-boot")}")
+}
+
 kotlin.sourceSets.main {
     kotlin.srcDir(generateBuildInfo)
 }

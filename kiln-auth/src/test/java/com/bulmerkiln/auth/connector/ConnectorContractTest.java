@@ -8,6 +8,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.SecretRef;
+import com.bulmerkiln.auth.connector.util.DomainUtils;
+import com.bulmerkiln.auth.connector.util.EndpointUtils;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.net.URI;
@@ -100,11 +105,11 @@ class ConnectorContractTest {
     @Test
     void endpointsMustBeHttps() {
         URI issuer = URI.create("https://idp.example.com/realms/acme");
-        assertThat(Endpoints.requireSecure(issuer, false, "issuer")).isEqualTo(issuer);
-        assertThat(Endpoints.requireSecure(URI.create("http://dex:5556/dex"), true, "issuer"))
+        assertThat(EndpointUtils.requireSecure(issuer, false, "issuer")).isEqualTo(issuer);
+        assertThat(EndpointUtils.requireSecure(URI.create("http://dex:5556/dex"), true, "issuer"))
                 .isNotNull();
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Endpoints.requireSecure(URI.create("http://idp.example.com"), false, "issuer"))
+                .isThrownBy(() -> EndpointUtils.requireSecure(URI.create("http://idp.example.com"), false, "issuer"))
                 .withMessageContaining("issuer");
     }
 
@@ -121,12 +126,12 @@ class ConnectorContractTest {
             })
     void refusesUnsafeEndpoints(String uri) {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Endpoints.requireSecure(URI.create(uri), true, "endpoint"));
+                .isThrownBy(() -> EndpointUtils.requireSecure(URI.create(uri), true, "endpoint"));
     }
 
     @Test
     void normalizesDomains() {
-        assertThat(Domains.normalize(List.of("Acme.COM", "eu.acme.com", "xn--bcher-kva.example")))
+        assertThat(DomainUtils.normalize(List.of("Acme.COM", "eu.acme.com", "xn--bcher-kva.example")))
                 .containsExactlyInAnyOrder("acme.com", "eu.acme.com", "xn--bcher-kva.example");
     }
 
@@ -148,7 +153,7 @@ class ConnectorContractTest {
                 "a_b.com"
             })
     void refusesDomainsThatAreNotPlainHostnames(String domain) {
-        assertThatIllegalArgumentException().isThrownBy(() -> Domains.normalize(List.of(domain)));
+        assertThatIllegalArgumentException().isThrownBy(() -> DomainUtils.normalize(List.of(domain)));
     }
 
     @FuzzTest

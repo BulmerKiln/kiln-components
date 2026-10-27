@@ -59,7 +59,7 @@ None: the worker provides the database and the input.
 ## Usage
 
 ```java
-ScanResult result = ScannerAdapters.run(new OsvScannerAdapter(), job, toolRun);
+ScanResult result = ScannerAdapterRunner.run(new OsvScannerAdapter(), job, toolRun);
 ```
 
 ## Security

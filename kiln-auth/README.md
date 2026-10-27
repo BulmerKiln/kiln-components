@@ -11,13 +11,13 @@ sign-in connector implements.
 | Artifact | `com.bulmerkiln:kiln-auth` (plus a `test-fixtures` variant) |
 | Runs in | Kiln's server |
 | Depends on | Nothing but the JDK and Spring Boot auto-configuration |
-| Used by | [`kiln-auth-oidc`](../kiln-auth-oidc), [`kiln-auth-oauth2`](../kiln-auth-oauth2); kiln-cloud's SAML and Entra ID connectors |
+| Used by | [`kiln-auth-oidc`](../kiln-auth-oidc), [`kiln-auth-oauth2`](../kiln-auth-oauth2) |
 | Status | M1, Experimental |
 
 ## Purpose
 
-People sign in through many IdPs: OIDC, plain OAuth2 such as GitHub, and SAML or Entra ID in
-kiln-cloud. Every connector must reach the same outcome, an identity with its groups, under the
+People sign in through many IdPs: OIDC, plain OAuth2 such as GitHub, and others through their own connector
+modules. Every connector must reach the same outcome, an identity with its groups, under the
 same rules, so access behaves the same whichever IdP someone used. Long-lived tokens need a format
 that's safe to store and detectable when leaked.
 
@@ -26,7 +26,7 @@ that's safe to store and detectable when leaked.
 **Does**
 
 - The token format: `bkp_` personal and `bks_` service tokens (`TokenSecret`)
-- The connector contract: `IdentityConnector`, `ExternalIdentity`, the shared `IdentityRules`
+- The connector contract: `IdentityConnector`, `ExternalIdentity`, the shared `IdentityUtils`
 - `ConnectorRegistry`: every connector from every module, with startup checks
 - Connector settings rules: connector IDs, secret references, endpoints, domains
 - `IdentityConnectorContract`, the suite every connector passes
@@ -53,7 +53,7 @@ that's safe to store and detectable when leaked.
 | AUTH-10 | No groups from the IdP must mean no groups, and a connector without group support reports none: such a person gets no roles until an admin grants some | `IdentityConnectorContract` |
 | AUTH-11 | Connectors must never grant roles; they report groups only | By type: `ExternalIdentity` has no roles |
 | AUTH-12 | Connector IDs must be lowercase letters and digits with single inner hyphens, at most 63 characters, safe in callback paths and cookies, and unique across every protocol | `ConnectorContractTest`, `StaticConnectorRegistryTest` |
-| AUTH-13 | Kiln must refuse to start without at least one connector. An assembly's own registry (kiln-cloud's, per organization) replaces the static one | `StaticConnectorRegistryTest` |
+| AUTH-13 | Kiln must refuse to start without at least one connector. An assembly's own registry replaces the static one | `StaticConnectorRegistryTest` |
 | AUTH-14 | Secrets must be references, `env:NAME` or `file:/absolute/path`, never values. Anything else is refused without repeating it | `ConnectorContractTest` |
 | AUTH-15 | IdP endpoints must be `https` URLs with a host and no user info or fragment; plain `http` only when a connector allows it explicitly. Lookup URLs are always `https` | `ConnectorContractTest`, `StaticConnectorRegistryTest` |
 | AUTH-16 | Discovery domains must be plain ASCII hostnames, stored lowercase and matched exactly: a subdomain doesn't match its parent | `ConnectorContractTest`, `StaticConnectorRegistryTest` |
@@ -66,10 +66,10 @@ that's safe to store and detectable when leaked.
 | `IdentityConnector` | A connector: its ID, type, display name, domains, whether it provides groups, its lookups, and `identify` |
 | `IdpResponse` | The verified response: claims, user info or assertion attributes, plus the lookups' results |
 | `ExternalIdentity` | The outcome: connector, issuer, subject, verified email, groups |
-| `IdentityRules` | The shared rules for subjects, emails and groups |
+| `IdentityUtils` | The shared rules for subjects, emails and groups |
 | `ConnectorSource` | How a module offers its connectors |
 | `ConnectorRegistry`, `StaticConnectorRegistry` | Every connector, for sign-in and discovery |
-| `ConnectorId`, `SecretRef`, `Endpoints`, `Domains` | Settings rules every connector uses |
+| `ConnectorId`, `SecretRef`, `EndpointUtils`, `DomainUtils` | Settings rules every connector uses |
 | `IdentityConnectorContract` *(test fixtures)* | The suite every connector extends |
 
 **Rules enforced here**: one outcome for every connector (AUTH-6), the identity rules (AUTH-7 to
@@ -78,9 +78,9 @@ AUTH-10), unique connector IDs (AUTH-12), at least one connector (AUTH-13).
 ## Adding an implementation *(subsystem only)*
 
 1. Create `kiln-auth-<protocol>` and depend on `kiln-auth`.
-2. Implement `IdentityConnector`, applying `IdentityRules` in `identify`. Declare any extra API
+2. Implement `IdentityConnector`, applying `IdentityUtils` in `identify`. Declare any extra API
    calls the sign-in flow should make (such as group lookups) in `lookups()`.
-3. Validate settings with `ConnectorId`, `SecretRef`, `Endpoints` and `Domains`, naming the
+3. Validate settings with `ConnectorId`, `SecretRef`, `EndpointUtils` and `DomainUtils`, naming the
    connector and setting in every error.
 4. Offer the connectors through a `ConnectorSource` bean from a Spring Boot auto-configuration.
 5. Extend `IdentityConnectorContract` in its tests.

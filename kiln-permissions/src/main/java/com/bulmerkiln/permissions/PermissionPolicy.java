@@ -4,6 +4,10 @@
  */
 package com.bulmerkiln.permissions;
 
+import com.bulmerkiln.permissions.constant.Action;
+import com.bulmerkiln.permissions.constant.Decision;
+import com.bulmerkiln.permissions.domain.Principal;
+import com.bulmerkiln.permissions.domain.Resource;
 import java.util.Set;
 
 /**

@@ -6,9 +6,17 @@ package com.bulmerkiln.permissions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.permissions.Ids.MemberId;
-import com.bulmerkiln.permissions.Ids.ServiceAccountId;
-import com.bulmerkiln.permissions.Ids.TeamId;
+import com.bulmerkiln.permissions.constant.Action;
+import com.bulmerkiln.permissions.constant.Decision;
+import com.bulmerkiln.permissions.constant.Role;
+import com.bulmerkiln.permissions.constant.Visibility;
+import com.bulmerkiln.permissions.domain.Ids.MemberId;
+import com.bulmerkiln.permissions.domain.Ids.ServiceAccountId;
+import com.bulmerkiln.permissions.domain.Ids.TeamId;
+import com.bulmerkiln.permissions.domain.Principal;
+import com.bulmerkiln.permissions.domain.Resource;
+import com.bulmerkiln.permissions.domain.RoleBinding;
+import com.bulmerkiln.permissions.domain.Scope;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;

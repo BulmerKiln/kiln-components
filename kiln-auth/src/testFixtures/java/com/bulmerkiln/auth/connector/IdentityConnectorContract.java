@@ -8,6 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.connector.service.StaticConnectorRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

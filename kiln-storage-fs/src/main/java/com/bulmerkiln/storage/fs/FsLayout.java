@@ -8,7 +8,7 @@ import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.DigestAlgorithm;
 import com.bulmerkiln.core.digest.InvalidDigestException;
 import com.bulmerkiln.core.organization.OrganizationContext;
-import com.bulmerkiln.storage.UploadId;
+import com.bulmerkiln.storage.domain.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
 import java.io.IOException;
 import java.nio.channels.FileChannel;

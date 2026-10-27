@@ -10,6 +10,8 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.core.digest.Digest;
+import com.bulmerkiln.storage.domain.BlobInfo;
+import com.bulmerkiln.storage.domain.UploadId;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.util.HashSet;

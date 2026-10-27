@@ -7,15 +7,17 @@ package com.bulmerkiln.scan.orchestration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.scan.Limits;
-import com.bulmerkiln.scan.ScanJob;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
-import com.bulmerkiln.scan.ScannerAdapters;
-import com.bulmerkiln.scan.Severity;
-import com.bulmerkiln.scan.ToolRun;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Limits;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ToolRun;
 import com.bulmerkiln.scan.grype.GrypeAdapter;
+import com.bulmerkiln.scan.orchestration.domain.MergedFinding;
+import com.bulmerkiln.scan.orchestration.domain.SeverityCounts;
 import com.bulmerkiln.scan.osv.OsvScannerAdapter;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import com.bulmerkiln.scan.trivy.TrivyAdapter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,7 +72,7 @@ class RecordedScansTest {
         try (InputStream in = getClass().getResourceAsStream(recording)) {
             String output = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             ScanResult result =
-                    ScannerAdapters.run(adapter, JOB, new ToolRun(version, "db", exitCode, output, false, null));
+                    ScannerAdapterRunner.run(adapter, JOB, new ToolRun(version, "db", exitCode, output, false, null));
             assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
             return result;
         }

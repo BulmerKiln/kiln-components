@@ -27,8 +27,8 @@ module. It holds no server code, so the worker carries nothing it doesn't need.
 **Does**
 
 - The protocol: `ScanJob`, `ScanResult`, `Finding`, `Limits` and the `ScanProtocol` codec
-- The adapter contract: `ScannerAdapter`, `ToolRun`, and `ScannerAdapters.run` with its rules
-- Shared helpers every adapter uses: `ToolOutput`, `ToolText`, `ToolVersion`, `Severities`
+- The adapter contract: `ScannerAdapter`, `ToolRun`, and `ScannerAdapterRunner.run` with its rules
+- Shared helpers every adapter uses: `ToolOutputUtils`, `ToolTextUtils`, `ToolVersion`, `SeverityUtils`
 - `ScannerAdapterContract`, the suite every adapter passes
 
 **Does not**
@@ -45,7 +45,7 @@ module. It holds no server code, so the worker carries nothing it doesn't need.
 | SCAN-3 | Results must be treated as untrusted, since the worker opens hostile content and may be compromised. Identifiers match `[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}`; text is printable and bounded (titles 512, versions 255); a package is a Package URL of at most 2,048 characters; at most 50 aliases and 100,000 findings | `ScanProtocolTest` |
 | SCAN-4 | An `INCOMPLETE` result must say why; a `FAILED` result has no findings | `ScanProtocolTest` |
 | SCAN-5 | Scanner IDs must be open values (`[a-z][a-z0-9-]{0,31}`) that travel as plain strings, so a new tool needs no protocol change | `ScanProtocolTest` |
-| SCAN-6 | A tool that didn't complete, or output its adapter can't read, must give `FAILED` with no findings. A run must never pass from partial data, and parsing problems never throw out of `ScannerAdapters.run` | `ScannerAdapterContract` |
+| SCAN-6 | A tool that didn't complete, or output its adapter can't read, must give `FAILED` with no findings. A run must never pass from partial data, and parsing problems never throw out of `ScannerAdapterRunner.run` | `ScannerAdapterContract` |
 | SCAN-7 | A timeout or an archive limit must give `INCOMPLETE`, keeping what was found. It's never counted as a clean pass | `ScannerAdapterContract` |
 | SCAN-8 | More findings than the protocol allows must give `FAILED`, never a truncated pass | `ExampleAdapterContractTest` |
 | SCAN-9 | Tool-reported versions and text must be cleaned of control characters and bounded, so they can't forge log lines or break a result | `ScannerAdapterContract`, `ToolHelpersTest` |
@@ -62,10 +62,10 @@ module. It holds no server code, so the worker carries nothing it doesn't need.
 |---|---|
 | `ScannerAdapter` | One tool: its ID, supported versions, accepted exit codes, command line and report parser |
 | `ToolRun` | What running the tool produced: versions, exit code, output, timeout or limit hit |
-| `ScannerAdapters` | `run(adapter, job, run)`: applies SCAN-6 to SCAN-9 to any adapter |
+| `ScannerAdapterRunner` | `run(adapter, job, run)`: applies SCAN-6 to SCAN-9 to any adapter |
 | `ScanJob`, `ScanResult`, `Finding`, `Limits`, `ScannerId`, `Severity` | The protocol |
 | `ScanProtocol` | Reads and writes messages |
-| `ToolOutput`, `ToolText`, `ToolVersion`, `Severities` | Shared parsing and mapping |
+| `ToolOutputUtils`, `ToolTextUtils`, `ToolVersion`, `SeverityUtils` | Shared parsing and mapping |
 | `ScannerAdapterContract` *(test fixtures)* | The suite every adapter extends |
 
 **Rules enforced here**: no clean pass from a failed, partial or oversized run (SCAN-6 to
@@ -88,7 +88,7 @@ None: adapters are configured by the worker.
 ## Usage
 
 ```java
-ScanResult result = ScannerAdapters.run(adapter, job, toolRun);
+ScanResult result = ScannerAdapterRunner.run(adapter, job, toolRun);
 byte[] message = ScanProtocol.write(result);
 ```
 

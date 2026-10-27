@@ -58,7 +58,7 @@ None: the worker provides the database and the input.
 ## Usage
 
 ```java
-ScanResult result = ScannerAdapters.run(new GrypeAdapter(), job, toolRun);
+ScanResult result = ScannerAdapterRunner.run(new GrypeAdapter(), job, toolRun);
 ```
 
 ## Security

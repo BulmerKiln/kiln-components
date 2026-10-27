@@ -8,8 +8,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.bulmerkiln.auth.connector.ExternalIdentity;
 import com.bulmerkiln.auth.connector.InvalidIdentityException;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2AutoConfiguration;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
+import com.bulmerkiln.auth.oauth2.constant.OAuth2Preset;
+import com.bulmerkiln.auth.oauth2.domain.OAuth2JsonPath;
+import com.bulmerkiln.auth.oauth2.service.OAuth2UserMapper;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.math.BigInteger;
@@ -216,17 +221,18 @@ class OAuth2ConnectorTest {
 
     @Test
     void jsonPathsNameExactlyOneValue() {
-        assertThat(JsonPath.parse("a.b").read(Map.of("a", Map.of("b", 1)))).isEqualTo(1);
-        assertThat(JsonPath.parse("a.b").read(Map.of("a", List.of(Map.of("b", 1)))))
+        assertThat(OAuth2JsonPath.parse("a.b").read(Map.of("a", Map.of("b", 1))))
+                .isEqualTo(1);
+        assertThat(OAuth2JsonPath.parse("a.b").read(Map.of("a", List.of(Map.of("b", 1)))))
                 .isNull();
-        assertThat(JsonPath.parse("a.b").read(Map.of("a", "b"))).isNull();
-        assertThat(JsonPath.parse("a").read(Map.of())).isNull();
+        assertThat(OAuth2JsonPath.parse("a.b").read(Map.of("a", "b"))).isNull();
+        assertThat(OAuth2JsonPath.parse("a").read(Map.of())).isNull();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", ".", "a.", ".a", "a..b", "a[0]", "a.*", "$.a", "a b", "a.b.c.d.e.f.g.h.i"})
     void refusesAmbiguousJsonPaths(String path) {
-        assertThatIllegalArgumentException().isThrownBy(() -> JsonPath.parse(path));
+        assertThatIllegalArgumentException().isThrownBy(() -> OAuth2JsonPath.parse(path));
     }
 
     @Test
@@ -303,8 +309,8 @@ class OAuth2ConnectorTest {
     @FuzzTest
     void jsonPathParsingOnlyFailsWithIllegalArgument(FuzzedDataProvider data) {
         try {
-            JsonPath path = JsonPath.parse(data.consumeRemainingAsString());
-            assertThat(JsonPath.parse(path.toString())).isEqualTo(path);
+            OAuth2JsonPath path = OAuth2JsonPath.parse(data.consumeRemainingAsString());
+            assertThat(OAuth2JsonPath.parse(path.toString())).isEqualTo(path);
         } catch (IllegalArgumentException expected) {
             // The only failure a configured path may cause.
         }

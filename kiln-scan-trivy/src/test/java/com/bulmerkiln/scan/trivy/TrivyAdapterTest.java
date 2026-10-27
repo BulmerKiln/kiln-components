@@ -6,12 +6,12 @@ package com.bulmerkiln.scan.trivy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.ScannerAdapterContract;
-import com.bulmerkiln.scan.ScannerAdapters;
-import com.bulmerkiln.scan.Severity;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,7 +45,7 @@ class TrivyAdapterTest extends ScannerAdapterContract {
 
     @Test
     void readsLodashsVulnerabilitiesWithTheirGhsaAliases() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(sampleOutput()));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput()));
         assertThat(result.findings()).hasSize(5).allSatisfy(f -> {
             assertThat(f.kind()).isEqualTo(Finding.Kind.VULNERABILITY);
             assertThat(f.purl()).isEqualTo("pkg:npm/lodash@4.17.20");
@@ -64,13 +64,15 @@ class TrivyAdapterTest extends ScannerAdapterContract {
     @Test
     void skipsWhatVexMarksNotAffected() {
         String output = sampleOutput().replaceFirst("\"Status\": \"fixed\"", "\"Status\": \"not_affected\"");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings()).hasSize(4);
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
+                .hasSize(4);
     }
 
     @Test
     void refusesOtherReportSchemas() {
         String output = sampleOutput().replace("\"SchemaVersion\": 2", "\"SchemaVersion\": 3");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).status()).isEqualTo(ScanResult.Status.FAILED);
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).status())
+                .isEqualTo(ScanResult.Status.FAILED);
     }
 
     @Test
@@ -90,7 +92,7 @@ class TrivyAdapterTest extends ScannerAdapterContract {
     @ValueSource(strings = {"\"npm/lodash@4.17.20\"", "42"})
     void dropsAPurlThatIsNotOne(String purl) {
         String output = sampleOutput().replace("\"PURL\": \"pkg:npm/lodash@4.17.20\"", "\"PURL\": " + purl);
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .isNotEmpty()
                 .allSatisfy(f -> assertThat(f.purl()).isNull());
     }
@@ -98,7 +100,7 @@ class TrivyAdapterTest extends ScannerAdapterContract {
     @Test
     void readsANullListAsEmpty() {
         String output = sampleOutput().replace("\"VendorIDs\": [", "\"VendorIDs\": null, \"x\": [");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .hasSize(5)
                 .allSatisfy(f -> assertThat(f.aliases()).isEmpty());
     }
@@ -106,11 +108,12 @@ class TrivyAdapterTest extends ScannerAdapterContract {
     @Test
     void refusesAListThatIsNotOne() {
         String output = sampleOutput().replace("\"VendorIDs\": [", "\"VendorIDs\": \"x\", \"y\": [");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).status()).isEqualTo(ScanResult.Status.FAILED);
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).status())
+                .isEqualTo(ScanResult.Status.FAILED);
     }
 
     private Finding find(String output, String id) {
-        return ScannerAdapters.run(adapter(), JOB, run(output)).findings().stream()
+        return ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings().stream()
                 .filter(f -> f.id().equals(id))
                 .findFirst()
                 .orElseThrow();

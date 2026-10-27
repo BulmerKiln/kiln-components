@@ -4,6 +4,8 @@
  */
 package com.bulmerkiln.format;
 
+import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.domain.Refusal;
 import java.util.Optional;
 
 /**

@@ -8,7 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.auth.connector.IdentityConnector;
 import com.bulmerkiln.auth.connector.IdentityConnectorContract;
-import com.bulmerkiln.auth.connector.IdpResponse;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
+import com.bulmerkiln.auth.oauth2.constant.OAuth2Preset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

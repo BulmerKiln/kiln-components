@@ -7,10 +7,12 @@ package com.bulmerkiln.scan.orchestration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanResult;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severity;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.orchestration.domain.MergedFinding;
+import com.bulmerkiln.scan.orchestration.domain.SeverityCounts;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

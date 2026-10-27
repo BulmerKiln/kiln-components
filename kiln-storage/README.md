@@ -52,7 +52,7 @@ shared test suite.
 | STO-10 | `Range` headers must be read as RFC 9110 says: a header that can't be parsed, uses another unit or asks for several ranges is ignored and the whole blob served; a range starting past the end, or any range of an empty blob, is unsatisfiable. Several ranges are never served, which also stops overlapping-range amplification | `ByteRangeTest` (fuzz and property tests) |
 | STO-11 | Upload IDs from URLs must be accepted only in canonical lowercase UUID form, so nothing else reaches a storage key | `BlobTypesTest` |
 | STO-12 | `kiln.storage.type` must select exactly one backend. Startup fails, naming the available types, when it's unset, unknown, or claimed by two backends, or when no backend is on the classpath | `StorageSelectionTest` |
-| STO-13 | Stores must be reachable only through `StorageRouter`, never as a bean of their own. When the assembly provides its own router (kiln-cloud's per-organization buckets), no store is created here | `StorageSelectionTest` |
+| STO-13 | Stores must be reachable only through `StorageRouter`, never as a bean of their own. When the assembly provides its own router, no store is created here | `StorageSelectionTest` |
 | STO-14 | Every backend must pass `BlobStoreContract` | `InMemoryBlobStoreTest`, `FsBlobStoreTest` |
 
 ## Contract *(subsystem only)*
@@ -61,7 +61,7 @@ shared test suite.
 |---|---|
 | `BlobStore` | The storage operations a backend implements |
 | `StorageBackend` | A backend module's entry: its `type` for `kiln.storage.type`, and how to create its store |
-| `StorageRouter` | Finds the store for an organization; kiln-oss uses `SingleStoreRouter`, kiln-cloud its own |
+| `StorageRouter` | Finds the store for an organization; `SingleStoreRouter` by default, or the assembly's own |
 | `BlobRead`, `BlobInfo`, `UploadId`, `ByteRange` | The values the operations take and return |
 | `BlobStoreContract` *(test fixtures)* | The suite every backend extends |
 | `InMemoryBlobStore` *(test fixtures)* | A store for other modules' tests, passing the same suite |

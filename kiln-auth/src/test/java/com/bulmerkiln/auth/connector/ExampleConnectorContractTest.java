@@ -4,6 +4,10 @@
  */
 package com.bulmerkiln.auth.connector;
 
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.connector.util.IdentityUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,13 +48,13 @@ class ExampleConnectorContractTest extends IdentityConnectorContract {
             @Override
             public ExternalIdentity identify(IdpResponse response) {
                 Map<String, ?> c = response.claims();
-                String subject = IdentityRules.subject(c.get("sub") instanceof String s ? s : null);
+                String subject = IdentityUtils.subject(c.get("sub") instanceof String s ? s : null);
                 return new ExternalIdentity(
                         ID,
                         "https://idp.example",
                         subject,
-                        IdentityRules.verifiedEmail(c.get("email"), c.get("email_verified")),
-                        groups ? IdentityRules.groups(c.get("groups")) : Set.of());
+                        IdentityUtils.verifiedEmail(c.get("email"), c.get("email_verified")),
+                        groups ? IdentityUtils.groups(c.get("groups")) : Set.of());
             }
         };
     }

@@ -5,6 +5,7 @@
 package com.bulmerkiln.auth.oidc;
 
 import com.bulmerkiln.auth.connector.ConnectorSource;
+import com.bulmerkiln.auth.oidc.autoconfigure.OidcProperties;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

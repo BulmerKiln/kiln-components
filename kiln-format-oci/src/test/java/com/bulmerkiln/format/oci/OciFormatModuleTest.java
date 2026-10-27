@@ -8,9 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.format.FormatModule;
 import com.bulmerkiln.format.FormatModuleContract;
-import com.bulmerkiln.format.FormatResponse;
-import com.bulmerkiln.format.Reason;
-import com.bulmerkiln.format.Refusal;
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.FormatResponse;
+import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import org.junit.jupiter.api.Test;
 
 class OciFormatModuleTest extends FormatModuleContract {

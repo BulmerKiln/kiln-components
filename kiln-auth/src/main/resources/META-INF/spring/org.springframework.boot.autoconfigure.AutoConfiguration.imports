@@ -1,1 +1,1 @@
-com.bulmerkiln.auth.connector.ConnectorAutoConfiguration
+com.bulmerkiln.auth.autoconfigure.ConnectorAutoConfiguration

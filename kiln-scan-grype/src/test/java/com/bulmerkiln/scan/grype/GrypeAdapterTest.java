@@ -6,12 +6,12 @@ package com.bulmerkiln.scan.grype;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.ScannerAdapterContract;
-import com.bulmerkiln.scan.ScannerAdapters;
-import com.bulmerkiln.scan.Severity;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,7 +45,7 @@ class GrypeAdapterTest extends ScannerAdapterContract {
 
     @Test
     void readsLodashsAdvisoriesWithTheirCveAliases() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(sampleOutput()));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput()));
         assertThat(result.findings()).hasSize(5).allSatisfy(f -> {
             assertThat(f.id()).startsWith("GHSA-");
             assertThat(f.aliases()).singleElement().asString().startsWith("CVE-");
@@ -63,7 +63,7 @@ class GrypeAdapterTest extends ScannerAdapterContract {
     @Test
     void reportsNoFixWhenGrypeHasNone() {
         String output = sampleOutput().replaceFirst("\"state\":\"fixed\"", "\"state\":\"not-fixed\"");
-        long withoutFix = ScannerAdapters.run(adapter(), JOB, run(output)).findings().stream()
+        long withoutFix = ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings().stream()
                 .filter(f -> f.fixedVersion() == null)
                 .count();
         assertThat(withoutFix).isEqualTo(1);
@@ -72,7 +72,8 @@ class GrypeAdapterTest extends ScannerAdapterContract {
     @Test
     void refusesReportsFromAnotherTool() {
         String output = sampleOutput().replaceFirst("\"name\":\"grype\"", "\"name\":\"impostor\"");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).status()).isEqualTo(ScanResult.Status.FAILED);
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).status())
+                .isEqualTo(ScanResult.Status.FAILED);
     }
 
     @Test
@@ -102,7 +103,7 @@ class GrypeAdapterTest extends ScannerAdapterContract {
     @ValueSource(strings = {"\"npm/lodash@4.17.20\"", "42"})
     void dropsAPurlThatIsNotOne(String purl) {
         String output = sampleOutput().replace("\"purl\":\"pkg:npm/lodash@4.17.20\"", "\"purl\":" + purl);
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .isNotEmpty()
                 .allSatisfy(f -> assertThat(f.purl()).isNull());
     }
@@ -111,7 +112,7 @@ class GrypeAdapterTest extends ScannerAdapterContract {
     void readsANullListAsEmpty() {
         String output =
                 sampleOutput().replace("\"relatedVulnerabilities\":[", "\"relatedVulnerabilities\":null,\"x\":[");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).findings())
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings())
                 .hasSize(5)
                 .allSatisfy(f -> assertThat(f.aliases()).isEmpty());
     }
@@ -120,11 +121,12 @@ class GrypeAdapterTest extends ScannerAdapterContract {
     void refusesAListThatIsNotOne() {
         String output =
                 sampleOutput().replace("\"relatedVulnerabilities\":[", "\"relatedVulnerabilities\":\"x\",\"y\":[");
-        assertThat(ScannerAdapters.run(adapter(), JOB, run(output)).status()).isEqualTo(ScanResult.Status.FAILED);
+        assertThat(ScannerAdapterRunner.run(adapter(), JOB, run(output)).status())
+                .isEqualTo(ScanResult.Status.FAILED);
     }
 
     private Finding find(String output, String id) {
-        return ScannerAdapters.run(adapter(), JOB, run(output)).findings().stream()
+        return ScannerAdapterRunner.run(adapter(), JOB, run(output)).findings().stream()
                 .filter(f -> f.id().equals(id))
                 .findFirst()
                 .orElseThrow();

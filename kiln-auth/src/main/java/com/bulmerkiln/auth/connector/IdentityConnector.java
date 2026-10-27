@@ -4,6 +4,10 @@
  */
 package com.bulmerkiln.auth.connector;
 
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.connector.util.IdentityUtils;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +46,7 @@ public interface IdentityConnector {
     }
 
     /**
-     * Turns a verified IdP response into an identity, applying {@link IdentityRules}.
+     * Turns a verified IdP response into an identity, applying {@link IdentityUtils}.
      *
      * @throws InvalidIdentityException if the response doesn't identify anyone usable
      */

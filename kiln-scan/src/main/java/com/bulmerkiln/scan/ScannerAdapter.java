@@ -4,13 +4,18 @@
  */
 package com.bulmerkiln.scan;
 
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import java.nio.file.Path;
 import java.util.List;
 
 /**
  * One scanner tool, as kiln-scanner-service runs it. Running and parsing are separate so parsing
  * can be tested against recorded tool output. Every adapter must pass {@code ScannerAdapterContract},
- * and the worker always calls it through {@link ScannerAdapters#run}, which applies the rules every
+ * and the worker always calls it through {@link ScannerAdapterRunner#run}, which applies the rules every
  * scanner shares.
  */
 public interface ScannerAdapter {

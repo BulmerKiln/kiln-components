@@ -5,8 +5,8 @@
 package com.bulmerkiln.storage.fs;
 
 import com.bulmerkiln.storage.BlobRead;
-import com.bulmerkiln.storage.ByteRange;
 import com.bulmerkiln.storage.RangeNotSatisfiableException;
+import com.bulmerkiln.storage.domain.ByteRange;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;

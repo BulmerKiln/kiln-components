@@ -4,6 +4,9 @@
  */
 package com.bulmerkiln.format;
 
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.FormatResponse;
+
 /**
  * Thrown by format code to refuse a request. The web layer turns it into a response with
  * {@link FormatResponse#refusal}; no cause or stack trace ever reaches the client.

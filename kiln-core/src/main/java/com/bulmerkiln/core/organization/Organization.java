@@ -9,8 +9,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * An organization: the isolation unit. Its slug is the first path segment of artifact addresses
- * in kiln-cloud, so it must be a valid OCI repository-name component and must never collide with
+ * An organization: the isolation unit. Its slug can be the first path segment of artifact
+ * addresses, so it must be a valid OCI repository-name component and must never collide with
  * Kiln's own routes (CORE-4).
  */
 public record Organization(OrganizationId id, String slug) {

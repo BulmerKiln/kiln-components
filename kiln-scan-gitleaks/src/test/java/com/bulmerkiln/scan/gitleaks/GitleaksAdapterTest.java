@@ -6,12 +6,12 @@ package com.bulmerkiln.scan.gitleaks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.scan.Finding;
 import com.bulmerkiln.scan.ScanProtocol;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.ScannerAdapterContract;
-import com.bulmerkiln.scan.ScannerAdapters;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -50,7 +50,7 @@ class GitleaksAdapterTest extends ScannerAdapterContract {
 
     @Test
     void reportsTheRuleNotTheLeak() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(outputWithSecret(PLANTED_SECRET)));
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(outputWithSecret(PLANTED_SECRET)));
         assertThat(result.findings()).singleElement().satisfies(f -> {
             assertThat(f.kind()).isEqualTo(Finding.Kind.SECRET);
             assertThat(f.id()).isEqualTo("aws-access-token");

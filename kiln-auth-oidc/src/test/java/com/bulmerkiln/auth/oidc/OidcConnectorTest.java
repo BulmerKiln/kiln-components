@@ -7,7 +7,9 @@ package com.bulmerkiln.auth.oidc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
-import com.bulmerkiln.auth.connector.SecretRef;
+import com.bulmerkiln.auth.connector.domain.SecretRef;
+import com.bulmerkiln.auth.oidc.autoconfigure.OidcProperties;
+import com.bulmerkiln.auth.oidc.constant.OidcPreset;
 import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,7 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class OidcConnectorTest {
+public class OidcConnectorTest {
 
     @Test
     void appliesPresetDefaults() {
@@ -174,7 +176,7 @@ class OidcConnectorTest {
                 .withMessageContaining("sso");
     }
 
-    static OidcProperties.Connector config(String id, OidcPreset preset, String issuer, List<String> domains) {
+    public static OidcProperties.Connector config(String id, OidcPreset preset, String issuer, List<String> domains) {
         return new OidcProperties.Connector(
                 id, null, preset, URI.create(issuer), "kiln", "env:KILN_OIDC_SECRET", null, null, domains, false);
     }

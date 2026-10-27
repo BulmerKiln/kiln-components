@@ -7,6 +7,11 @@ package com.bulmerkiln.scan;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.ToolVersion;
+import com.bulmerkiln.scan.util.SeverityUtils;
+import com.bulmerkiln.scan.util.ToolOutputUtils;
+import com.bulmerkiln.scan.util.ToolTextUtils;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import org.junit.jupiter.api.Test;
@@ -52,7 +57,7 @@ class ToolHelpersTest {
         "'', UNKNOWN"
     })
     void mapsSeverityNames(String name, Severity severity) {
-        assertThat(Severities.named(name)).isEqualTo(severity);
+        assertThat(SeverityUtils.named(name)).isEqualTo(severity);
     }
 
     @ParameterizedTest
@@ -68,23 +73,23 @@ class ToolHelpersTest {
         "NaN, UNKNOWN"
     })
     void mapsCvssScores(double score, Severity severity) {
-        assertThat(Severities.cvss(score)).isEqualTo(severity);
+        assertThat(SeverityUtils.cvss(score)).isEqualTo(severity);
     }
 
     @Test
     void cleansToolText() {
-        assertThat(ToolText.clean("xz: backdoor\nin liblzma\t ", 512)).isEqualTo("xz: backdoor in liblzma");
-        assertThat(ToolText.clean("\u0000\n", 512)).isNull();
-        assertThat(ToolText.clean(null, 512)).isNull();
-        assertThat(ToolText.clean("a".repeat(600), 512)).hasSize(512);
+        assertThat(ToolTextUtils.clean("xz: backdoor\nin liblzma\t ", 512)).isEqualTo("xz: backdoor in liblzma");
+        assertThat(ToolTextUtils.clean("\u0000\n", 512)).isNull();
+        assertThat(ToolTextUtils.clean(null, 512)).isNull();
+        assertThat(ToolTextUtils.clean("a".repeat(600), 512)).hasSize(512);
     }
 
     @Test
     void readsToolJsonStrictly() {
-        assertThat(ToolOutput.json("{\"a\":1}").get("a").asInt()).isEqualTo(1);
-        assertThatThrownBy(() -> ToolOutput.json("{\"a\":1,\"a\":2}")).isInstanceOf(RuntimeException.class);
-        assertThatThrownBy(() -> ToolOutput.json("")).isInstanceOf(RuntimeException.class);
-        assertThatThrownBy(() -> ToolOutput.json("{} {}")).isInstanceOf(RuntimeException.class);
+        assertThat(ToolOutputUtils.json("{\"a\":1}").get("a").asInt()).isEqualTo(1);
+        assertThatThrownBy(() -> ToolOutputUtils.json("{\"a\":1,\"a\":2}")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> ToolOutputUtils.json("")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> ToolOutputUtils.json("{} {}")).isInstanceOf(RuntimeException.class);
     }
 
     @FuzzTest

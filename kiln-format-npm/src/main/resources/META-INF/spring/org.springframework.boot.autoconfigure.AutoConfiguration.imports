@@ -1,1 +1,2 @@
-com.bulmerkiln.format.npm.NpmFormatAutoConfiguration
+com.bulmerkiln.format.npm.autoconfigure.NpmFormatAutoConfiguration
+com.bulmerkiln.format.npm.autoconfigure.NpmWebAutoConfiguration

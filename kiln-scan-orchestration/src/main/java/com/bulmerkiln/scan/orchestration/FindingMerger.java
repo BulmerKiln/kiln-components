@@ -4,10 +4,11 @@
  */
 package com.bulmerkiln.scan.orchestration;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanResult;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severity;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.orchestration.domain.MergedFinding;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;

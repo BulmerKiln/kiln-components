@@ -10,11 +10,18 @@ dependencies {
     api("org.springframework.boot:spring-boot-autoconfigure")
     // Optional: when the format subsystem is present, permissions answer its ArtifactAccess port.
     compileOnly(project(":kiln-format"))
+    // Optional: when the database module is present, role bindings are kept there.
+    compileOnly(project(":kiln-database"))
+    compileOnly("org.jooq:jooq")
+    compileOnly("jakarta.xml.bind:jakarta.xml.bind-api")
 
     // The authorization-matrix suite every decision engine runs.
     testFixturesApi("org.junit.jupiter:junit-jupiter")
     testFixturesImplementation("org.assertj:assertj-core")
 
     testImplementation(project(":kiln-format"))
+    testImplementation(project(":kiln-database"))
+    testImplementation(testFixtures(project(":kiln-database")))
+    testCompileOnly("jakarta.xml.bind:jakarta.xml.bind-api")
     testImplementation("org.springframework.boot:spring-boot-test")
 }

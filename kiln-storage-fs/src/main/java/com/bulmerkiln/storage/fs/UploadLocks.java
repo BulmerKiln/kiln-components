@@ -4,8 +4,8 @@
  */
 package com.bulmerkiln.storage.fs;
 
-import com.bulmerkiln.storage.UploadId;
 import com.bulmerkiln.storage.UploadNotFoundException;
+import com.bulmerkiln.storage.domain.UploadId;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;

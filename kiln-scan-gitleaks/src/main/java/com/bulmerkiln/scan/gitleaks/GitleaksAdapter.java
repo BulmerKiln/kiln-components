@@ -4,15 +4,15 @@
  */
 package com.bulmerkiln.scan.gitleaks;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanJob;
 import com.bulmerkiln.scan.ScannerAdapter;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severity;
-import com.bulmerkiln.scan.ToolOutput;
-import com.bulmerkiln.scan.ToolRun;
-import com.bulmerkiln.scan.ToolText;
-import com.bulmerkiln.scan.ToolVersion;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.domain.ToolVersion;
+import com.bulmerkiln.scan.util.ToolOutputUtils;
+import com.bulmerkiln.scan.util.ToolTextUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,7 +62,7 @@ public final class GitleaksAdapter implements ScannerAdapter {
 
     @Override
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutput.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.output());
         if (!root.isArray()) {
             throw new IllegalArgumentException("Not a Gitleaks report");
         }
@@ -76,7 +76,7 @@ public final class GitleaksAdapter implements ScannerAdapter {
                     null,
                     Severity.HIGH,
                     null,
-                    ToolText.clean(leak.path("Description").asString(null), 512)));
+                    ToolTextUtils.clean(leak.path("Description").asString(null), 512)));
         }
         return findings;
     }

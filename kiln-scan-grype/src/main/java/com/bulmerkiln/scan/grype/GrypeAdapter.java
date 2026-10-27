@@ -4,15 +4,15 @@
  */
 package com.bulmerkiln.scan.grype;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanJob;
 import com.bulmerkiln.scan.ScannerAdapter;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severities;
-import com.bulmerkiln.scan.ToolOutput;
-import com.bulmerkiln.scan.ToolRun;
-import com.bulmerkiln.scan.ToolText;
-import com.bulmerkiln.scan.ToolVersion;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.domain.ToolVersion;
+import com.bulmerkiln.scan.util.SeverityUtils;
+import com.bulmerkiln.scan.util.ToolOutputUtils;
+import com.bulmerkiln.scan.util.ToolTextUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -51,7 +51,7 @@ public final class GrypeAdapter implements ScannerAdapter {
 
     @Override
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutput.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.output());
         JsonNode matches = root.path("matches");
         if (!root.isObject()
                 || !matches.isArray()
@@ -80,7 +80,7 @@ public final class GrypeAdapter implements ScannerAdapter {
                 id,
                 List.copyOf(aliases),
                 purl(match.path("artifact")),
-                Severities.named(vulnerability.path("severity").asString(null)),
+                SeverityUtils.named(vulnerability.path("severity").asString(null)),
                 fixedVersion(vulnerability.path("fix")),
                 null);
     }
@@ -91,7 +91,7 @@ public final class GrypeAdapter implements ScannerAdapter {
         }
         for (JsonNode version : list(fix.path("versions"))) {
             if (version.isString()) {
-                return ToolText.clean(version.asString(), 255);
+                return ToolTextUtils.clean(version.asString(), 255);
             }
         }
         return null;

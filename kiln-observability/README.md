@@ -10,7 +10,7 @@ Kiln's metrics, with labels bounded so no request can create new time series.
 | Artifact | `com.bulmerkiln:kiln-observability` |
 | Runs in | Kiln's server |
 | Depends on | [`kiln-core`](../kiln-core), Micrometer; optionally [`kiln-format`](../kiln-format), to listen to its push and pull events |
-| Used by | `kiln-oss-service`, `kiln-cloud-service` |
+| Used by | `kiln-oss-service` |
 | Status | M4, Experimental: the artifact and auth metrics |
 
 ## Purpose
@@ -61,7 +61,7 @@ subsystem's listener port, not by calling `KilnMetrics` from feature code.
 
 | Property | Default | Description |
 |---|---|---|
-| `kiln.observability.organization-label` | `false` | Adds the `organization` label to per-organization metrics; kiln-cloud sets it |
+| `kiln.observability.organization-label` | `false` | Adds the `organization` label to per-organization metrics, for installations with several organizations |
 
 `KilnMetrics` is created only when the application has a Micrometer `MeterRegistry`.
 

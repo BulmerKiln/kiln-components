@@ -10,7 +10,7 @@ The generic OAuth2 connector for IdPs without OpenID Connect, with a GitHub pres
 | Artifact | `com.bulmerkiln:kiln-auth-oauth2` |
 | Runs in | Kiln's server |
 | Depends on | [`kiln-auth`](../kiln-auth) |
-| Used by | `kiln-oss-service`, `kiln-cloud-service` |
+| Used by | `kiln-oss-service` |
 | Status | M2, Experimental: settings, the GitHub preset and user mapping; no Spring Security wiring yet |
 
 ## Purpose
@@ -24,7 +24,7 @@ the subject is always an immutable ID, and emails count only when the IdP vouche
 **Does**
 
 - Validate OAuth2 connector settings and apply the GitHub preset (`OAuth2Connector`, `OAuth2Preset`)
-- Read user info through dotted paths (`JsonPath`) and map it to an identity (`OAuth2UserMapper`)
+- Read user info through dotted paths (`OAuth2JsonPath`) and map it to an identity (`OAuth2UserMapper`)
 - Turn GitHub's team list into groups
 
 **Does not**

@@ -10,6 +10,16 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
+import com.bulmerkiln.format.autoconfigure.FormatAutoConfiguration;
+import com.bulmerkiln.format.constant.Access;
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.FormatResponse;
+import com.bulmerkiln.format.dto.RefusalResponse;
+import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.format.service.FormatRegistry;
+import com.bulmerkiln.format.util.FormatJsonUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +46,9 @@ class FormatRulesTest {
             }
 
             @Override
-            public RefusalBody render(Refusal refusal) {
-                return new RefusalBody(
-                        "application/json", FormatJson.write(Map.of("error", refusal.message())), headers);
+            public RefusalResponse render(Refusal refusal) {
+                return new RefusalResponse(
+                        "application/json", FormatJsonUtils.write(Map.of("error", refusal.message())), headers);
             }
         };
     }
@@ -212,7 +222,7 @@ class FormatRulesTest {
         ArtifactEventListener b = listener("b", seen);
         ArtifactRef ref = new ArtifactRef(new ArtifactFormat("npm"), "@acme", "ui", "1.0.0");
 
-        ArtifactEvents events = new ArtifactEvents(List.of(a, b));
+        ArtifactEventService events = new ArtifactEventService(List.of(a, b));
         events.pushed(ref, 10);
         events.pulled(ref, 0);
 
@@ -231,23 +241,23 @@ class FormatRulesTest {
             @Override
             public void pulled(ArtifactRef artifact, long bytes) {}
         };
-        ArtifactEvents events = new ArtifactEvents(List.of(audit));
+        ArtifactEventService events = new ArtifactEventService(List.of(audit));
         assertThatIllegalStateException()
                 .isThrownBy(() -> events.pushed(new ArtifactRef(new ArtifactFormat("oci"), "acme", "app", "1"), 1));
     }
 
     @Test
     void thereAreNoEventsWithoutAListener() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactEvents(List.of()));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactEventService(List.of()));
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(FormatAutoConfiguration.class))
-                .run(context -> assertThatThrownBy(() -> context.getBean(ArtifactEvents.class))
+                .run(context -> assertThatThrownBy(() -> context.getBean(ArtifactEventService.class))
                         .hasRootCauseMessage("ArtifactEvents needs at least one listener"));
         List<String> seen = new ArrayList<>();
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(FormatAutoConfiguration.class))
                 .withBean(ArtifactEventListener.class, () -> listener("metrics", seen))
-                .run(context -> assertThat(context).hasSingleBean(ArtifactEvents.class));
+                .run(context -> assertThat(context).hasSingleBean(ArtifactEventService.class));
     }
 
     private static ArtifactEventListener listener(String name, List<String> seen) {

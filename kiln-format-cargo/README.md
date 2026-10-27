@@ -9,8 +9,8 @@ The Cargo format: Rust crates through the sparse index, on `/cargo/`.
 | Kind | Implementation of [`kiln-format`](../kiln-format) |
 | Artifact | `com.bulmerkiln:kiln-format-cargo` |
 | Runs in | Kiln's server |
-| Depends on | [`kiln-format`](../kiln-format) |
-| Used by | `kiln-oss-service`, `kiln-cloud-service` |
+| Depends on | [`kiln-format`](../kiln-format), [`kiln-web`](../kiln-web), [`kiln-registry`](../kiln-registry), [`kiln-database`](../kiln-database), [`kiln-storage`](../kiln-storage), Jackson |
+| Used by | `kiln-oss-service` |
 | Status | 1.x, Experimental: names, index paths, the publish body and errors; no endpoints yet |
 
 ## Purpose
@@ -23,15 +23,17 @@ index files, and reads the publish body without trusting its length fields.
 
 **Does**
 
-- Validate crate names and their uniqueness form (`CrateName`)
+- Validate crate names and their uniqueness form (`CargoCrateName`)
 - Compute sparse index paths
-- Parse the publish body (`PublishBody`)
+- Parse the publish body (`CargoPublishRequest`)
 - Render refusals in Cargo's error body
+- Serve the `/cargo/` sparse registry while the format is enabled: `config.json`, index files,
+  publish, download, yank and unyank
 
 **Does not**
 
-- Serve HTTP yet: the index, `config.json`, publish, download and yank come next
-- Store crates
+- Decide access or policy; it asks the `ArtifactAccess` and `ArtifactPolicy` ports first
+- Keep its own tables; crates, versions and files live in `kiln-registry`
 
 ## Requirements
 
@@ -45,6 +47,13 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-CARGO-4 | Index paths must follow the sparse index: `1/a`, `2/ab`, `3/a/abc`, `ab/cd/abcd` for longer names, lowercase | `CargoTest` |
 | FMT-CARGO-5 | The publish body's two 32-bit little-endian lengths must be read as unsigned, checked against the limits (`413`) before allocating anything, and against the bytes actually present (`400`); nothing may follow the crate | `CargoTest` (fuzz target) |
 | FMT-CARGO-6 | Errors must be Cargo's `{"errors":[{"detail":"<message>"}]}` | `CargoFormatModuleTest` |
+| FMT-CARGO-7 | Routes below `/cargo/` must be the sparse index (`index/config.json`, `index/<path>` at exactly the path the name defines) and the API (`api/v1/crates/new`, `…/<name>/<version>/download`, `yank`, `unyank`); route parsing never throws anything but a refusal | `CargoRouteTest` (fuzz target) |
+| FMT-CARGO-8 | Access must be decided before anything about the crate is looked up. A crate belongs to the namespace owning the longest prefix of its canonical name, and publishing needs one | `CargoAccessServiceTest` |
+| FMT-CARGO-9 | A version's index line must be built from the publish: `req` from `version_req`, a renamed dependency with its real name in `package`, `cksum` the SHA-256 of the `.crate`, `v` 2 | `CargoRegistryTest` |
+| FMT-CARGO-10 | A version must never change, and a name can't be published under another spelling of a crate that exists; the metadata must name a valid crate and SemVer version; past `max-crate-size` is `413` | `CargoRegistryTest` |
+| FMT-CARGO-11 | `config.json` must name `dl` and `api` from the external URL and require auth, and be readable by anyone since Cargo asks before it sends credentials. Index files carry `ETag` and `Last-Modified`, and `If-None-Match` is `304`. Unsupported commands (`owner`, `search`) get guidance in Cargo's error format | `CargoRegistryTest`, `CargoAccessServiceTest` |
+| FMT-CARGO-12 | A yanked version must stay in the index, marked, and downloadable, so lockfiles keep working; a blocked one leaves the index and is `403`; a tombstoned one can't be published | `CargoRegistryTest` |
+| FMT-CARGO-13 | The `/cargo/` routes must exist only in a web application while `kiln.format.cargo.enabled` isn't `false`. Publishes and downloads reach the event listeners | `CargoWebAutoConfigurationTest`, `CargoRegistryTest` |
 
 ## How it plugs in *(implementation only)*
 
@@ -55,14 +64,15 @@ Registers `CargoFormatModule` (format `cargo`, route `/cargo/`), switched by
 
 | Property | Default | Description |
 |---|---|---|
-| `kiln.format.cargo.enabled` | `true` | Switches the format off |
+| `kiln.format.cargo.enabled` | `true` | Switches the format off: its `/cargo/` routes don't exist |
+| `kiln.format.cargo.max-crate-size` | 10 MiB | The largest `.crate` in bytes; larger is `413` |
 
 ## Usage
 
 ```java
-CrateName name = new CrateName("serde_json");
+CargoCrateName name = new CargoCrateName("serde_json");
 String indexFile = name.indexPath();          // se/rd/serde_json
-PublishBody body = PublishBody.parse(request, PublishBody.DEFAULT_MAX_METADATA, maxCrateSize);
+CargoPublishRequest body = CargoPublishRequest.parse(request, CargoPublishRequest.DEFAULT_MAX_METADATA, maxCrateSize);
 ```
 
 ## Security
@@ -93,8 +103,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: FMT-CARGO-1 to FMT-CARGO-6.
+Implemented: FMT-CARGO-1 to FMT-CARGO-13.
 
-Planned (1.x): `config.json` with `auth-required`, index files with `ETag` and `Last-Modified`,
-publish with checksum verification, downloads, yank as a soft block that keeps lockfiles working,
-and authentication through `kiln-cli` as a Cargo credential provider.
+Planned (1.x): authentication through `kiln-cli` as a Cargo credential provider, and Cargo
+itself as the acceptance test.

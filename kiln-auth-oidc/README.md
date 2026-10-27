@@ -10,7 +10,7 @@ The generic OpenID Connect connector, with presets for common IdPs.
 | Artifact | `com.bulmerkiln:kiln-auth-oidc` |
 | Runs in | Kiln's server |
 | Depends on | [`kiln-auth`](../kiln-auth) |
-| Used by | `kiln-oss-service`, `kiln-cloud-service` |
+| Used by | `kiln-oss-service` |
 | Status | M1, Experimental: settings, presets and claim mapping; no Spring Security wiring yet |
 
 ## Purpose

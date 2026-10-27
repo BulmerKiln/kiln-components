@@ -4,13 +4,16 @@
  */
 package com.bulmerkiln.auth.oidc;
 
-import com.bulmerkiln.auth.connector.ConnectorId;
-import com.bulmerkiln.auth.connector.Domains;
-import com.bulmerkiln.auth.connector.Endpoints;
-import com.bulmerkiln.auth.connector.ExternalIdentity;
 import com.bulmerkiln.auth.connector.IdentityConnector;
-import com.bulmerkiln.auth.connector.IdpResponse;
-import com.bulmerkiln.auth.connector.SecretRef;
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.connector.domain.SecretRef;
+import com.bulmerkiln.auth.connector.util.DomainUtils;
+import com.bulmerkiln.auth.connector.util.EndpointUtils;
+import com.bulmerkiln.auth.oidc.autoconfigure.OidcProperties;
+import com.bulmerkiln.auth.oidc.constant.OidcPreset;
+import com.bulmerkiln.auth.oidc.service.OidcClaimsMapper;
 import java.net.URI;
 import java.util.List;
 import java.util.Objects;
@@ -46,7 +49,7 @@ public record OidcConnector(
     public static OidcConnector from(OidcProperties.Connector config) {
         ConnectorId id = new ConnectorId(required(config.id(), "id", "?"));
         OidcPreset preset = config.preset() == null ? OidcPreset.GENERIC : config.preset();
-        URI issuer = Endpoints.requireSecure(
+        URI issuer = EndpointUtils.requireSecure(
                 required(config.issuer(), "issuer", id), config.allowInsecureIssuer(), "Connector " + id + " issuer");
         if (issuer.getRawQuery() != null) {
             throw new IllegalArgumentException("Connector " + id + " issuer must not have a query");
@@ -60,7 +63,7 @@ public record OidcConnector(
                 SecretRef.parse(required(config.clientSecret(), "client-secret", id)),
                 config.scopes() == null ? preset.scopes() : config.scopes(),
                 config.groupsClaim() == null ? preset.groupsClaim() : config.groupsClaim(),
-                Domains.normalize(config.domains() == null ? List.of() : config.domains()));
+                DomainUtils.normalize(config.domains() == null ? List.of() : config.domains()));
     }
 
     @Override

@@ -4,9 +4,9 @@
  */
 package com.bulmerkiln.format.maven;
 
-import com.bulmerkiln.format.Reason;
-import com.bulmerkiln.format.Refusal;
 import com.bulmerkiln.format.RefusedException;
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.Refusal;
 
 /** A path that isn't a valid Maven repository path; answered with 400, the path never echoed. */
 public class InvalidMavenPathException extends RefusedException {

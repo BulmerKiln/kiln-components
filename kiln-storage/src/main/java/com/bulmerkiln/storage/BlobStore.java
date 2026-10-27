@@ -5,6 +5,9 @@
 package com.bulmerkiln.storage;
 
 import com.bulmerkiln.core.digest.Digest;
+import com.bulmerkiln.storage.domain.BlobInfo;
+import com.bulmerkiln.storage.domain.ByteRange;
+import com.bulmerkiln.storage.domain.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
 import java.io.IOException;
 import java.io.InputStream;

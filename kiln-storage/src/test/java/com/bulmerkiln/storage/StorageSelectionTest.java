@@ -9,6 +9,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import com.bulmerkiln.core.organization.Organization;
 import com.bulmerkiln.core.organization.OrganizationId;
+import com.bulmerkiln.storage.autoconfigure.StorageAutoConfiguration;
+import com.bulmerkiln.storage.util.StorageBackendUtils;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -30,38 +32,39 @@ class StorageSelectionTest {
 
     @Test
     void selectsTheConfiguredBackend() throws Exception {
-        assertThat(StorageBackends.select("memory", List.of(memoryBackend, otherBackend)))
+        assertThat(StorageBackendUtils.select("memory", List.of(memoryBackend, otherBackend)))
                 .isSameAs(memoryBackend);
-        assertThat(StorageBackends.select("other", List.of(memoryBackend, otherBackend)))
+        assertThat(StorageBackendUtils.select("other", List.of(memoryBackend, otherBackend)))
                 .isSameAs(otherBackend);
     }
 
     @Test
     void requiresAType() {
         assertThatIllegalStateException()
-                .isThrownBy(() -> StorageBackends.select(null, List.of(memoryBackend, otherBackend)))
+                .isThrownBy(() -> StorageBackendUtils.select(null, List.of(memoryBackend, otherBackend)))
                 .withMessage("kiln.storage.type must be set to one of [memory, other]");
-        assertThatIllegalStateException().isThrownBy(() -> StorageBackends.select(" ", List.of(memoryBackend)));
+        assertThatIllegalStateException().isThrownBy(() -> StorageBackendUtils.select(" ", List.of(memoryBackend)));
     }
 
     @Test
     void namesTheAvailableBackendsForAnUnknownType() {
         assertThatIllegalStateException()
-                .isThrownBy(() -> StorageBackends.select("s3", List.of(memoryBackend)))
+                .isThrownBy(() -> StorageBackendUtils.select("s3", List.of(memoryBackend)))
                 .withMessage("kiln.storage.type is s3, but the available backends are [memory]");
     }
 
     @Test
     void explainsAMissingBackend() {
         assertThatIllegalStateException()
-                .isThrownBy(() -> StorageBackends.select("fs", List.of()))
+                .isThrownBy(() -> StorageBackendUtils.select("fs", List.of()))
                 .withMessageContaining("kiln-storage-fs");
     }
 
     @Test
     void refusesTwoBackendsWithOneType() {
         assertThatIllegalStateException()
-                .isThrownBy(() -> StorageBackends.select("memory", List.of(memoryBackend, backend("memory", memory))))
+                .isThrownBy(
+                        () -> StorageBackendUtils.select("memory", List.of(memoryBackend, backend("memory", memory))))
                 .withMessageContaining("memory");
     }
 

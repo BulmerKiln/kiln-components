@@ -4,15 +4,15 @@
  */
 package com.bulmerkiln.scan.trivy;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanJob;
 import com.bulmerkiln.scan.ScannerAdapter;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severities;
-import com.bulmerkiln.scan.ToolOutput;
-import com.bulmerkiln.scan.ToolRun;
-import com.bulmerkiln.scan.ToolText;
-import com.bulmerkiln.scan.ToolVersion;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.domain.ToolVersion;
+import com.bulmerkiln.scan.util.SeverityUtils;
+import com.bulmerkiln.scan.util.ToolOutputUtils;
+import com.bulmerkiln.scan.util.ToolTextUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -61,7 +61,7 @@ public final class TrivyAdapter implements ScannerAdapter {
 
     @Override
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutput.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.output());
         if (!root.isObject() || root.path("SchemaVersion").asInt(0) != 2) {
             throw new IllegalArgumentException("Not a Trivy schema 2 report");
         }
@@ -91,9 +91,9 @@ public final class TrivyAdapter implements ScannerAdapter {
                 id,
                 List.copyOf(aliases),
                 purl(vulnerability),
-                Severities.named(vulnerability.path("Severity").asString(null)),
-                ToolText.clean(vulnerability.path("FixedVersion").asString(null), 255),
-                ToolText.clean(vulnerability.path("Title").asString(null), 512));
+                SeverityUtils.named(vulnerability.path("Severity").asString(null)),
+                ToolTextUtils.clean(vulnerability.path("FixedVersion").asString(null), 255),
+                ToolTextUtils.clean(vulnerability.path("Title").asString(null), 512));
     }
 
     private static @Nullable String purl(JsonNode vulnerability) {

@@ -22,7 +22,7 @@ released together, at one version, through `kiln-dependencies`.
 | `kiln-storage` | The `BlobStore` contract, `StorageRouter`, backend selection with `kiln.storage.type`, and the contract test suite (test fixtures) every backend runs |
 | `kiln-storage-fs` | The `fs` backend: the filesystem `BlobStore`, configured with `kiln.storage.fs.root` |
 | `kiln-storage-s3` | The `s3` backend: key layout, settings and the presigned-redirect policy; the `BlobStore` follows |
-| `kiln-scan` | The scan subsystem's contract, shared by the server and `kiln-scanner-service`: the versioned job and result schema, open scanner IDs, the `ScannerAdapter` contract with its rules (`ScannerAdapters.run`), and the contract suite (test fixtures) every adapter runs |
+| `kiln-scan` | The scan subsystem's contract, shared by the server and `kiln-scanner-service`: the versioned job and result schema, open scanner IDs, the `ScannerAdapter` contract with its rules (`ScannerAdapterRunner.run`), and the contract suite (test fixtures) every adapter runs |
 | `kiln-scan-trivy`, `kiln-scan-grype`, `kiln-scan-osv-scanner`, `kiln-scan-gitleaks` | One scanner adapter per tool, tested against real recorded output; used by `kiln-scanner-service` |
 | `kiln-scan-orchestration` | Server-side scanning: deduplicating findings across scanners, and severity counts |
 | `kiln-observability` | Kiln's metrics, with bounded labels; counts every format's pushes and pulls as an `ArtifactEventListener` |
@@ -40,8 +40,31 @@ Error Prone and NullAway, and every test. Fuzz tests run their regression inputs
 tests. To fuzz one for real:
 
 ```bash
-JAZZER_FUZZ=1 ./gradlew :kiln-format-oci:test --tests '*ManifestParserTest.parseOnlyFailsWithRegistryErrors'
+JAZZER_FUZZ=1 ./gradlew :kiln-format-oci:test --tests '*OciManifestParserTest.parseOnlyFailsWithRegistryErrors'
 ```
+
+## Package layout
+
+Each module groups its classes by layer, under its own package (`com.bulmerkiln.format.oci`
+below), and names each class for what it is. A module has only the layers it needs; small ones
+stay flat.
+
+| Package | Holds | Named |
+|---|---|---|
+| the module's own | Its contracts, and the implementation that makes it what it is (`OciFormatModule`, `FsBlobStore`), and its exceptions | `*FormatModule`, `*Exception`, … |
+| `autoconfigure` | Spring wiring | `*AutoConfiguration`, `*Properties` |
+| `constant` | Enums and fixed values | `OciErrorCode`, `OciMediaTypes` |
+| `domain` | The format's own types and the rules that validate them | `OciManifest`, `OciManifestParser` |
+| `dto` | What crosses into and out of the operations: request bodies and results | `*Request`, `*Response` |
+| `entity` | Rows as the store reads them | `*Entity` |
+| `service` | Operations, and the access checks they make | `*Service` |
+| `store` | Database access, inside the caller's transaction | `*Store` |
+| `util` | Static helpers | `*Utils` |
+| `web`, `web.handler` | The controller and route dispatch; a handler per kind of route | `*Controller`, `*Dispatcher`, `*Handler` |
+
+Calls go one way: `web` uses `service`, which uses `store`. A class with no layer of its own,
+such as a format's route parser, lives in `domain`. Tests sit in the package of the class they
+test; tests of the whole module stay in its own package.
 
 ## Using a component
 
