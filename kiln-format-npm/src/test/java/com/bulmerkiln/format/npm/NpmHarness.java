@@ -17,9 +17,11 @@ import com.bulmerkiln.format.npm.service.NpmAccessService;
 import com.bulmerkiln.format.npm.service.NpmPublishService;
 import com.bulmerkiln.format.npm.service.NpmReadService;
 import com.bulmerkiln.format.npm.service.NpmTagService;
+import com.bulmerkiln.format.npm.service.NpmUnpublishService;
 import com.bulmerkiln.format.npm.web.NpmController;
 import com.bulmerkiln.format.npm.web.NpmRouteDispatcher;
 import com.bulmerkiln.format.npm.web.handler.NpmPackageHandler;
+import com.bulmerkiln.format.npm.web.handler.NpmUnpublishHandler;
 import com.bulmerkiln.format.service.ArtifactEventService;
 import com.bulmerkiln.permissions.constant.Role;
 import com.bulmerkiln.permissions.constant.Visibility;
@@ -61,7 +63,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 /**
  * The npm routes wired to real services: PostgreSQL with every migration, a filesystem blob store,
  * stored role bindings, and a caller the test chooses. Namespace {@code acme} (private) owns
- * {@code @acme}; {@code pub} (public) owns {@code @pub}.
+ * {@code @acme} and unscoped names starting {@code acme-}; {@code pub} (public) owns {@code @pub}.
  */
 public final class NpmHarness implements AutoCloseable {
 
@@ -82,8 +84,8 @@ public final class NpmHarness implements AutoCloseable {
         RoleBindingStore bindings = new RoleBindingStore(database);
         OrganizationContext.run(acme, () -> {
             database.run(tx -> {
-                NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "@acme"));
-                NamespaceStore.create(tx, namespace("pub", Visibility.PUBLIC, "@pub"));
+                NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "@acme", List.of("acme-")));
+                NamespaceStore.create(tx, namespace("pub", Visibility.PUBLIC, "@pub", List.of()));
             });
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("acme")));
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("pub")));
@@ -113,7 +115,8 @@ public final class NpmHarness implements AutoCloseable {
                         new NpmPackageHandler(
                                 new NpmReadService(database, access, storage, recorded),
                                 new NpmPublishService(database, access, storage, recorded, 1024),
-                                new NpmTagService(database, access)))))
+                                new NpmTagService(database, access)),
+                        new NpmUnpublishHandler(new NpmUnpublishService(database, access)))))
                 .build();
     }
 
@@ -186,8 +189,8 @@ public final class NpmHarness implements AutoCloseable {
         }
     }
 
-    private static Namespace namespace(String name, Visibility visibility, String scope) {
-        return new Namespace(UUID.randomUUID(), name, visibility, null, scope, List.of(), List.of());
+    private static Namespace namespace(String name, Visibility visibility, String scope, List<String> prefixes) {
+        return new Namespace(UUID.randomUUID(), name, visibility, null, scope, prefixes, List.of(), List.of());
     }
 
     private static RoleBinding.Subject member(Principal principal) {

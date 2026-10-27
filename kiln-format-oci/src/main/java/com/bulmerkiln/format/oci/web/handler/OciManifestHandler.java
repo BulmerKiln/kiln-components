@@ -69,7 +69,7 @@ public final class OciManifestHandler {
         // One byte past the limit, so the parser can tell an oversized manifest from one at the limit.
         byte[] content = request.getInputStream().readNBytes(maxManifestSize + 1);
         OciManifestPushResponse pushed = manifests.push(oci, reference, request.getContentType(), content);
-        response.setHeader("Location", oci.url("manifests/" + pushed.digest()));
+        response.setHeader("Location", oci.path("manifests/" + pushed.digest()));
         response.setHeader(OciResponseUtils.DIGEST, pushed.digest().toString());
         Digest subject = pushed.subject();
         if (subject != null) {

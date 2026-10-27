@@ -10,7 +10,7 @@ dependencies {
     api(project(":kiln-registry"))
     api(project(":kiln-database"))
     api(project(":kiln-storage"))
-    implementation("org.jooq:jooq")
+    api("org.jooq:jooq")
 
     // Public auto-configuration classes carry its annotations, so it is part of this module's API.
     api("org.springframework.boot:spring-boot-autoconfigure")

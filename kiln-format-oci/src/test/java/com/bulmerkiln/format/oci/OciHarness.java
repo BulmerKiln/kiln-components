@@ -204,7 +204,7 @@ public final class OciHarness implements AutoCloseable {
     }
 
     private static Namespace namespace(String name, Visibility visibility, String prefix) {
-        return new Namespace(UUID.randomUUID(), name, visibility, prefix, null, List.of(), List.of());
+        return new Namespace(UUID.randomUUID(), name, visibility, prefix, null, List.of(), List.of(), List.of());
     }
 
     private static RoleBinding.Subject subject(Principal principal) {

@@ -21,6 +21,7 @@ public record Namespace(
         Visibility visibility,
         @Nullable String ociPrefix,
         @Nullable String npmScope,
+        List<String> npmPrefixes,
         List<String> mavenGroupPrefixes,
         List<String> cargoPrefixes) {
 
@@ -30,6 +31,7 @@ public record Namespace(
         if (name.isBlank()) {
             throw new IllegalArgumentException("A namespace has a name");
         }
+        npmPrefixes = List.copyOf(npmPrefixes);
         mavenGroupPrefixes = List.copyOf(mavenGroupPrefixes);
         cargoPrefixes = List.copyOf(cargoPrefixes);
     }

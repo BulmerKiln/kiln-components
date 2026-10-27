@@ -9,6 +9,7 @@ import com.bulmerkiln.format.npm.domain.NpmRoute;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
 import com.bulmerkiln.format.npm.web.handler.NpmMetaHandler;
 import com.bulmerkiln.format.npm.web.handler.NpmPackageHandler;
+import com.bulmerkiln.format.npm.web.handler.NpmUnpublishHandler;
 import com.bulmerkiln.web.FormatRequests;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,10 +21,12 @@ public final class NpmRouteDispatcher {
     private final FormatRequests requests;
     private final NpmFormatModule format = new NpmFormatModule();
     private final NpmPackageHandler packages;
+    private final NpmUnpublishHandler unpublish;
 
-    public NpmRouteDispatcher(FormatRequests requests, NpmPackageHandler packages) {
+    public NpmRouteDispatcher(FormatRequests requests, NpmPackageHandler packages, NpmUnpublishHandler unpublish) {
         this.requests = requests;
         this.packages = packages;
+        this.unpublish = unpublish;
     }
 
     void handle(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -43,6 +46,10 @@ public final class NpmRouteDispatcher {
                     packages.distTags(request, response, new NpmPackageRequest(t.name(), registry));
                 case NpmRoute.DistTag t ->
                     packages.distTag(request, response, new NpmPackageRequest(t.name(), registry), t.tag());
+                case NpmRoute.Revision r ->
+                    unpublish.revision(request, response, new NpmPackageRequest(r.name(), registry));
+                case NpmRoute.TarballRevision t ->
+                    unpublish.tarball(request, response, new NpmPackageRequest(t.name(), registry), t.file());
                 case NpmRoute.Unsupported u -> NpmMetaHandler.unsupported(response, u.endpoint());
             }
         });

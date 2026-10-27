@@ -23,8 +23,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Who may do what to a package, decided before anything about it is looked up (FMT-NPM-9). A
- * scoped package belongs to the namespace that owns its scope; an unscoped one to none, so it can
- * be read where policy allows but never published.
+ * scoped package belongs to the namespace that owns its scope; an unscoped one to the namespace
+ * claiming the longest prefix of its name, or to none, so it can be read where policy allows but
+ * not published.
  */
 public final class NpmAccessService {
 
@@ -40,8 +41,9 @@ public final class NpmAccessService {
 
     Optional<Namespace> require(NpmPackageRequest request, Operation operation) {
         String scope = request.name().scope();
-        Optional<Namespace> namespace =
-                scope == null ? Optional.empty() : database.transaction(tx -> NamespaceStore.forNpm(tx, "@" + scope));
+        Optional<Namespace> namespace = database.transaction(tx -> scope == null
+                ? NamespaceStore.forNpmName(tx, request.name().toString())
+                : NamespaceStore.forNpm(tx, "@" + scope));
         Optional<Refusal> refusal = access.check(artifact(request, namespace, null), operation)
                 .toRefusal(
                         "You may not " + operation.name().toLowerCase(Locale.ROOT) + " " + request.name(),
@@ -57,7 +59,8 @@ public final class NpmAccessService {
         return require(request, operation)
                 .orElseThrow(() -> new NpmException(
                         Reason.DENIED,
-                        "No namespace owns " + request.name() + "; publish under a scope an admin has created"));
+                        "No namespace owns " + request.name()
+                                + "; publish under a scope or name prefix an admin has created"));
     }
 
     /** Whether policy refuses reading one version, or the whole package when it's null. */

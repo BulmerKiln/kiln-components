@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.service.SchemaLinter;
+import com.bulmerkiln.format.npm.domain.NpmPackumentBuilder;
 import com.bulmerkiln.registry.store.BlockStore;
 import java.nio.file.Path;
 import org.junit.jupiter.api.AfterAll;
@@ -55,6 +56,7 @@ class NpmRegistryTest {
                 .perform(NpmHarness.at(HttpMethod.GET, "/npm/@acme%2futil"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("@acme/util"))
+                .andExpect(jsonPath("$._rev").isString())
                 .andExpect(jsonPath("$['dist-tags'].latest").value("1.1.0"))
                 .andExpect(jsonPath("$.versions['1.1.0'].description").value("A package"))
                 .andExpect(jsonPath("$.versions['1.0.0'].dist.tarball")
@@ -166,6 +168,17 @@ class NpmRegistryTest {
         assertThat(statusOf(unowned)).isEqualTo(403);
     }
 
+    /** FMT-NPM-9: an unscoped name belongs to the namespace claiming its longest prefix. */
+    @Test
+    void publishesUnscopedNamesANamespaceClaims() throws Exception {
+        assertThat(statusOf(npm.publish("acme-ui", NpmHarness.publishBody("acme-ui", "1.0.0", "ui"))))
+                .isEqualTo(201);
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.GET, "/npm/acme-ui"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$['dist-tags'].latest").value("1.0.0"));
+    }
+
     /** FMT-NPM-13: deprecating changes only the deprecation message. */
     @Test
     void deprecatesWithoutChangingAnythingElse() throws Exception {
@@ -194,7 +207,7 @@ class NpmRegistryTest {
                 .andExpect(jsonPath("$.deprecated").doesNotExist());
     }
 
-    /** FMT-NPM-14: tags point at existing versions; latest moves but stays. */
+    /** FMT-NPM-14: tags point at existing versions, and can be removed. */
     @Test
     void managesDistTags() throws Exception {
         npm.mvc()
@@ -211,9 +224,13 @@ class NpmRegistryTest {
         npm.mvc()
                 .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/-/package/@acme%2futil/dist-tags/next"))
                 .andExpect(status().isNotFound());
+        npm.publish("@acme%2funtagged", NpmHarness.publishBody("@acme/untagged", "1.0.0", "x"));
         npm.mvc()
-                .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/-/package/@acme%2futil/dist-tags/latest"))
-                .andExpect(status().isBadRequest());
+                .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/-/package/@acme%2funtagged/dist-tags/latest"))
+                .andExpect(status().isOk());
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.GET, "/npm/-/package/@acme%2funtagged/dist-tags"))
+                .andExpect(content().json("{}"));
         npm.mvc()
                 .perform(NpmHarness.at(HttpMethod.PUT, "/npm/-/package/@acme%2futil/dist-tags/next")
                         .contentType("application/json")
@@ -224,6 +241,55 @@ class NpmRegistryTest {
                         .contentType("application/json")
                         .content("\"1.0.0\""))
                 .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * FMT-NPM-17: a member who may delete unpublishes one version, then the package. Both numbers are
+     * tombstoned, so neither comes back; a writer may not unpublish.
+     */
+    @Test
+    void unpublishesVersionsAndPackages() throws Exception {
+        npm.publish("@acme%2fgone", NpmHarness.publishBody("@acme/gone", "1.0.0", "one"));
+        npm.publish("@acme%2fgone", NpmHarness.publishBody("@acme/gone", "1.1.0", "two"));
+        String without = """
+                {"_id":"@acme/gone","name":"@acme/gone","dist-tags":{"latest":"1.0.0"},
+                 "versions":{"1.0.0":{"name":"@acme/gone","version":"1.0.0"}}}
+                """;
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.PUT, "/npm/@acme%2fgone/-rev/2-a")
+                        .contentType("application/json")
+                        .content(without))
+                .andExpect(status().isForbidden());
+
+        npm.callAs(NpmHarness.ADMIN);
+        String rev = revision("@acme%2fgone");
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.PUT, "/npm/@acme%2fgone/-rev/" + rev)
+                        .contentType("application/json")
+                        .content(without))
+                .andExpect(status().isOk());
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.GET, "/npm/@acme%2fgone"))
+                .andExpect(jsonPath("$.versions['1.0.0']").exists())
+                .andExpect(jsonPath("$.versions['1.1.0']").doesNotExist())
+                .andExpect(jsonPath("$['dist-tags'].latest").value("1.0.0"));
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/@acme%2fgone/-/gone-1.1.0.tgz/-rev/" + rev))
+                .andExpect(status().isOk());
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/@acme%2fgone/-/gone-1.0.0.tgz/-rev/" + rev))
+                .andExpect(status().isConflict());
+        assertThat(statusOf(npm.publish("@acme%2fgone", NpmHarness.publishBody("@acme/gone", "1.1.0", "again"))))
+                .isEqualTo(409);
+
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/@acme%2fgone/-rev/" + revision("@acme%2fgone")))
+                .andExpect(status().isOk());
+        npm.mvc().perform(NpmHarness.at(HttpMethod.GET, "/npm/@acme%2fgone")).andExpect(status().isNotFound());
+        assertThat(statusOf(npm.publish("@acme%2fgone", NpmHarness.publishBody("@acme/gone", "1.0.0", "again"))))
+                .isEqualTo(409);
+        assertThat(statusOf(npm.publish("@acme%2fgone", NpmHarness.publishBody("@acme/gone", "2.0.0", "new"))))
+                .isEqualTo(201);
     }
 
     /** REG-4 through npm: blocked versions leave the packument and are 403; deleted ones stay gone. */
@@ -263,6 +329,15 @@ class NpmRegistryTest {
     @Test
     void theSchemaIsOrganizationSafe() {
         assertThat(npm.database().instanceTransaction(SchemaLinter::problems)).isEmpty();
+    }
+
+    private static String revision(String name) throws Exception {
+        String packument = npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.GET, "/npm/" + name))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return NpmPackumentBuilder.JSON.readTree(packument).get("_rev").asString();
     }
 
     private static int statusOf(MvcResult result) {

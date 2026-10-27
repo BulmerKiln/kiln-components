@@ -40,13 +40,14 @@ garbage-collect, and to show in the web app, and one place that decides immutabi
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| REG-1 | A namespace must own an OCI prefix (`acme` owns `acme/*`), an npm scope, Maven groupId prefixes (`org.acme` owns `org.acme.*`) and Cargo crate-name prefixes. The longest matching prefix wins; a name no namespace owns has none. Namespaces are per organization, so two organizations can own the same names | `RegistryTest` |
+| REG-1 | A namespace must own an OCI prefix (`acme` owns `acme/*`), an npm scope and unscoped npm name prefixes (`acme-` owns `acme-ui`), Maven groupId prefixes (`org.acme` owns `org.acme.*`) and Cargo crate-name prefixes. The longest matching prefix wins; a name no namespace owns has none. Namespaces are per organization, so two organizations can own the same names | `RegistryTest` |
 | REG-2 | Recording a blob the organization already holds must be harmless, so concurrent pushes of the same content both succeed | `RegistryTest` |
 | REG-3 | A version that exists, or a file of a version under a name that exists with other content, must be refused as a conflict. The same file again is a no-op, since clients retry. Two first publishes of a package must share one package. A format that publishes a version file by file ensures the version instead, and then adds immutable files to it | `RegistryTest` |
 | REG-4 | A blocked artifact must be refused with `BLOCKED` (403, never 404) on read and write, for one version or every version; a tombstoned version must be refused as a conflict on write, forever. Formats check both inside the transaction that writes | `RegistryTest` |
 | REG-5 | Visibility must come from the namespace; the organization itself and an unknown namespace are private | `RegistryTest` |
 | REG-6 | Every registry table must pass the schema linter, and every query filters on the organization as well as relying on row-level security | `RegistryTest` |
 | REG-7 | The registry must answer `ArtifactPolicy` and `VisibilityLookup` unless the assembly provides its own | `RegistryAutoConfigurationTest` |
+| REG-8 | Deleting a version must remove it and its files, and a package can be removed once it has no versions. Callers tombstone a version before deleting it, so it can't be published again | `RegistryTest` |
 
 ## Contract *(subsystem only)*
 
@@ -108,7 +109,7 @@ The tests need Docker.
 
 ## Status
 
-Implemented: REG-1 to REG-7.
+Implemented: REG-1 to REG-8.
 
 Planned: the admin API and resources that create namespaces, blocks and deletes; GC of
 unreferenced blobs; repository-level visibility.

@@ -24,8 +24,20 @@ public final class MavenMetadata {
 
     private MavenMetadata() {}
 
-    /** Per artifact: its visible versions, oldest first, and the latest and latest release. */
-    public static String artifact(String groupId, String artifactId, List<String> versions, Instant updated) {
+    /**
+     * Per artifact: its visible versions, oldest first, and the latest and latest release; and,
+     * where the path is also a group, that group's plugins. Either part can be empty.
+     */
+    public static String artifact(
+            String groupId,
+            String artifactId,
+            List<String> versions,
+            @Nullable Instant updated,
+            List<MavenPlugin> plugins) {
+        if (versions.isEmpty() || updated == null) {
+            StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<metadata>\n");
+            return plugins(xml, plugins).append("</metadata>\n").toString();
+        }
         StringBuilder xml = header(groupId, artifactId);
         xml.append("  <versioning>\n");
         if (!versions.isEmpty()) {
@@ -39,7 +51,27 @@ public final class MavenMetadata {
         versions.forEach(v -> element(xml, "      ", "version", v));
         xml.append("    </versions>\n");
         element(xml, "    ", "lastUpdated", UPDATED.format(updated));
-        return xml.append("  </versioning>\n</metadata>\n").toString();
+        xml.append("  </versioning>\n");
+        return plugins(xml, plugins).append("</metadata>\n").toString();
+    }
+
+    /** Group level: each plugin's prefix (Maven "Repository Metadata", FMT-MVN-17). */
+    private static StringBuilder plugins(StringBuilder xml, List<MavenPlugin> plugins) {
+        if (plugins.isEmpty()) {
+            return xml;
+        }
+        xml.append("  <plugins>\n");
+        for (MavenPlugin plugin : plugins) {
+            xml.append("    <plugin>\n");
+            String name = plugin.name();
+            if (name != null) {
+                element(xml, "      ", "name", name);
+            }
+            element(xml, "      ", "prefix", plugin.prefix());
+            element(xml, "      ", "artifactId", plugin.artifactId());
+            xml.append("    </plugin>\n");
+        }
+        return xml.append("  </plugins>\n");
     }
 
     /** Per snapshot version: the latest build, and the latest build of each classifier and extension. */

@@ -13,7 +13,7 @@ final class NpmRoutePaths {
 
     static final Pattern TAG = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,63}");
 
-    private static final Pattern TARBALL = Pattern.compile("[A-Za-z0-9._-]{1,250}\\.tgz");
+    static final Pattern TARBALL = Pattern.compile("[A-Za-z0-9._-]{1,250}\\.tgz");
 
     private NpmRoutePaths() {}
 
@@ -27,13 +27,17 @@ final class NpmRoutePaths {
         }
         if (rest.startsWith("/-/")) {
             String file = rest.substring(3);
+            int revision = file.indexOf(NpmRevisionPaths.REV);
+            if (revision >= 0) {
+                return NpmRevisionPaths.tarball(name, file, revision);
+            }
             if (!TARBALL.matcher(file).matches()) {
                 throw notFound();
             }
             return new NpmRoute.Tarball(name, file);
         }
-        if (rest.startsWith("/-rev/")) {
-            return new NpmRoute.Unsupported("unpublish");
+        if (rest.startsWith(NpmRevisionPaths.REV)) {
+            return NpmRevisionPaths.revision(name, rest);
         }
         String version = rest.substring(1);
         if (version.indexOf('/') >= 0) {

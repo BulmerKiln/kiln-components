@@ -6,7 +6,6 @@ package com.bulmerkiln.format.npm.service;
 
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.constant.Operation;
-import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.npm.NpmException;
 import com.bulmerkiln.format.npm.domain.NpmVersion;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
@@ -18,8 +17,8 @@ import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
 /**
- * {@code npm dist-tag add} and {@code rm}. A tag can only point at a version that exists, and
- * {@code latest} can be moved but never removed (FMT-NPM-14).
+ * {@code npm dist-tag add} and {@code rm}. A tag can only point at a version that exists; any tag,
+ * {@code latest} included, can be removed, as other npm registries allow (FMT-NPM-14).
  */
 public final class NpmTagService {
 
@@ -44,9 +43,6 @@ public final class NpmTagService {
 
     public void remove(NpmPackageRequest request, String tag) {
         access.requireToWrite(request, Operation.PUSH);
-        if ("latest".equals(tag)) {
-            throw new NpmException(Reason.INVALID, "latest can be moved but not removed");
-        }
         change(request, tags -> tags.remove(tag) != null, null);
     }
 

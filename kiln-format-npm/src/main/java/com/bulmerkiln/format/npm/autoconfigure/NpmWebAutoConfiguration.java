@@ -8,12 +8,10 @@ import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.ArtifactAccess;
 import com.bulmerkiln.format.ArtifactPolicy;
 import com.bulmerkiln.format.npm.service.NpmAccessService;
-import com.bulmerkiln.format.npm.service.NpmPublishService;
-import com.bulmerkiln.format.npm.service.NpmReadService;
-import com.bulmerkiln.format.npm.service.NpmTagService;
 import com.bulmerkiln.format.npm.web.NpmController;
 import com.bulmerkiln.format.npm.web.NpmRouteDispatcher;
 import com.bulmerkiln.format.npm.web.handler.NpmPackageHandler;
+import com.bulmerkiln.format.npm.web.handler.NpmUnpublishHandler;
 import com.bulmerkiln.format.service.ArtifactEventService;
 import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.web.FormatRequests;
@@ -45,9 +43,7 @@ public class NpmWebAutoConfiguration {
         NpmAccessService npm = new NpmAccessService(database, access, policy);
         return new NpmController(new NpmRouteDispatcher(
                 requests,
-                new NpmPackageHandler(
-                        new NpmReadService(database, npm, storage, events),
-                        new NpmPublishService(database, npm, storage, events, properties.maxTarballSizeOrDefault()),
-                        new NpmTagService(database, npm))));
+                NpmPackageHandler.of(database, npm, storage, events, properties.maxTarballSizeOrDefault()),
+                NpmUnpublishHandler.of(database, npm)));
     }
 }

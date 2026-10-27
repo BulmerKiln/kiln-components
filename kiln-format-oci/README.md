@@ -61,7 +61,7 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-OCI-17 | Manifests must be served exactly as pushed, by tag or digest, with their stored media type and `Docker-Content-Digest`, on `GET` and `HEAD`. A block on the tag or the digest is `403`, never `404` | `OciPushPullTest`, `OciAccessServiceTest` |
 | FMT-OCI-18 | A manifest push must refuse with `MANIFEST_BLOB_UNKNOWN` any config, layer or child manifest the repository doesn't hold; a subject may be missing. A push with a subject answers `OCI-Subject` | `OciPushPullTest` |
 | FMT-OCI-19 | A manifest pushed by digest must match its own content, or `DIGEST_INVALID`. Blocks and tombstones on the tag and digest are checked in the transaction that stores it | `OciPushPullTest`, `OciAccessServiceTest` |
-| FMT-OCI-20 | Deleting a tag removes only the tag; deleting a manifest removes its tags too. A manifest an index still references can't be deleted (`409`) until the index is | `OciPushPullTest` |
+| FMT-OCI-20 | Deleting a tag removes only the tag; deleting a manifest removes its tags too. A manifest an index still references can't be deleted (`405`, `UNSUPPORTED`) until the index is | `OciPushPullTest` |
 | FMT-OCI-21 | A blob must be readable only through a repository it was pushed or mounted to, whole or by one `Range` (`206` with `Content-Range`, `416` beyond the end), with `Docker-Content-Digest` | `OciPushPullTest` |
 | FMT-OCI-22 | Uploads must work as a session finished by `PUT`, with the last chunk in the `PUT` or not, and as one `POST ?digest=` | `OciUploadTest` |
 | FMT-OCI-23 | A mount must link the blob only when the caller may pull from the source repository of the same organization and the blob is linked there; otherwise it's a plain upload (`202`) that reveals nothing | `OciUploadTest` |
@@ -72,6 +72,7 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-OCI-28 | `GET /v2/` must answer `200 {}` with `Docker-Distribution-API-Version: registry/2.0`, which every response carries | `OciPushPullTest` |
 | FMT-OCI-29 | `Content-Range` must be OCI's `<start>-<end>` with `end >= start`, and `n` a page size; anything else is `400` | `OciRouteTest`, `OciUploadTest` |
 | FMT-OCI-30 | The `/v2/` routes must exist only in a web application while `kiln.format.oci.enabled` isn't `false`. Pushes and manifest pulls reach the event listeners | `OciWebAutoConfigurationTest`, `OciPushPullTest` |
+| FMT-OCI-31 | `Location` and `Link` headers must be relative paths (`/v2/<name>/…`), as the spec allows, so none is built from the request's host | `OciUploadTest`, `OciPushPullTest` |
 
 ## How it plugs in *(implementation only)*
 
@@ -124,7 +125,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: FMT-OCI-1 to FMT-OCI-30.
+Implemented: FMT-OCI-1 to FMT-OCI-31.
 
 Planned (M1): immutable tag policies, the token service behind the challenge, and the OCI
 conformance suite as the acceptance test. Later: the referrers fallback tag for older cosign, and

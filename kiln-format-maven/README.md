@@ -54,8 +54,9 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-MVN-12 | `.md5`, `.sha1`, `.sha256` and `.sha512` must be computed on the server for every file and metadata. An uploaded checksum must match its stored file, or `400` | `MavenRepositoryTest` |
 | FMT-MVN-13 | Anonymous callers must get `401` with `WWW-Authenticate: Basic`, since Maven sends credentials only after a challenge | `MavenAccessServiceTest` |
 | FMT-MVN-14 | A `-SNAPSHOT` file name must resolve to the latest timestamped build of the same classifier and extension; a timestamped name is served exactly | `MavenRepositoryTest` |
-| FMT-MVN-15 | `maven-metadata.xml` must be generated from the database, never taken from uploads: per artifact, the versions with a POM that no block refuses, with `latest` and `release`; per snapshot version, the latest build of each kind. A blocked version is `403`, with the reason in the body | `MavenRepositoryTest` |
+| FMT-MVN-15 | `maven-metadata.xml` must be generated from the database; of uploads only plugin prefixes are kept (FMT-MVN-17): per artifact, the versions with a POM that no block refuses, with `latest` and `release`; per snapshot version, the latest build of each kind. A blocked version is `403`, with the reason in the body | `MavenRepositoryTest` |
 | FMT-MVN-16 | The `/maven/` routes must exist only in a web application while `kiln.format.maven.enabled` isn't `false`. POM deploys and downloads reach the event listeners | `MavenWebAutoConfigurationTest`, `MavenRepositoryTest` |
+| FMT-MVN-17 | Group-level metadata must list the group's plugins (`name`, `prefix`, `artifactId`), so `mvn <prefix>:<goal>` resolves. They come from the `<plugins>` of uploaded group metadata, parsed by `MavenSafeXmlUtils`, kept only for artifacts already deployed that the uploader may write, with a valid prefix and a bounded name. A path without a version is both artifact `g:a` and group `g.a`: either may be written, versions are listed to those who may read the artifact, and plugins to those who may read each plugin | `MavenRepositoryTest`, `MavenPluginMetadataTest` (fuzz target) |
 
 ## How it plugs in *(implementation only)*
 
@@ -108,7 +109,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: FMT-MVN-1 to FMT-MVN-16.
+Implemented: FMT-MVN-1 to FMT-MVN-17.
 
 Planned (M3): checksums stored at deploy rather than computed per request, the sweep of
 half-deployed versions, and Maven and Gradle themselves as the acceptance test.

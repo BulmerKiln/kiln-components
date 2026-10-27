@@ -174,7 +174,7 @@ public final class CargoHarness implements AutoCloseable {
     }
 
     private static Namespace namespace(String name, Visibility visibility, String scope) {
-        return new Namespace(UUID.randomUUID(), name, visibility, null, null, List.of(), List.of(scope));
+        return new Namespace(UUID.randomUUID(), name, visibility, null, null, List.of(), List.of(), List.of(scope));
     }
 
     private static RoleBinding.Subject member(Principal principal) {

@@ -99,10 +99,7 @@ class NpmAccessServiceTest {
         }
         npm.mvc()
                 .perform(NpmHarness.at(HttpMethod.DELETE, "/npm/@acme%2fprivate/-rev/1-abc"))
-                .andExpect(status().isNotFound())
-                .andExpect(header().string(
-                                "npm-notice",
-                                "npm unpublish isn't supported by Kiln; use the Kiln web app or the kiln CLI"));
+                .andExpect(status().isForbidden());
         npm.mvc()
                 .perform(NpmHarness.at(HttpMethod.POST, "/npm/@acme%2fprivate"))
                 .andExpect(status().isMethodNotAllowed());

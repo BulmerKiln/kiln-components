@@ -157,6 +157,22 @@ public final class PackageStore {
                 size);
     }
 
+    /**
+     * Removes a version and its files, for an unpublish. The caller tombstones the version first,
+     * so it can't come back (REG-8). The blobs stay recorded until storage collects them.
+     */
+    public static void deleteVersion(DSLContext tx, UUID versionId) {
+        UUID organization = NamespaceStore.organization();
+        tx.execute("DELETE FROM package_files WHERE organization_id = ? AND version_id = ?", organization, versionId);
+        tx.execute("DELETE FROM package_versions WHERE organization_id = ? AND id = ?", organization, versionId);
+    }
+
+    /** Removes a package whose versions are all deleted (REG-8). */
+    public static void delete(DSLContext tx, UUID packageId) {
+        tx.execute(
+                "DELETE FROM packages WHERE organization_id = ? AND id = ?", NamespaceStore.organization(), packageId);
+    }
+
     public static Optional<PackageFileEntity> file(DSLContext tx, UUID versionId, String name) {
         return tx.fetchOptional(
                         "SELECT name, digest, size FROM package_files"

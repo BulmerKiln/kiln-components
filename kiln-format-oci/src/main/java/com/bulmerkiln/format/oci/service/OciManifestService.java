@@ -102,7 +102,7 @@ public final class OciManifestService {
                 case OciReference.ByDigest byDigest -> {
                     if (OciManifestStore.referencedByIndex(tx, repository, byDigest.digest())) {
                         throw new RefusedException(Refusal.of(
-                                Reason.CONFLICT, "An index references this manifest; delete the index first"));
+                                Reason.UNSUPPORTED, "An index references this manifest; delete the index first"));
                     }
                     yield OciManifestStore.delete(tx, repository, byDigest.digest());
                 }

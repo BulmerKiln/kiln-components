@@ -12,7 +12,10 @@ import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.format.maven.MavenFormatModule;
 import com.bulmerkiln.format.maven.domain.MavenMetadata;
 import com.bulmerkiln.format.maven.domain.MavenPath;
+import com.bulmerkiln.format.maven.domain.MavenPlugin;
+import com.bulmerkiln.format.maven.domain.MavenPluginMetadata;
 import com.bulmerkiln.format.maven.domain.MavenSnapshots;
+import com.bulmerkiln.format.maven.store.MavenPluginStore;
 import com.bulmerkiln.registry.domain.Namespace;
 import com.bulmerkiln.registry.entity.PackageEntity;
 import com.bulmerkiln.registry.entity.PackageVersionEntity;
@@ -44,16 +47,71 @@ public final class MavenMetadataService {
     }
 
     public byte[] read(MavenPath.Metadata metadata) {
+        if (metadata.version() == null) {
+            return artifact(metadata).getBytes(StandardCharsets.UTF_8);
+        }
         Optional<Namespace> namespace = access.require(metadata, Operation.PULL);
         access.checkRead(metadata, namespace, metadata.version());
-        String xml = metadata.version() == null ? artifact(metadata, namespace) : snapshot(metadata);
-        return xml.getBytes(StandardCharsets.UTF_8);
+        return snapshot(metadata).getBytes(StandardCharsets.UTF_8);
     }
 
-    private String artifact(MavenPath.Metadata metadata, Optional<Namespace> namespace) {
-        List<PackageVersionEntity> visible = database.transaction(tx -> {
-            PackageEntity entry = PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(metadata))
-                    .orElseThrow(MavenMetadataService::notFound);
+    /**
+     * Uploaded metadata: Kiln keeps only the plugin entries of group-level metadata, each for an
+     * artifact already deployed that the caller may write (FMT-MVN-17). The path {@code g/a/} is
+     * both artifact {@code g:a} and group {@code g.a}.
+     */
+    public void upload(MavenPath.Metadata metadata, byte[] xml) {
+        if (metadata.version() != null || metadata.checksum() != null) {
+            return;
+        }
+        String group = group(metadata);
+        for (MavenPlugin plugin : MavenPluginMetadata.parse(xml)) {
+            MavenPath.Metadata artifact = new MavenPath.Metadata(group, plugin.artifactId(), null, null);
+            access.requireToWrite(artifact);
+            database.run(tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(artifact))
+                    .ifPresent(entry -> MavenPluginStore.save(tx, entry.id(), group, plugin)));
+        }
+    }
+
+    /**
+     * Version-less metadata: the artifact's versions where the caller may read the artifact, and
+     * the group's plugins they may read. With neither, the artifact's own refusal, or not found.
+     */
+    private String artifact(MavenPath.Metadata metadata) {
+        List<PackageVersionEntity> readable = access.mayRead(metadata) ? readable(metadata) : List.of();
+        String group = group(metadata);
+        List<MavenPlugin> plugins = database.transaction(tx -> MavenPluginStore.inGroup(tx, group)).stream()
+                .filter(plugin -> access.mayRead(new MavenPath.Metadata(group, plugin.artifactId(), null, null)))
+                .toList();
+        if (readable.isEmpty() && plugins.isEmpty()) {
+            access.require(metadata, Operation.PULL);
+            throw notFound();
+        }
+        return MavenMetadata.artifact(
+                metadata.groupId(),
+                metadata.artifactId(),
+                readable.stream().map(PackageVersionEntity::version).toList(),
+                readable.isEmpty() ? null : readable.getLast().publishedAt(),
+                plugins);
+    }
+
+    private List<PackageVersionEntity> readable(MavenPath.Metadata metadata) {
+        Optional<Namespace> namespace = access.require(metadata, Operation.PULL);
+        return versions(metadata).stream()
+                .filter(v ->
+                        access.readRefusal(metadata, namespace, v.version()).isEmpty())
+                .toList();
+    }
+
+    /** Versions with a POM, oldest first; none when the artifact doesn't exist. */
+    private List<PackageVersionEntity> versions(MavenPath.Metadata metadata) {
+        return database.transaction(tx -> {
+            Optional<PackageEntity> found =
+                    PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(metadata));
+            if (found.isEmpty()) {
+                return List.<PackageVersionEntity>of();
+            }
+            PackageEntity entry = found.get();
             List<PackageVersionEntity> withPom = new ArrayList<>();
             for (PackageVersionEntity version : PackageStore.versions(tx, entry.id())) {
                 String pom = metadata.artifactId() + "-" + version.version() + ".pom";
@@ -65,18 +123,11 @@ public final class MavenMetadataService {
             }
             return withPom;
         });
-        List<PackageVersionEntity> readable = visible.stream()
-                .filter(v ->
-                        access.readRefusal(metadata, namespace, v.version()).isEmpty())
-                .toList();
-        if (readable.isEmpty()) {
-            throw notFound();
-        }
-        return MavenMetadata.artifact(
-                metadata.groupId(),
-                metadata.artifactId(),
-                readable.stream().map(PackageVersionEntity::version).toList(),
-                readable.getLast().publishedAt());
+    }
+
+    /** The group whose metadata shares this path: {@code org/acme/plugins/} is group {@code org.acme.plugins}. */
+    private static String group(MavenPath.Metadata metadata) {
+        return metadata.groupId() + "." + metadata.artifactId();
     }
 
     /** The latest build of each classifier and extension of a snapshot version. */

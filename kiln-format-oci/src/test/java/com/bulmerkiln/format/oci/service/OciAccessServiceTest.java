@@ -163,8 +163,7 @@ class OciAccessServiceTest {
             prefixed.mvc()
                     .perform(request(HttpMethod.POST, "/v2/acme/acme/app/blobs/uploads/"))
                     .andExpect(status().isAccepted())
-                    .andExpect(header().string(
-                                    "Location", startsWith("http://localhost/v2/acme/acme/app/blobs/uploads/")));
+                    .andExpect(header().string("Location", startsWith("/v2/acme/acme/app/blobs/uploads/")));
             prefixed.callAs(OciHarness.ANONYMOUS);
             prefixed.mvc()
                     .perform(request(HttpMethod.GET, "/v2/acme/acme/app/tags/list"))

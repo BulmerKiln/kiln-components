@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.format.npm.web.handler;
 
+import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.RefusedException;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.domain.Refusal;
@@ -11,10 +12,13 @@ import com.bulmerkiln.format.dto.FormatResponse;
 import com.bulmerkiln.format.npm.domain.NpmPackumentBuilder;
 import com.bulmerkiln.format.npm.domain.NpmVersion;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
+import com.bulmerkiln.format.npm.service.NpmAccessService;
 import com.bulmerkiln.format.npm.service.NpmPublishService;
 import com.bulmerkiln.format.npm.service.NpmReadService;
 import com.bulmerkiln.format.npm.service.NpmTagService;
+import com.bulmerkiln.format.service.ArtifactEventService;
 import com.bulmerkiln.storage.BlobRead;
+import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.web.FormatRequests;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,6 +35,19 @@ public final class NpmPackageHandler {
     private final NpmReadService reads;
     private final NpmPublishService publisher;
     private final NpmTagService tags;
+
+    /** The handler with its services, reading and publishing through {@code storage}. */
+    public static NpmPackageHandler of(
+            Database database,
+            NpmAccessService access,
+            StorageRouter storage,
+            ArtifactEventService events,
+            long maxTarballSize) {
+        return new NpmPackageHandler(
+                new NpmReadService(database, access, storage, events),
+                new NpmPublishService(database, access, storage, events, maxTarballSize),
+                new NpmTagService(database, access));
+    }
 
     public NpmPackageHandler(NpmReadService reads, NpmPublishService publisher, NpmTagService tags) {
         this.reads = reads;

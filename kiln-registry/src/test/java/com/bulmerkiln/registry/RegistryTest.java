@@ -58,7 +58,15 @@ class RegistryTest {
         globex = KilnPostgres.organization(database, "globex");
         in(acme, tx -> {
             NamespaceStore.create(
-                    tx, namespace("acme", Visibility.PUBLIC, "acme", "@acme", List.of("org.acme"), List.of("acme-")));
+                    tx,
+                    namespace(
+                            "acme",
+                            Visibility.PUBLIC,
+                            "acme",
+                            "@acme",
+                            List.of("acme-"),
+                            List.of("org.acme"),
+                            List.of("acme-")));
             NamespaceStore.create(
                     tx,
                     namespace(
@@ -66,6 +74,7 @@ class RegistryTest {
                             Visibility.PRIVATE,
                             "acme/team",
                             null,
+                            List.of("acme-team-"),
                             List.of("org.acme.team"),
                             List.of("acme-team-")));
             return null;
@@ -87,6 +96,9 @@ class RegistryTest {
             assertThat(NamespaceStore.forOci(tx, "acmecorp/api")).isEmpty();
             assertThat(name(NamespaceStore.forNpm(tx, "@acme"))).contains("acme");
             assertThat(NamespaceStore.forNpm(tx, "@other")).isEmpty();
+            assertThat(name(NamespaceStore.forNpmName(tx, "acme-ui"))).contains("acme");
+            assertThat(name(NamespaceStore.forNpmName(tx, "acme-team-ui"))).contains("team");
+            assertThat(NamespaceStore.forNpmName(tx, "left-pad")).isEmpty();
             assertThat(name(NamespaceStore.forMaven(tx, "org.acme"))).contains("acme");
             assertThat(name(NamespaceStore.forMaven(tx, "org.acme.core"))).contains("acme");
             assertThat(name(NamespaceStore.forMaven(tx, "org.acme.team.app"))).contains("team");
@@ -105,6 +117,7 @@ class RegistryTest {
         assertThat(team.visibility()).isEqualTo(Visibility.PRIVATE);
         assertThat(team.ociPrefix()).isEqualTo("acme/team");
         assertThat(team.npmScope()).isNull();
+        assertThat(team.npmPrefixes()).containsExactly("acme-team-");
         assertThat(team.mavenGroupPrefixes()).containsExactly("org.acme.team");
         assertThat(in(acme, (DSLContext tx) -> NamespaceStore.byId(tx, team.id())))
                 .contains(team);
@@ -116,7 +129,8 @@ class RegistryTest {
         assertThat(in(globex, (DSLContext tx) -> NamespaceStore.forNpm(tx, "@acme")))
                 .isEmpty();
         in(globex, tx -> {
-            NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "acme", "@acme", List.of(), List.of()));
+            NamespaceStore.create(
+                    tx, namespace("acme", Visibility.PRIVATE, "acme", "@acme", List.of(), List.of(), List.of()));
             return null;
         });
         assertThat(in(globex, (DSLContext tx) -> NamespaceStore.forNpm(tx, "@acme"))
@@ -188,6 +202,36 @@ class RegistryTest {
                 .isEqualTo(Reason.CONFLICT);
         assertThat(in(acme, (DSLContext tx) -> PackageStore.files(tx, version.id())))
                 .containsExactly(new PackageFileEntity("util-1.0.0.tgz", TARBALL, 7));
+    }
+
+    /** REG-8: an unpublished version goes with its files, and then the package can go too. */
+    @Test
+    void deletesVersionsAndPackages() {
+        UUID namespace =
+                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().id();
+        PackageEntity pkg = in(acme, tx -> PackageStore.create(tx, NPM, namespace, "@acme/gone", "@acme/gone"));
+        PackageVersionEntity version = in(acme, tx -> {
+            BlobRecordStore.record(tx, TARBALL, 7);
+            PackageVersionEntity added = PackageStore.addVersion(tx, pkg.id(), "1.0.0", "{}");
+            PackageStore.addFile(tx, added.id(), "gone-1.0.0.tgz", TARBALL, 7);
+            return added;
+        });
+
+        in(acme, tx -> {
+            PackageStore.deleteVersion(tx, version.id());
+            return null;
+        });
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.versions(tx, pkg.id())))
+                .isEmpty();
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.files(tx, version.id())))
+                .isEmpty();
+
+        in(acme, tx -> {
+            PackageStore.delete(tx, pkg.id());
+            return null;
+        });
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.find(tx, NPM, "@acme/gone")))
+                .isEmpty();
     }
 
     /** REG-3: a version published file by file is created once and then grows. */
@@ -288,8 +332,14 @@ class RegistryTest {
     }
 
     private static Namespace namespace(
-            String name, Visibility visibility, String oci, String npm, List<String> maven, List<String> cargo) {
-        return new Namespace(UUID.randomUUID(), name, visibility, oci, npm, maven, cargo);
+            String name,
+            Visibility visibility,
+            String oci,
+            String npm,
+            List<String> npmPrefixes,
+            List<String> maven,
+            List<String> cargo) {
+        return new Namespace(UUID.randomUUID(), name, visibility, oci, npm, npmPrefixes, maven, cargo);
     }
 
     private static Optional<String> name(Optional<Namespace> namespace) {

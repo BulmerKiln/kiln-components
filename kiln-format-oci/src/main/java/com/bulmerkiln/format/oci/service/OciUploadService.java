@@ -146,10 +146,10 @@ public final class OciUploadService {
     }
 
     private static OciUploadProgressResponse progress(OciRepositoryRequest request, UploadId upload, long size) {
-        return new OciUploadProgressResponse(request.url("blobs/uploads/" + upload), upload.value(), size);
+        return new OciUploadProgressResponse(request.path("blobs/uploads/" + upload), upload.value(), size);
     }
 
     private static OciUploadResponse stored(OciRepositoryRequest request, Digest digest) {
-        return new OciUploadResponse(request.url("blobs/" + digest), digest);
+        return new OciUploadResponse(request.path("blobs/" + digest), digest);
     }
 }

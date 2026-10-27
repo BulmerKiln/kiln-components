@@ -36,7 +36,10 @@ class NpmRouteTest {
         assertThat(NpmRoute.parse("-/v1/login")).isEqualTo(new NpmRoute.Unsupported("login"));
         assertThat(NpmRoute.parse("-/org/acme/user")).isEqualTo(new NpmRoute.Unsupported("org"));
         assertThat(NpmRoute.parse("-/%00")).isEqualTo(new NpmRoute.Unsupported("this"));
-        assertThat(NpmRoute.parse("lodash/-rev/1-a")).isEqualTo(new NpmRoute.Unsupported("unpublish"));
+        assertThat(NpmRoute.parse("lodash/-rev/1-a")).isEqualTo(new NpmRoute.Revision(lodash()));
+        assertThat(NpmRoute.parse("lodash/-rev/undefined")).isEqualTo(new NpmRoute.Revision(lodash()));
+        assertThat(NpmRoute.parse("lodash/-/lodash-1.0.0.tgz/-rev/2-b"))
+                .isEqualTo(new NpmRoute.TarballRevision(lodash(), "lodash-1.0.0.tgz"));
         assertThat(NpmRoute.parse("-/package/lodash/collaborators")).isEqualTo(new NpmRoute.Unsupported("access"));
     }
 
@@ -48,7 +51,11 @@ class NpmRouteTest {
         "lodash/1.0",
         "lodash/1.0.0/extra",
         "Lodash",
-        "-/package/lodash/dist-tags/1.2.3"
+        "-/package/lodash/dist-tags/1.2.3",
+        "lodash/-rev/",
+        "lodash/-rev/1-a/extra",
+        "lodash/-/evil.zip/-rev/1-a",
+        "lodash/-/lodash-1.0.0.tgz/-rev/"
     })
     void refusesWhatIsNoValidRoute(String path) {
         assertThatThrownBy(() -> NpmRoute.parse(path)).isInstanceOf(RefusedException.class);
@@ -99,5 +106,9 @@ class NpmRouteTest {
     void defaultsItsLimit() {
         assertThat(new NpmProperties(null, null).maxTarballSizeOrDefault()).isEqualTo(256L * 1024 * 1024);
         assertThat(new NpmProperties(true, 5L).maxTarballSizeOrDefault()).isEqualTo(5);
+    }
+
+    private static NpmPackageName lodash() {
+        return NpmPackageName.fromPath("lodash");
     }
 }

@@ -163,7 +163,7 @@ public final class MavenHarness implements AutoCloseable {
     }
 
     private static Namespace namespace(String name, Visibility visibility, String scope) {
-        return new Namespace(UUID.randomUUID(), name, visibility, null, null, List.of(scope), List.of());
+        return new Namespace(UUID.randomUUID(), name, visibility, null, null, List.of(), List.of(scope), List.of());
     }
 
     private static RoleBinding.Subject member(Principal principal) {

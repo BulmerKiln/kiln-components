@@ -22,20 +22,21 @@ import org.jooq.Record;
 public final class NamespaceStore {
 
     private static final String COLUMNS =
-            "id, name, visibility, oci_prefix, npm_scope, maven_group_prefixes, cargo_prefixes";
+            "id, name, visibility, oci_prefix, npm_scope, npm_prefixes, maven_group_prefixes, cargo_prefixes";
 
     private NamespaceStore() {}
 
     public static void create(DSLContext tx, Namespace namespace) {
         tx.execute(
-                "INSERT INTO namespaces (organization_id, id, name, visibility, oci_prefix, npm_scope,"
-                        + " maven_group_prefixes, cargo_prefixes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO namespaces (organization_id, id, name, visibility, oci_prefix, npm_scope, npm_prefixes,"
+                        + " maven_group_prefixes, cargo_prefixes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 organization(),
                 namespace.id(),
                 namespace.name(),
                 namespace.visibility().name().toLowerCase(Locale.ROOT),
                 namespace.ociPrefix(),
                 namespace.npmScope(),
+                namespace.npmPrefixes().toArray(String[]::new),
                 namespace.mavenGroupPrefixes().toArray(String[]::new),
                 namespace.cargoPrefixes().toArray(String[]::new));
     }
@@ -60,6 +61,17 @@ public final class NamespaceStore {
     /** The namespace owning npm scope {@code scope}, such as {@code @acme}. */
     public static Optional<Namespace> forNpm(DSLContext tx, String scope) {
         return one(tx, "npm_scope = ?", scope);
+    }
+
+    /** The namespace owning unscoped npm package {@code name}: {@code acme-} owns {@code acme-ui}. */
+    public static Optional<Namespace> forNpmName(DSLContext tx, String name) {
+        return one(
+                tx,
+                "EXISTS (SELECT 1 FROM unnest(npm_prefixes) p WHERE starts_with(?, p))"
+                        + " ORDER BY (SELECT max(length(p)) FROM unnest(npm_prefixes) p"
+                        + " WHERE starts_with(?, p)) DESC LIMIT 1",
+                name,
+                name);
     }
 
     /** The namespace owning Maven group {@code groupId}: {@code org.acme} owns {@code org.acme.core}. */
@@ -102,6 +114,7 @@ public final class NamespaceStore {
                 Visibility.valueOf(row.get("visibility", String.class).toUpperCase(Locale.ROOT)),
                 row.get("oci_prefix", String.class),
                 row.get("npm_scope", String.class),
+                strings(row.get("npm_prefixes", String[].class)),
                 strings(row.get("maven_group_prefixes", String[].class)),
                 strings(row.get("cargo_prefixes", String[].class)));
     }

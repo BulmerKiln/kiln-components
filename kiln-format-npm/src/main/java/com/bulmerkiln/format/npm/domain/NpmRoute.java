@@ -27,6 +27,12 @@ public sealed interface NpmRoute {
 
     record DistTag(NpmPackageName name, String tag) implements NpmRoute {}
 
+    /** {@code <name>/-rev/<rev>}, where {@code npm unpublish} rewrites or deletes a package (FMT-NPM-17). */
+    record Revision(NpmPackageName name) implements NpmRoute {}
+
+    /** {@code <name>/-/<file>/-rev/<rev>}, the tarball {@code npm unpublish} deletes after its version. */
+    record TarballRevision(NpmPackageName name, String file) implements NpmRoute {}
+
     /** An npm endpoint Kiln answers with guidance instead, such as {@code owner} or {@code search}. */
     record Unsupported(String endpoint) implements NpmRoute {}
 

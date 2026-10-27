@@ -39,7 +39,7 @@ class OciUploadTest {
         oci.close();
     }
 
-    /** FMT-OCI-22, FMT-OCI-24: a session, chunks in order, its status, and the final PUT. */
+    /** FMT-OCI-22, FMT-OCI-24, FMT-OCI-31: a session, chunks in order, its status, and the final PUT. */
     @Test
     void uploadsInChunks() throws Exception {
         String session = startSession("acme/chunks");
@@ -51,7 +51,7 @@ class OciUploadTest {
                         .content("01234"))
                 .andExpect(status().isAccepted())
                 .andExpect(header().string("Range", "0-4"))
-                .andExpect(header().string("Location", "http://localhost" + session));
+                .andExpect(header().string("Location", session));
         oci.mvc()
                 .perform(request(HttpMethod.PATCH, session).content("56789"))
                 .andExpect(header().string("Range", "0-9"));
@@ -62,7 +62,7 @@ class OciUploadTest {
         oci.mvc()
                 .perform(request(HttpMethod.PUT, session).param("digest", digest.toString()))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "http://localhost/v2/acme/chunks/blobs/" + digest))
+                .andExpect(header().string("Location", "/v2/acme/chunks/blobs/" + digest))
                 .andExpect(header().string("Docker-Content-Digest", digest.toString()));
 
         oci.mvc()
@@ -168,7 +168,7 @@ class OciUploadTest {
                         .param("mount", shared.toString())
                         .param("from", "acme/source"))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "http://localhost/v2/acme/target/blobs/" + shared));
+                .andExpect(header().string("Location", "/v2/acme/target/blobs/" + shared));
         oci.mvc()
                 .perform(request(HttpMethod.GET, "/v2/acme/target/blobs/" + shared))
                 .andExpect(content().string("shared"));
@@ -206,7 +206,7 @@ class OciUploadTest {
                 .andExpect(header().exists("Docker-Upload-UUID"))
                 .andReturn();
         String location = started.getResponse().getHeader("Location");
-        assertThat(location).startsWith("http://localhost/v2/" + repository + "/blobs/uploads/");
-        return location.substring("http://localhost".length());
+        assertThat(location).startsWith("/v2/" + repository + "/blobs/uploads/");
+        return location;
     }
 }

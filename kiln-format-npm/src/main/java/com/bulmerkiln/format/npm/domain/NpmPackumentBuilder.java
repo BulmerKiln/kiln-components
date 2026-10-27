@@ -8,6 +8,7 @@ import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
 import com.bulmerkiln.registry.entity.PackageVersionEntity;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -43,10 +44,21 @@ public final class NpmPackumentBuilder {
 
     private NpmPackumentBuilder() {}
 
+    /**
+     * A CouchDB-style revision of the package's state. npm reads it to address an unpublish
+     * ({@code <name>/-rev/<rev>}); Kiln doesn't check it, since every write runs in a transaction.
+     */
+    static String revision(Map<String, String> distTags, List<PackageVersionEntity> versions) {
+        List<String> names =
+                versions.stream().map(PackageVersionEntity::version).toList();
+        return versions.size() + "-" + Integer.toHexString(Objects.hash(distTags, names));
+    }
+
     public static String full(
             NpmPackageRequest request, Map<String, String> distTags, List<PackageVersionEntity> versions) {
         ObjectNode packument = JSON.createObjectNode();
         packument.put("_id", request.name().toString());
+        packument.put("_rev", revision(distTags, versions));
         packument.put("name", request.name().toString());
         packument.set("dist-tags", JSON.valueToTree(distTags));
         ObjectNode all = packument.putObject("versions");

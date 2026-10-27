@@ -61,8 +61,7 @@ class OciPushPullTest {
 
         MvcResult pushed = oci.push("acme/app", "1.0", manifest, OciMediaTypes.OCI_MANIFEST);
         assertThat(pushed.getResponse().getStatus()).isEqualTo(201);
-        assertThat(pushed.getResponse().getHeader("Location"))
-                .isEqualTo("http://localhost/v2/acme/app/manifests/" + digest);
+        assertThat(pushed.getResponse().getHeader("Location")).isEqualTo("/v2/acme/app/manifests/" + digest);
         assertThat(pushed.getResponse().getHeader("Docker-Content-Digest")).isEqualTo(digest.toString());
 
         for (String reference : new String[] {"1.0", digest.toString()}) {
@@ -167,8 +166,8 @@ class OciPushPullTest {
                     .andExpect(jsonPath("$.errors[0].code").value("MANIFEST_UNKNOWN"));
             oci.mvc()
                     .perform(request(HttpMethod.DELETE, "/v2/acme/del/manifests/" + imageDigest))
-                    .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.errors[0].code").value("DENIED"));
+                    .andExpect(status().isMethodNotAllowed())
+                    .andExpect(jsonPath("$.errors[0].code").value("UNSUPPORTED"));
             oci.mvc()
                     .perform(request(HttpMethod.DELETE, "/v2/acme/del/manifests/" + OciHarness.digest(index)))
                     .andExpect(status().isAccepted());
@@ -202,8 +201,7 @@ class OciPushPullTest {
                 .perform(request(HttpMethod.GET, "/v2/acme/tags/tags/list").param("n", "2"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"name\":\"acme/tags\",\"tags\":[\"a\",\"b\"]}"))
-                .andExpect(
-                        header().string("Link", "<http://localhost/v2/acme/tags/tags/list?n=2&last=b>; rel=\"next\""));
+                .andExpect(header().string("Link", "</v2/acme/tags/tags/list?n=2&last=b>; rel=\"next\""));
         oci.mvc()
                 .perform(request(HttpMethod.GET, "/v2/acme/tags/tags/list").param("last", "b"))
                 .andExpect(content().json("{\"tags\":[\"c\",\"d\"]}"))

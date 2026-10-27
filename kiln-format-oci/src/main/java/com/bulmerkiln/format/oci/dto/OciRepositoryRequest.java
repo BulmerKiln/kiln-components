@@ -13,7 +13,8 @@ import java.util.Objects;
  * @param repository the repository within the organization, as it's stored
  * @param addressed the name as the client addressed it, which can carry a prefix for the
  *     organization; {@code Location} headers and challenges use it
- * @param baseUrl where the client reached Kiln, such as {@code https://pkg.example.com}
+ * @param baseUrl the configured external URL, such as {@code https://pkg.example.com}, for the
+ *     token challenge's realm
  */
 public record OciRepositoryRequest(OciRepositoryName repository, String addressed, String baseUrl) {
 
@@ -23,8 +24,11 @@ public record OciRepositoryRequest(OciRepositoryName repository, String addresse
         Objects.requireNonNull(baseUrl, "baseUrl");
     }
 
-    /** The absolute URL of a route below this repository, such as {@code blobs/uploads/<id>}. */
-    public String url(String route) {
-        return baseUrl + "/v2/" + addressed + "/" + route;
+    /**
+     * The path of a route below this repository, such as {@code blobs/uploads/<id>}: relative, as the
+     * spec allows, so no {@code Location} or {@code Link} carries a host (FMT-OCI-31).
+     */
+    public String path(String route) {
+        return "/v2/" + addressed + "/" + route;
     }
 }

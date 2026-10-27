@@ -48,7 +48,7 @@ public final class OciTagService {
         boolean more = tags.size() > size;
         List<String> page = more ? tags.subList(0, size) : tags;
         String body = FormatJsonUtils.write(new OciTagListResponse(request.addressed(), page));
-        String next = more ? request.url("tags/list?n=" + size + "&last=" + page.getLast()) : null;
+        String next = more ? request.path("tags/list?n=" + size + "&last=" + page.getLast()) : null;
         return new OciTagPageResponse(body, next);
     }
 

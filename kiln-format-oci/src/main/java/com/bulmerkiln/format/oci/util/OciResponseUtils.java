@@ -18,9 +18,9 @@ public final class OciResponseUtils {
 
     public static final String DIGEST = "Docker-Content-Digest";
 
-    /** Why a {@code Location} built by {@link OciRepositoryRequest#url} is no open redirect. */
-    public static final String LOCATION = "The Location is the configured external URL, /v2/, a name that passed the"
-            + " distribution grammar and a validated digest or UUID, so it can never point at another origin";
+    /** Why a {@code Location} built by {@link OciRepositoryRequest#path} is no open redirect. */
+    public static final String LOCATION = "The Location is a path starting /v2/, then a name that passed the"
+            + " distribution grammar and a validated digest or UUID, so it can never leave this origin";
 
     private OciResponseUtils() {}
 

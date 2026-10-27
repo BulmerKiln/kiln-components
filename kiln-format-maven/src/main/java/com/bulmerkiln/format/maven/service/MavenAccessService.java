@@ -8,6 +8,7 @@ import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.ArtifactAccess;
 import com.bulmerkiln.format.ArtifactPolicy;
 import com.bulmerkiln.format.RefusedException;
+import com.bulmerkiln.format.constant.Access;
 import com.bulmerkiln.format.constant.Operation;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.domain.ArtifactRef;
@@ -47,6 +48,36 @@ public final class MavenAccessService {
             throw new RefusedException(refusal.get());
         }
         return namespace;
+    }
+
+    /** Whether the caller may read {@code path}, for choosing what to list; never throws. */
+    boolean mayRead(MavenPath path) {
+        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.groupId()));
+        return allowed(artifact(path, namespace, null), Operation.PULL)
+                && readRefusal(path, namespace, null).isEmpty();
+    }
+
+    /**
+     * Uploading metadata. A path without a version is both artifact {@code g:a} and group
+     * {@code g.a}, whose plugin metadata Maven deploys there, so writing either will do (FMT-MVN-17).
+     */
+    public void requireToWriteMetadata(MavenPath.Metadata metadata) {
+        if (metadata.version() == null) {
+            String group = metadata.groupId() + "." + metadata.artifactId();
+            Optional<Namespace> owner = database.transaction(tx -> NamespaceStore.forMaven(tx, group));
+            if (owner.isPresent()
+                    && allowed(
+                            new ArtifactRef(
+                                    MavenFormatModule.FORMAT, owner.get().name(), group, null),
+                            Operation.PUSH)) {
+                return;
+            }
+        }
+        requireToWrite(metadata);
+    }
+
+    private boolean allowed(ArtifactRef artifact, Operation operation) {
+        return access.check(artifact, operation) == Access.ALLOW;
     }
 
     public Namespace requireToWrite(MavenPath path) {

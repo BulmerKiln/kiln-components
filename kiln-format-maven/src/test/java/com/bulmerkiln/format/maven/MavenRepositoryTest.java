@@ -116,6 +116,56 @@ class MavenRepositoryTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * FMT-MVN-17: a plugin's prefix comes from the group metadata its deploy uploads, for an
+     * artifact already deployed; the group's metadata then lists it, and the plugin keeps its own.
+     */
+    @Test
+    void servesPluginPrefixesFromGroupMetadata() throws Exception {
+        String plugin = "org/acme/acme-maven-plugin/1.0/acme-maven-plugin-1.0";
+        maven.deploy(plugin + ".jar", "plugin jar");
+        maven.deploy(plugin + ".pom", "<project/>");
+        String group = """
+                <metadata><plugins>
+                  <plugin>
+                    <name>Acme Plugin</name><prefix>acme</prefix><artifactId>acme-maven-plugin</artifactId>
+                  </plugin>
+                  <plugin><prefix>ghost</prefix><artifactId>ghost-maven-plugin</artifactId></plugin>
+                </plugins></metadata>
+                """;
+        assertThat(maven.deploy("org/acme/maven-metadata.xml", group)).isEqualTo(201);
+        assertThat(maven.deploy("org/acme/maven-metadata.xml.sha1", MavenHarness.sha1(group)))
+                .isEqualTo(201);
+
+        String xml = maven.mvc()
+                .perform(MavenHarness.at(HttpMethod.GET, "/maven/org/acme/maven-metadata.xml"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(xml)
+                .contains(
+                        "<name>Acme Plugin</name>",
+                        "<prefix>acme</prefix>",
+                        "<artifactId>acme-maven-plugin</artifactId>")
+                .doesNotContain("ghost", "<versioning>");
+        maven.mvc()
+                .perform(MavenHarness.at(HttpMethod.GET, "/maven/org/acme/acme-maven-plugin/maven-metadata.xml"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<version>1.0</version>")));
+
+        assertThat(maven.deploy(
+                        "org/acme/maven-metadata.xml",
+                        "<metadata><plugins><plugin><prefix>a b</prefix><artifactId>x</artifactId></plugin>"
+                                + "</plugins></metadata>"))
+                .isEqualTo(400);
+        maven.callAs(MavenHarness.ANONYMOUS);
+        maven.mvc()
+                .perform(MavenHarness.at(HttpMethod.GET, "/maven/org/acme/maven-metadata.xml"))
+                .andExpect(status().isUnauthorized());
+        assertThat(maven.deploy("org/acme/maven-metadata.xml", group)).isEqualTo(401);
+    }
+
     /** FMT-MVN-11: a stored file never changes; the same bytes again are a no-op. */
     @Test
     void keepsReleasesImmutable() throws Exception {

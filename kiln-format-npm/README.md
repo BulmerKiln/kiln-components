@@ -49,14 +49,15 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-NPM-6 | Errors must be npm's `{"error": "<message>"}` with `application/json` | `NpmFormatModuleTest` |
 | FMT-NPM-7 | Routes below `/npm/` must take a scoped name as `@scope/name` or `@scope%2fname` (either case of `%2f`), and route parsing never throws anything but a refusal | `NpmRouteTest` (fuzz target), `NpmRegistryTest` |
 | FMT-NPM-8 | Versions must be strict SemVer 2.0.0, at most 256 characters; a dist-tag can't look like a version | `NpmRouteTest`, `NpmRegistryTest` |
-| FMT-NPM-9 | Access must be decided before anything about the package is looked up. A scoped package belongs to the namespace that owns its scope; publishing needs one, so an unscoped or unowned name can't be published | `NpmAccessServiceTest`, `NpmRegistryTest` |
+| FMT-NPM-9 | Access must be decided before anything about the package is looked up. A scoped package belongs to the namespace that owns its scope, an unscoped one to the namespace claiming the longest prefix of its name (`acme-` owns `acme-ui`); publishing needs one, so an unowned name can't be published | `NpmAccessServiceTest`, `NpmRegistryTest` |
 | FMT-NPM-10 | Packuments must be served full, or abbreviated for `Accept: application/vnd.npm.install-v1+json` with only the fields installs use. Tarball links are absolute, from the external URL, and versions a block refuses are left out, along with tags pointing at them | `NpmRegistryTest`, `NpmAccessServiceTest` |
 | FMT-NPM-11 | A version's manifest and its tarball must be served exactly as published; a blocked version is `403` | `NpmRegistryTest` |
 | FMT-NPM-12 | A publish must carry exactly one version and its tarball, named `<name>-<version>.tgz`, under the URL's package. The tarball is decoded from base64 straight into the blob store while it's hashed, never held whole, and must match `dist.integrity` and `dist.shasum`; past `max-tarball-size` is `413` | `NpmRegistryTest` |
 | FMT-NPM-13 | A published version must never change: publishing it again, or a tombstoned one, is `409`. `npm deprecate` changes only each version's `deprecated` message | `NpmRegistryTest` |
-| FMT-NPM-14 | Dist-tags must point at versions that exist; publishing moves the tags it names, the first version becomes `latest`, and `latest` can be moved but not removed | `NpmRegistryTest` |
+| FMT-NPM-14 | Dist-tags must point at versions that exist; publishing moves the tags it names, the first version becomes `latest`, and any tag, `latest` included, can be removed | `NpmRegistryTest` |
 | FMT-NPM-15 | The `/npm/` routes must exist only in a web application while `kiln.format.npm.enabled` isn't `false`. Publishes and tarball downloads reach the event listeners | `NpmWebAutoConfigurationTest`, `NpmRegistryTest` |
-| FMT-NPM-16 | `-/ping` and `-/whoami` must answer, `whoami` asking anonymous callers to sign in. npm commands Kiln doesn't serve (`search`, `login`, `audit`, `unpublish`, `owner`, `access`, …) are a `404` with npm's `error` and an `npm-notice` naming the alternative, never a `5xx` | `NpmAccessServiceTest` |
+| FMT-NPM-16 | `-/ping` and `-/whoami` must answer, `whoami` asking anonymous callers to sign in. npm commands Kiln doesn't serve (`search`, `login`, `audit`, `owner`, `access`, …) are a `404` with npm's `error` and an `npm-notice` naming the alternative, never a `5xx` | `NpmAccessServiceTest` |
+| FMT-NPM-17 | `npm unpublish` must work for members allowed to delete: `PUT <name>/-rev/<rev>` drops the versions the packument leaves out (dist-tags on them follow the packument or go), `DELETE <name>/-/<file>/-rev/<rev>` succeeds once the file's version is gone, and `DELETE <name>/-rev/<rev>` drops the package. Every unpublished version is tombstoned, so its number can't be published again. The packument carries the `_rev` npm addresses these by; Kiln doesn't check it | `NpmRegistryTest`, `NpmRouteTest`, `NpmAccessServiceTest` |
 
 ## How it plugs in *(implementation only)*
 
@@ -108,7 +109,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: FMT-NPM-1 to FMT-NPM-16.
+Implemented: FMT-NPM-1 to FMT-NPM-17.
 
-Planned (M2): web login, unpublish as a Kiln delete, audit from a local OSV mirror, search,
+Planned (M2): web login, audit from a local OSV mirror, search,
 registry signatures and provenance. The real npm, pnpm and yarn are the acceptance test.

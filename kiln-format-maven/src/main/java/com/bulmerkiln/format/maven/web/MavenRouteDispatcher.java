@@ -84,12 +84,12 @@ public final class MavenRouteDispatcher {
         }
     }
 
-    /** Generated metadata and its checksums; uploaded metadata is accepted and then ignored. */
+    /** Generated metadata and its checksums; of uploaded metadata only plugin prefixes are kept. */
     private void metadata(HttpServletRequest request, HttpServletResponse response, MavenPath.Metadata m)
             throws IOException {
         if ("PUT".equals(request.getMethod())) {
-            access.requireToWrite(m);
-            discard(request);
+            access.requireToWriteMetadata(m);
+            metadata.upload(m, readMetadata(request));
             empty(response, 201);
             return;
         }
@@ -104,14 +104,15 @@ public final class MavenRouteDispatcher {
                 response, new FormatResponse(200, "text/xml", new String(xml, StandardCharsets.UTF_8), Map.of()));
     }
 
-    /** Reads an upload Kiln ignores, refusing one too large to be metadata or a checksum. */
-    private static void discard(HttpServletRequest request) throws IOException {
+    /** Reads uploaded metadata or its checksum, refusing one too large to be either. */
+    private static byte[] readMetadata(HttpServletRequest request) throws IOException {
         InputStream body = request.getInputStream();
-        body.readNBytes(MAX_METADATA);
+        byte[] bytes = body.readNBytes(MAX_METADATA);
         if (body.read() != -1) {
             throw new RefusedException(
                     Refusal.of(Reason.TOO_LARGE, "Metadata is limited to " + MAX_METADATA + " bytes"));
         }
+        return bytes;
     }
 
     private static void requireRead(String method) {
