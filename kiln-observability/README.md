@@ -37,7 +37,7 @@ vocabulary or a validated name, never from raw request text.
 |---|---|---|
 | OBS-1 | Metrics must be exported under these Prometheus names: `kiln_pushes_total`, `kiln_pulls_total`, `kiln_bytes_served_total`, `kiln_bytes_received_total` and `kiln_blocked_requests_total` (labels `format`, `namespace`); `kiln_auth_failures_total` (labels `rung`, `reason`); `kiln_immutable_tag_denials_total`; `kiln_leaked_tokens_total` | `KilnMetricsTest` (against a real Prometheus scrape) |
 | OBS-2 | Label values must come only from fixed vocabularies or validated names. A namespace that isn't a valid namespace name is recorded as `unknown`; a rung outside 1 to 4 as `unknown`; reasons are a fixed list | `KilnMetricsTest` |
-| OBS-3 | The `org` label must be added only when `kiln.observability.org-label` is set and an organization is in context. kiln-oss has one organization, so the label would only add cardinality | `KilnMetricsTest` |
+| OBS-3 | The `organization` label must be added only when `kiln.observability.organization-label` is set and an organization is in context. kiln-oss has one organization, so the label would only add cardinality | `KilnMetricsTest` |
 | OBS-4 | Recording must never throw and never fail the request it describes; non-positive byte counts are ignored | `KilnMetricsTest` |
 | OBS-5 | When the format subsystem is present, every format's pushes and pulls must be counted through its events, without formats calling metrics directly | `KilnMetricsTest` |
 
@@ -61,7 +61,7 @@ subsystem's listener port, not by calling `KilnMetrics` from feature code.
 
 | Property | Default | Description |
 |---|---|---|
-| `kiln.observability.org-label` | `false` | Adds the `org` label to per-organization metrics; kiln-cloud sets it |
+| `kiln.observability.organization-label` | `false` | Adds the `organization` label to per-organization metrics; kiln-cloud sets it |
 
 `KilnMetrics` is created only when the application has a Micrometer `MeterRegistry`.
 
@@ -76,7 +76,7 @@ metrics.authFailure(4, AuthFailureReason.REVOKED);
 - **Threats**: an attacker sending many distinct names to create unbounded time series and exhaust
   Prometheus; label values used to inject fake metric lines
 - **Untrusted input**: namespace names, which are validated before use as labels
-- **Defaults**: no `org` label unless asked for
+- **Defaults**: no `organization` label unless asked for
 - **Protections**: OBS-2, OBS-4
 
 ## Testing

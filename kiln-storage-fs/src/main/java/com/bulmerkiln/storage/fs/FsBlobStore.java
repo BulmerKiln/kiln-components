@@ -32,8 +32,8 @@ import org.jspecify.annotations.Nullable;
  * A {@link BlobStore} on a local or shared filesystem, laid out per organization (STO-FS-1):
  *
  * <pre>
- * &lt;root&gt;/&lt;org-id&gt;/blobs/sha256/&lt;ab&gt;/&lt;hex&gt;   immutable, content-addressed
- * &lt;root&gt;/&lt;org-id&gt;/_uploads/&lt;session-uuid&gt;      in-progress uploads
+ * &lt;root&gt;/&lt;organization-id&gt;/blobs/sha256/&lt;ab&gt;/&lt;hex&gt;   immutable, content-addressed
+ * &lt;root&gt;/&lt;organization-id&gt;/_uploads/&lt;session-uuid&gt;      in-progress uploads
  * </pre>
  *
  * <p>Committing re-hashes the upload, so a session survives restarts and can continue on another

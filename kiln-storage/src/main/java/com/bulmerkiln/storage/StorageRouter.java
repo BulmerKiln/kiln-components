@@ -4,7 +4,7 @@
  */
 package com.bulmerkiln.storage;
 
-import com.bulmerkiln.core.org.Org;
+import com.bulmerkiln.core.organization.Organization;
 
 /**
  * Finds the store that holds an organization's blobs: one store for every organization in
@@ -12,5 +12,5 @@ import com.bulmerkiln.core.org.Org;
  */
 public interface StorageRouter {
 
-    BlobStore store(Org org);
+    BlobStore store(Organization organization);
 }

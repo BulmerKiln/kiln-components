@@ -41,7 +41,7 @@ Inherits every requirement of [`kiln-auth`](../kiln-auth#requirements), and adds
 | AUTH-OAUTH2-1 | The subject must come from the configured user-ID path, as a JSON string or integer only, never a float, boolean or object, and with no fallback. For GitHub it's the numeric `id`, never the `login`, which can be renamed and then registered by someone else | `OAuth2ConnectorTest`, `GitHubConnectorContractTest` |
 | AUTH-OAUTH2-2 | An email must be trusted only when the connector also configures where the IdP marks it verified, and that value is `true` | `OAuth2ConnectorTest` |
 | AUTH-OAUTH2-3 | JSON paths must be 1 to 8 dotted object keys: no array indexes or wildcards, so a path names exactly one value | `OAuth2ConnectorTest` |
-| AUTH-OAUTH2-4 | The GitHub preset must take groups from `/user/teams`, next to its user-info endpoint, as `org` and `org/team`, lowercased. A failed lookup only means fewer groups | `GitHubConnectorContractTest`, `OAuth2ConnectorTest` |
+| AUTH-OAUTH2-4 | The GitHub preset must take groups from `/user/teams`, next to its user-info endpoint, as `organization` and `organization/team`, lowercased. A failed lookup only means fewer groups | `GitHubConnectorContractTest`, `OAuth2ConnectorTest` |
 | AUTH-OAUTH2-5 | Every endpoint must be `https`. A generic connector must configure all of them; GitHub Enterprise Server overrides the preset's | `OAuth2ConnectorTest` |
 
 ## How it plugs in *(implementation only)*

@@ -23,8 +23,8 @@ subsystem can be replaced or tested on its own.
 
 **Does**
 
-- `OrgContext`: the organization the current work runs for
-- `Org`, `OrgId`: organizations and their slugs, including the reserved slugs
+- `OrganizationContext`: the organization the current work runs for
+- `Organization`, `OrganizationId`: organizations and their slugs, including the reserved slugs
 - `Digest`, `DigestAlgorithm`, `Digester`: content digests
 - `ArtifactFormat`: the open identifier formats use (`oci`, `npm`, ...)
 
@@ -37,11 +37,11 @@ subsystem can be replaced or tested on its own.
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| CORE-1 | Reading the current organization outside a scope must fail, never default. This is the same rule as Postgres's `current_setting('app.org_id')` without `missing_ok`: no organization means an error, not every organization | `OrgContextTest` |
-| CORE-2 | A scope must never switch to a different organization, including one with the same slug and a different ID. Re-entering the same organization is allowed | `OrgContextTest` |
-| CORE-3 | The organization must not leak past its scope: not after it throws, and not into threads or async tasks started inside it. Concurrent scopes each see only their own organization | `OrgContextTest` |
-| CORE-4 | Organization slugs must be lowercase letters and digits with single inner hyphens, at most 39 characters, and never a reserved slug: `v2`, `npm`, `maven`, `helm`, `cargo`, `ui`, `api`, `auth`, `token`, `scim`, `login`, `.well-known`, `metrics`, `healthz`, `admin`, `status`, `docs`, `static`, `assets`, `kiln`, `bulmer`. Slugs share the registry's path space with Kiln's own routes, so the list only grows, and a new route may only take a name already reserved | `OrgTest` |
-| CORE-5 | Slugs must refuse lookalikes and encodings: other scripts, fullwidth letters, zero-width and control characters, whitespace, `%`, `/`, `\` | `OrgTest` |
+| CORE-1 | Reading the current organization outside a scope must fail, never default. This is the same rule as Postgres's `current_setting('app.organization_id')` without `missing_ok`: no organization means an error, not every organization | `OrganizationContextTest` |
+| CORE-2 | A scope must never switch to a different organization, including one with the same slug and a different ID. Re-entering the same organization is allowed | `OrganizationContextTest` |
+| CORE-3 | The organization must not leak past its scope: not after it throws, and not into threads or async tasks started inside it. Concurrent scopes each see only their own organization | `OrganizationContextTest` |
+| CORE-4 | Organization slugs must be lowercase letters and digits with single inner hyphens, at most 39 characters, and never a reserved slug: `v2`, `npm`, `maven`, `helm`, `cargo`, `ui`, `api`, `auth`, `token`, `scim`, `login`, `.well-known`, `metrics`, `healthz`, `admin`, `status`, `docs`, `static`, `assets`, `kiln`, `bulmer`. Slugs share the registry's path space with Kiln's own routes, so the list only grows, and a new route may only take a name already reserved | `OrganizationTest` |
+| CORE-5 | Slugs must refuse lookalikes and encodings: other scripts, fullwidth letters, zero-width and control characters, whitespace, `%`, `/`, `\` | `OrganizationTest` |
 | CORE-6 | Digests must use a registered algorithm (`sha256` or `sha512`) with its exact lowercase hex encoding. A well-formed digest with another algorithm must be reported as unsupported, distinct from malformed | `DigestTest` |
 | CORE-7 | A `Digest` must be impossible to construct in an invalid form, so it's always safe to use in a storage path | `DigestTest` |
 | CORE-8 | Digest parsing must refuse inputs over 256 characters before matching, and must never throw anything but `InvalidDigestException` | `DigestTest` (fuzz target) |
@@ -56,7 +56,7 @@ None.
 ## Usage
 
 ```kotlin
-OrgContext.run(org, () -> blobStore.stat(digest));
+OrganizationContext.run(organization, () -> blobStore.stat(digest));
 
 Digest digest = Digest.parse("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 ```

@@ -4,7 +4,7 @@
  */
 package com.bulmerkiln.storage;
 
-import com.bulmerkiln.core.org.Org;
+import com.bulmerkiln.core.organization.Organization;
 import java.util.Objects;
 
 /** Routes every organization to one store, which keeps them apart by key. */
@@ -15,7 +15,7 @@ public record SingleStoreRouter(BlobStore blobStore) implements StorageRouter {
     }
 
     @Override
-    public BlobStore store(Org org) {
+    public BlobStore store(Organization organization) {
         return blobStore;
     }
 }

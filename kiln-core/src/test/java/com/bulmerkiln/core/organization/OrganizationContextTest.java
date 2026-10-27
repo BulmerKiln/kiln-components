@@ -2,7 +2,7 @@
  * Copyright The Bulmer Kiln Authors
  * SPDX-License-Identifier: Apache-2.0
  */
-package com.bulmerkiln.core.org;
+package com.bulmerkiln.core.organization;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -19,51 +19,52 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
-class OrgContextTest {
+class OrganizationContextTest {
 
-    private final Org acme = new Org(new OrgId(UUID.randomUUID()), "acme");
-    private final Org globex = new Org(new OrgId(UUID.randomUUID()), "globex");
+    private final Organization acme = new Organization(new OrganizationId(UUID.randomUUID()), "acme");
+    private final Organization globex = new Organization(new OrganizationId(UUID.randomUUID()), "globex");
 
     @Test
     void failsOutsideAScope() {
-        assertThat(OrgContext.isBound()).isFalse();
-        assertThatIllegalStateException().isThrownBy(OrgContext::current);
+        assertThat(OrganizationContext.isBound()).isFalse();
+        assertThatIllegalStateException().isThrownBy(OrganizationContext::current);
     }
 
     @Test
     void bindsForTheScopeOnly() {
-        assertThat(OrgContext.call(acme, OrgContext::current)).isEqualTo(acme);
-        assertThat(OrgContext.isBound()).isFalse();
+        assertThat(OrganizationContext.call(acme, OrganizationContext::current)).isEqualTo(acme);
+        assertThat(OrganizationContext.isBound()).isFalse();
     }
 
     @Test
     void refusesToSwitchOrganizationInsideAScope() {
-        OrgContext.run(
+        OrganizationContext.run(
                 acme,
                 () -> assertThatIllegalStateException()
-                        .isThrownBy(() -> OrgContext.run(globex, () -> {}))
+                        .isThrownBy(() -> OrganizationContext.run(globex, () -> {}))
                         .withMessageContaining("globex"));
     }
 
     @Test
     void allowsReenteringTheSameOrganization() {
-        OrgContext.run(
+        OrganizationContext.run(
                 acme,
-                () -> assertThat(OrgContext.call(acme, OrgContext::current)).isEqualTo(acme));
+                () -> assertThat(OrganizationContext.call(acme, OrganizationContext::current))
+                        .isEqualTo(acme));
     }
 
     @Test
     void unbindsWhenTheScopeThrows() {
-        assertThatThrownBy(() -> OrgContext.run(acme, () -> {
+        assertThatThrownBy(() -> OrganizationContext.run(acme, () -> {
                     throw new IllegalArgumentException("boom");
                 }))
                 .hasMessage("boom");
-        assertThat(OrgContext.isBound()).isFalse();
+        assertThat(OrganizationContext.isBound()).isFalse();
     }
 
     @Test
     void propagatesCheckedExceptions() {
-        assertThatThrownBy(() -> OrgContext.call(acme, () -> {
+        assertThatThrownBy(() -> OrganizationContext.call(acme, () -> {
                     throw new IOException("disk");
                 }))
                 .isInstanceOf(IOException.class);
@@ -72,8 +73,8 @@ class OrgContextTest {
     @Test
     void doesNotLeakIntoThreadsStartedInsideTheScope() throws Exception {
         AtomicReference<Boolean> boundInThread = new AtomicReference<>();
-        OrgContext.run(acme, () -> {
-            Thread thread = Thread.ofVirtual().start(() -> boundInThread.set(OrgContext.isBound()));
+        OrganizationContext.run(acme, () -> {
+            Thread thread = Thread.ofVirtual().start(() -> boundInThread.set(OrganizationContext.isBound()));
             try {
                 thread.join();
             } catch (InterruptedException e) {
@@ -83,23 +84,23 @@ class OrgContextTest {
         assertThat(boundInThread.get()).isFalse();
 
         CompletableFuture<Boolean> async =
-                OrgContext.call(acme, () -> CompletableFuture.supplyAsync(OrgContext::isBound));
+                OrganizationContext.call(acme, () -> CompletableFuture.supplyAsync(OrganizationContext::isBound));
         assertThat(async.get()).isFalse();
     }
 
     @Test
     void concurrentScopesSeeOnlyTheirOwnOrganization() throws Exception {
-        List<Org> orgs = new ArrayList<>();
+        List<Organization> organizations = new ArrayList<>();
         for (int i = 0; i < 200; i++) {
-            orgs.add(new Org(new OrgId(UUID.randomUUID()), "org-" + i));
+            organizations.add(new Organization(new OrganizationId(UUID.randomUUID()), "organization-" + i));
         }
         CountDownLatch start = new CountDownLatch(1);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<Boolean>> results = new ArrayList<>();
-            for (Org org : orgs) {
-                results.add(executor.submit(() -> OrgContext.call(org, () -> {
+            for (Organization organization : organizations) {
+                results.add(executor.submit(() -> OrganizationContext.call(organization, () -> {
                     start.await();
-                    return OrgContext.current().equals(org);
+                    return OrganizationContext.current().equals(organization);
                 })));
             }
             start.countDown();
@@ -111,8 +112,9 @@ class OrgContextTest {
 
     @Test
     void organizationsWithTheSameSlugButDifferentIdsAreDifferent() {
-        Org impostor = new Org(new OrgId(UUID.randomUUID()), "acme");
-        OrgContext.run(
-                acme, () -> assertThatIllegalStateException().isThrownBy(() -> OrgContext.run(impostor, () -> {})));
+        Organization impostor = new Organization(new OrganizationId(UUID.randomUUID()), "acme");
+        OrganizationContext.run(
+                acme,
+                () -> assertThatIllegalStateException().isThrownBy(() -> OrganizationContext.run(impostor, () -> {})));
     }
 }

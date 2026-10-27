@@ -9,7 +9,7 @@ released together, at one version, through `kiln-dependencies`.
 | `kiln-build` | Gradle convention plugins (`kiln.java-library`, `kiln.publishing`): Java 25, Error Prone with NullAway, Palantir formatting with SPDX headers, JUnit, jqwik and Jazzer, reproducible archives, signed publishing |
 | `kiln-dependencies` | The release-train BOM: every `kiln-*` module and third-party version, from `gradle/libs.versions.toml` |
 | `kiln-architecture` | The architecture rules, checked across every module with ArchUnit (test only) |
-| `kiln-core` | The shared kernel: `OrgContext` and `Org`, content digests, and the open `ArtifactFormat` identifier |
+| `kiln-core` | The shared kernel: `OrganizationContext` and `Organization`, content digests, and the open `ArtifactFormat` identifier |
 | `kiln-auth` | The token format, and the sign-in subsystem: the `IdentityConnector` contract, shared identity rules, the `ConnectorRegistry`, and the contract test suite (test fixtures) every connector runs |
 | `kiln-auth-oidc` | The generic OIDC connector with presets (Dex, Keycloak, Authentik, Ory, Okta, GitLab, Google Workspace) and claim mapping |
 | `kiln-auth-oauth2` | The generic OAuth2 connector, with the GitHub preset |

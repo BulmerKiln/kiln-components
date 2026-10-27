@@ -38,7 +38,7 @@ Inherits every requirement of [`kiln-storage`](../kiln-storage#requirements), an
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| STO-FS-1 | Blobs must be stored at `<root>/<org-id>/blobs/<algorithm>/<first two hex>/<hex>` and uploads at `<root>/<org-id>/_uploads/<uuid>`, with every path built from a validated `Digest`, `UploadId` or organization ID, never from client text | `FsBlobStoreTest` |
+| STO-FS-1 | Blobs must be stored at `<root>/<organization-id>/blobs/<algorithm>/<first two hex>/<hex>` and uploads at `<root>/<organization-id>/_uploads/<uuid>`, with every path built from a validated `Digest`, `UploadId` or organization ID, never from client text | `FsBlobStoreTest` |
 | STO-FS-2 | The store must check at startup that the filesystem supports atomic rename, which several replicas sharing it rely on, and leave nothing behind from the check | `FsBlobStoreTest` (the probe leaves nothing) |
 | STO-FS-3 | The root must be normalized, so `x/../store` means `store`, and a root that's a file must stop the boot | `FsBlobStoreTest`, `FsStorageAutoConfigurationTest` |
 | STO-FS-4 | Listing must skip anything in the tree that isn't a blob: stray files, unknown algorithms, misplaced names | `FsBlobStoreTest` |

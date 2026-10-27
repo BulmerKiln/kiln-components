@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.OrganizationId;
 import com.bulmerkiln.storage.UploadId;
 import java.net.URI;
 import java.time.Duration;
@@ -20,24 +20,26 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class S3StorageTest {
 
-    private static final OrgId ORG = OrgId.of("7d6f5a2e-1c3b-4a5d-9e8f-0a1b2c3d4e5f");
+    private static final OrganizationId ORGANIZATION = OrganizationId.of("7d6f5a2e-1c3b-4a5d-9e8f-0a1b2c3d4e5f");
     private static final Digest EMPTY = Digest.sha256(new byte[0]);
 
     @Test
     void laysOutKeysLikeTheFilesystemStore() {
-        assertThat(new S3Keys("").blob(ORG, EMPTY)).isEqualTo(ORG + "/blobs/sha256/e3/" + EMPTY.encoded());
-        assertThat(new S3Keys("kiln/prod").blob(ORG, EMPTY)).startsWith("kiln/prod/" + ORG + "/blobs/");
+        assertThat(new S3Keys("").blob(ORGANIZATION, EMPTY))
+                .isEqualTo(ORGANIZATION + "/blobs/sha256/e3/" + EMPTY.encoded());
+        assertThat(new S3Keys("kiln/prod").blob(ORGANIZATION, EMPTY))
+                .startsWith("kiln/prod/" + ORGANIZATION + "/blobs/");
         UploadId upload = UploadId.random();
-        assertThat(new S3Keys("").upload(ORG, upload)).isEqualTo(ORG + "/_uploads/" + upload);
-        assertThat(new S3Keys("kiln").org(ORG)).isEqualTo("kiln/" + ORG + "/");
+        assertThat(new S3Keys("").upload(ORGANIZATION, upload)).isEqualTo(ORGANIZATION + "/_uploads/" + upload);
+        assertThat(new S3Keys("kiln").organization(ORGANIZATION)).isEqualTo("kiln/" + ORGANIZATION + "/");
     }
 
     @Test
     void organizationsNeverShareAKey() {
-        OrgId other = new OrgId(UUID.randomUUID());
+        OrganizationId other = new OrganizationId(UUID.randomUUID());
         S3Keys keys = new S3Keys("");
-        assertThat(keys.blob(ORG, EMPTY)).isNotEqualTo(keys.blob(other, EMPTY));
-        assertThat(keys.blob(other, EMPTY)).doesNotStartWith(keys.org(ORG));
+        assertThat(keys.blob(ORGANIZATION, EMPTY)).isNotEqualTo(keys.blob(other, EMPTY));
+        assertThat(keys.blob(other, EMPTY)).doesNotStartWith(keys.organization(ORGANIZATION));
     }
 
     @ParameterizedTest

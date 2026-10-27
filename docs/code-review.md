@@ -67,7 +67,7 @@ open. The gates catch what they can; this section is what they can't.
 - **Every new input surface** has a fuzz target.
 - **Fail closed**: a missing setting, port or listener stops the boot or refuses the request.
   Nothing is allowed by default.
-- **Organization isolation**: work runs inside `OrgContext`, keys and paths include the
+- **Organization isolation**: work runs inside `OrganizationContext`, keys and paths include the
   organization, and nothing reveals another organization's data or existence.
 - **No secret leaks**: not in logs, exceptions, `toString()`, metrics, findings or command lines.
   Errors never repeat a value they refuse.

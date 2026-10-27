@@ -40,7 +40,7 @@ exists, and adds:
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| STO-S3-1 | Keys must mirror the filesystem layout, `[prefix/]<org-id>/blobs/<algorithm>/<ab>/<hex>` and `[prefix/]<org-id>/_uploads/<uuid>`, so blobs copy between backends unchanged | `S3StorageTest` |
+| STO-S3-1 | Keys must mirror the filesystem layout, `[prefix/]<organization-id>/blobs/<algorithm>/<ab>/<hex>` and `[prefix/]<organization-id>/_uploads/<uuid>`, so blobs copy between backends unchanged | `S3StorageTest` |
 | STO-S3-2 | No organization's keys may fall under another's prefix | `S3StorageTest` |
 | STO-S3-3 | A key prefix must be lowercase segments separated by single slashes: no leading or trailing slash, no empty, dot or `..` segment | `S3StorageTest` |
 | STO-S3-4 | In `auto` mode, downloads may redirect only for clients known to follow a redirect without forwarding `Authorization` to storage, matched by the exact product name at the start of `User-Agent`: `docker`, `containerd`, `buildkit`, `containers`, `podman`, `skopeo`, `buildah`, `crane`, `go-containerregistry`, `oras`, `Helm`, `npm`, `Apache-Maven`, `Gradle`. Every other client is proxied. `always` and `never` override the list | `S3StorageTest` |

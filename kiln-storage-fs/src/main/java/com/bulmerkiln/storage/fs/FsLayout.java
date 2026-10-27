@@ -7,7 +7,7 @@ package com.bulmerkiln.storage.fs;
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.DigestAlgorithm;
 import com.bulmerkiln.core.digest.InvalidDigestException;
-import com.bulmerkiln.core.org.OrgContext;
+import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.storage.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
 import java.io.IOException;
@@ -43,14 +43,14 @@ final class FsLayout {
     }
 
     Path blobDirectory(Digest digest) {
-        return orgRoot()
+        return organizationRoot()
                 .resolve("blobs")
                 .resolve(digest.algorithm().id())
                 .resolve(digest.encoded().substring(0, 2));
     }
 
     Path uploadsDirectory() {
-        return orgRoot().resolve("_uploads");
+        return organizationRoot().resolve("_uploads");
     }
 
     Path uploadPath(UploadId upload) {
@@ -60,7 +60,7 @@ final class FsLayout {
     /** Every blob of the current organization. Anything else in the tree is skipped (STO-FS-4). */
     @MustBeClosed
     Stream<Digest> list() throws IOException {
-        Path blobs = orgRoot().resolve("blobs");
+        Path blobs = organizationRoot().resolve("blobs");
         if (!Files.isDirectory(blobs)) {
             return Stream.empty();
         }
@@ -77,8 +77,8 @@ final class FsLayout {
         }
     }
 
-    private Path orgRoot() {
-        return root.resolve(OrgContext.current().id().toString());
+    private Path organizationRoot() {
+        return root.resolve(OrganizationContext.current().id().toString());
     }
 
     /** {@code <algorithm>/<ab>/<hex>}, or empty for anything that isn't a blob. */

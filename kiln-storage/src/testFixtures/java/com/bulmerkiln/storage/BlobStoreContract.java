@@ -11,9 +11,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.DigestAlgorithm;
 import com.bulmerkiln.core.digest.Digester;
-import com.bulmerkiln.core.org.Org;
-import com.bulmerkiln.core.org.OrgContext;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.core.organization.OrganizationContext;
+import com.bulmerkiln.core.organization.OrganizationId;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,8 +45,8 @@ public abstract class BlobStoreContract {
     protected static final byte[] HELLO = "hello, kiln".getBytes(StandardCharsets.UTF_8);
     protected static final Digest HELLO_DIGEST = Digest.sha256(HELLO);
 
-    protected final Org acme = new Org(new OrgId(UUID.randomUUID()), "acme");
-    protected final Org globex = new Org(new OrgId(UUID.randomUUID()), "globex");
+    protected final Organization acme = new Organization(new OrganizationId(UUID.randomUUID()), "acme");
+    protected final Organization globex = new Organization(new OrganizationId(UUID.randomUUID()), "globex");
 
     protected BlobStore store;
 
@@ -57,7 +57,7 @@ public abstract class BlobStoreContract {
     protected abstract BlobStore newStore() throws IOException;
 
     /** Checks the backend kept nothing of finished uploads. Backends that can look override it. */
-    protected void assertNoUploadsLeft(Org org) throws IOException {}
+    protected void assertNoUploadsLeft(Organization organization) throws IOException {}
 
     @BeforeEach
     void openStore() throws IOException {
@@ -529,7 +529,7 @@ public abstract class BlobStoreContract {
         return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
     }
 
-    protected static <T> T in(Org org, Callable<T> work) throws Exception {
-        return OrgContext.call(org, work::call);
+    protected static <T> T in(Organization organization, Callable<T> work) throws Exception {
+        return OrganizationContext.call(organization, work::call);
     }
 }

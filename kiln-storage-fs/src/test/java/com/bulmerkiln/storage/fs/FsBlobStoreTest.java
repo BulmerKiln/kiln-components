@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.core.org.Org;
+import com.bulmerkiln.core.organization.Organization;
 import com.bulmerkiln.storage.BlobInfo;
 import com.bulmerkiln.storage.BlobStore;
 import com.bulmerkiln.storage.BlobStoreContract;
@@ -33,8 +33,9 @@ class FsBlobStoreTest extends BlobStoreContract {
     }
 
     @Override
-    protected void assertNoUploadsLeft(Org org) throws IOException {
-        try (Stream<Path> uploads = Files.list(root.resolve(org.id().toString()).resolve("_uploads"))) {
+    protected void assertNoUploadsLeft(Organization organization) throws IOException {
+        try (Stream<Path> uploads =
+                Files.list(root.resolve(organization.id().toString()).resolve("_uploads"))) {
             assertThat(uploads).isEmpty();
         }
     }

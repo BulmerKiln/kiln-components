@@ -5,7 +5,7 @@
 package com.bulmerkiln.observability;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
-import com.bulmerkiln.core.org.OrgContext;
+import com.bulmerkiln.core.organization.OrganizationContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * Records Kiln's metrics under the names in OBS-1. Recording never throws: a
  * metric must never fail the request it describes.
  *
- * <p>The {@code org} label is added only when {@code orgLabel} is set, which kiln-cloud does;
+ * <p>The {@code organization} label is added only when {@code organizationLabel} is set, which kiln-cloud does;
  * kiln-oss has one organization, so the label would only add cardinality.
  */
 public final class KilnMetrics {
@@ -26,11 +26,11 @@ public final class KilnMetrics {
     static final String UNKNOWN = "unknown";
 
     private final MeterRegistry registry;
-    private final boolean orgLabel;
+    private final boolean organizationLabel;
 
-    public KilnMetrics(MeterRegistry registry, boolean orgLabel) {
+    public KilnMetrics(MeterRegistry registry, boolean organizationLabel) {
         this.registry = registry;
-        this.orgLabel = orgLabel;
+        this.organizationLabel = organizationLabel;
     }
 
     public void push(ArtifactFormat format, String namespace) {
@@ -82,8 +82,8 @@ public final class KilnMetrics {
     }
 
     private Tags withOrg(Tags tags) {
-        return orgLabel && OrgContext.isBound()
-                ? tags.and("org", OrgContext.current().slug())
+        return organizationLabel && OrganizationContext.isBound()
+                ? tags.and("organization", OrganizationContext.current().slug())
                 : tags;
     }
 

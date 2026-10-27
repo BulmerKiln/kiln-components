@@ -54,15 +54,15 @@ public final class OAuth2UserMapper {
     }
 
     /**
-     * Groups from GitHub's {@code GET /user/teams}: each team gives {@code org} and
-     * {@code org/team-slug}, lowercased, since GitHub logins and slugs are case-insensitive.
+     * Groups from GitHub's {@code GET /user/teams}: each team gives {@code organization} and
+     * {@code organization/team-slug}, lowercased, since GitHub logins and slugs are case-insensitive.
      */
     public static Set<String> gitHubTeams(List<?> teams) {
         Set<String> groups = new LinkedHashSet<>();
-        JsonPath org = JsonPath.parse("organization.login");
+        JsonPath organization = JsonPath.parse("organization.login");
         for (Object item : teams) {
             if (item instanceof Map<?, ?> team
-                    && org.read(team) instanceof String login
+                    && organization.read(team) instanceof String login
                     && team.get("slug") instanceof String slug
                     && !login.isBlank()
                     && !slug.isBlank()) {

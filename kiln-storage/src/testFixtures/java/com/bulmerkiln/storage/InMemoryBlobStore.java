@@ -6,8 +6,8 @@ package com.bulmerkiln.storage;
 
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.Digester;
-import com.bulmerkiln.core.org.OrgContext;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.OrganizationContext;
+import com.bulmerkiln.core.organization.OrganizationId;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ public final class InMemoryBlobStore implements BlobStore {
         private final Map<Key<UploadId>, Upload> uploads = new ConcurrentHashMap<>();
     }
 
-    record Key<T>(OrgId org, T id) {}
+    record Key<T>(OrganizationId organization, T id) {}
 
     static final class Upload {
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -138,9 +138,9 @@ public final class InMemoryBlobStore implements BlobStore {
 
     @Override
     public Stream<Digest> list() {
-        OrgId org = OrgContext.current().id();
+        OrganizationId organization = OrganizationContext.current().id();
         List<Digest> digests = state.blobs.keySet().stream()
-                .filter(k -> k.org().equals(org))
+                .filter(k -> k.organization().equals(organization))
                 .map(Key::id)
                 .toList();
         return digests.stream();
@@ -155,7 +155,7 @@ public final class InMemoryBlobStore implements BlobStore {
     }
 
     private static <T> Key<T> key(T id) {
-        return new Key<>(OrgContext.current().id(), id);
+        return new Key<>(OrganizationContext.current().id(), id);
     }
 
     private static final class Read implements BlobRead {

@@ -40,7 +40,7 @@ shared test suite.
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| STO-1 | Every blob operation must act on the organization in `OrgContext`, and fail outside one | `BlobStoreContract` |
+| STO-1 | Every blob operation must act on the organization in `OrganizationContext`, and fail outside one | `BlobStoreContract` |
 | STO-2 | Blobs and uploads must never be shared across organizations. The same content is stored separately for each, and no organization can read, abort or delete another's. Deduplicating across organizations would reveal that another organization holds a blob | `BlobStoreContract` |
 | STO-3 | A chunk must be applied entirely or not at all: if the upload would exceed its size limit, or the client disconnects mid-chunk, the session is left as it was | `BlobStoreContract` |
 | STO-4 | A chunk must start exactly where the upload ends. A gap or an overlap is refused, reporting the offset to resume from | `BlobStoreContract` |
@@ -72,7 +72,7 @@ shared test suite.
 ## Adding an implementation *(subsystem only)*
 
 1. Create `kiln-storage-<name>` and depend on `kiln-storage`.
-2. Implement `BlobStore`. Scope every key by `OrgContext.current().id()`.
+2. Implement `BlobStore`. Scope every key by `OrganizationContext.current().id()`.
 3. Register a `StorageBackend` bean with a new type from a Spring Boot auto-configuration. Validate
    the backend's own settings in `create()`, which runs only when the backend is selected.
 4. Extend `BlobStoreContract` in its tests, implementing `newStore()` so a second call opens the
@@ -87,7 +87,7 @@ shared test suite.
 ## Usage
 
 ```java
-BlobStore store = storageRouter.store(OrgContext.current());
+BlobStore store = storageRouter.store(OrganizationContext.current());
 UploadId upload = store.createUpload();
 store.append(upload, 0, body, maxBlobSize);
 BlobInfo blob = store.commit(upload, digest);

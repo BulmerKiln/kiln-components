@@ -5,13 +5,13 @@
 package com.bulmerkiln.storage.s3;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.OrganizationId;
 import com.bulmerkiln.storage.UploadId;
 import java.util.regex.Pattern;
 
 /**
  * Object keys, laid out as the filesystem store lays out paths, so blobs copy across unchanged:
- * {@code [prefix/]<org-id>/blobs/sha256/<ab>/<hex>} and {@code [prefix/]<org-id>/_uploads/<uuid>}.
+ * {@code [prefix/]<organization-id>/blobs/sha256/<ab>/<hex>} and {@code [prefix/]<organization-id>/_uploads/<uuid>}.
  * Every part comes from a validated type, never from client text.
  */
 public final class S3Keys {
@@ -39,17 +39,17 @@ public final class S3Keys {
         return true;
     }
 
-    public String blob(OrgId org, Digest digest) {
+    public String blob(OrganizationId organization, Digest digest) {
         String hex = digest.encoded();
-        return prefix + org + "/blobs/" + digest.algorithm().id() + "/" + hex.substring(0, 2) + "/" + hex;
+        return prefix + organization + "/blobs/" + digest.algorithm().id() + "/" + hex.substring(0, 2) + "/" + hex;
     }
 
-    public String upload(OrgId org, UploadId upload) {
-        return prefix + org + "/_uploads/" + upload;
+    public String upload(OrganizationId organization, UploadId upload) {
+        return prefix + organization + "/_uploads/" + upload;
     }
 
     /** Everything an organization owns, for listing and for deleting the organization. */
-    public String org(OrgId org) {
-        return prefix + org + "/";
+    public String organization(OrganizationId organization) {
+        return prefix + organization + "/";
     }
 }

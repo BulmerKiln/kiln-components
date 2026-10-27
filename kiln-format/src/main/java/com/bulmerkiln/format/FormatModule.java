@@ -18,7 +18,7 @@ public interface FormatModule {
     /**
      * The first path segment of the format's routes on the registry host, such as {@code v2} or
      * {@code npm}. It shares the path space with organization slugs, so it must be one of
-     * {@link com.bulmerkiln.core.org.Org#RESERVED_SLUGS}.
+     * {@link com.bulmerkiln.core.organization.Organization#RESERVED_SLUGS}.
      */
     String pathSegment();
 

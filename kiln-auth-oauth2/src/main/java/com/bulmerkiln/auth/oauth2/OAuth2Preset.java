@@ -14,8 +14,8 @@ public enum OAuth2Preset {
     /**
      * GitHub (or GitHub Enterprise Server, by overriding the URLs). The subject is the numeric
      * {@code id}, which never changes, never the {@code login}, which can be renamed and then
-     * registered by someone else. Groups come from {@code /user/teams}, as {@code org} and
-     * {@code org/team}.
+     * registered by someone else. Groups come from {@code /user/teams}, as {@code organization} and
+     * {@code organization/team}.
      */
     GITHUB(
             "https://github.com",

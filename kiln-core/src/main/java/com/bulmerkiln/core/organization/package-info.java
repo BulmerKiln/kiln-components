@@ -3,6 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 @NullMarked
-package com.bulmerkiln.core.org;
+package com.bulmerkiln.core.organization;
 
 import org.jspecify.annotations.NullMarked;

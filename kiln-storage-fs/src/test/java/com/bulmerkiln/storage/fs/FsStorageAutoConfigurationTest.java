@@ -6,8 +6,8 @@ package com.bulmerkiln.storage.fs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.core.org.Org;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.core.organization.OrganizationId;
 import com.bulmerkiln.storage.StorageAutoConfiguration;
 import com.bulmerkiln.storage.StorageRouter;
 import java.nio.file.Files;
@@ -20,7 +20,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class FsStorageAutoConfigurationTest {
 
-    private static final Org ACME = new Org(new OrgId(UUID.randomUUID()), "acme");
+    private static final Organization ACME = new Organization(new OrganizationId(UUID.randomUUID()), "acme");
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(StorageAutoConfiguration.class, FsStorageAutoConfiguration.class));

@@ -8,9 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
-import com.bulmerkiln.core.org.Org;
-import com.bulmerkiln.core.org.OrgContext;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.core.organization.OrganizationContext;
+import com.bulmerkiln.core.organization.OrganizationId;
 import com.bulmerkiln.format.ArtifactEvents;
 import com.bulmerkiln.format.ArtifactRef;
 import com.bulmerkiln.format.FormatAutoConfiguration;
@@ -33,7 +33,7 @@ class KilnMetricsTest {
     private static final ArtifactFormat MAVEN = new ArtifactFormat("maven");
     private static final ArtifactFormat CARGO = new ArtifactFormat("cargo");
 
-    private final Org acme = new Org(new OrgId(UUID.randomUUID()), "acme");
+    private final Organization acme = new Organization(new OrganizationId(UUID.randomUUID()), "acme");
 
     @Test
     void exportsTheNamesObservabilityMdDefines() {
@@ -58,26 +58,30 @@ class KilnMetricsTest {
                 .contains("kiln_auth_failures_total{reason=\"revoked\",rung=\"4\"} 1.0")
                 .contains("kiln_immutable_tag_denials_total 1.0")
                 .contains("kiln_leaked_tokens_total 1.0")
-                .doesNotContain("org=");
+                .doesNotContain("organization=");
     }
 
     @Test
-    void addsTheOrgLabelOnlyWhenEnabled() {
+    void addsTheOrganizationLabelOnlyWhenEnabled() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        OrgContext.run(acme, () -> {
+        OrganizationContext.run(acme, () -> {
             new KilnMetrics(registry, false).push(OCI, "acme");
             new KilnMetrics(registry, true).push(OCI, "acme");
         });
-        assertThat(registry.get("kiln.pushes").tag("org", "acme").counter().count())
+        assertThat(registry.get("kiln.pushes")
+                        .tag("organization", "acme")
+                        .counter()
+                        .count())
                 .isEqualTo(1);
-        assertThat(registry.find("kiln.pushes").tagKeys("org").counters()).hasSize(1);
+        assertThat(registry.find("kiln.pushes").tagKeys("organization").counters())
+                .hasSize(1);
     }
 
     @Test
-    void omitsTheOrgLabelOutsideAnOrganization() {
+    void omitsTheOrganizationLabelOutsideAnOrganization() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         new KilnMetrics(registry, true).immutableTagDenial();
-        assertThat(registry.get("kiln.immutable.tag.denials").counter().getId().getTag("org"))
+        assertThat(registry.get("kiln.immutable.tag.denials").counter().getId().getTag("organization"))
                 .isNull();
     }
 
@@ -149,10 +153,10 @@ class KilnMetricsTest {
                 .withConfiguration(AutoConfigurations.of(ObservabilityAutoConfiguration.class));
         runner.run(context -> assertThat(context).doesNotHaveBean(KilnMetrics.class));
         runner.withBean(MeterRegistry.class, SimpleMeterRegistry::new)
-                .withPropertyValues("kiln.observability.org-label=true")
+                .withPropertyValues("kiln.observability.organization-label=true")
                 .run(context -> {
                     assertThat(context).hasSingleBean(KilnMetrics.class);
-                    assertThat(context.getBean(ObservabilityProperties.class).orgLabel())
+                    assertThat(context.getBean(ObservabilityProperties.class).organizationLabel())
                             .isTrue();
                 });
     }

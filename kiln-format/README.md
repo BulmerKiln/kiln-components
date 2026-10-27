@@ -75,7 +75,7 @@ defaults on the ports (FMT-10, FMT-11).
 1. Create `kiln-format-<name>` and depend on `kiln-format`.
 2. Implement `FormatModule`: define `public static final ArtifactFormat FORMAT` and render
    refusals in the format's own error body, using `FormatJson` for JSON.
-3. Make the route segment a reserved slug; reserve it in `Org.RESERVED_SLUGS` first if it's new.
+3. Make the route segment a reserved slug; reserve it in `Organization.RESERVED_SLUGS` first if it's new.
 4. Register the module as a `FormatModule` bean from a Spring Boot auto-configuration.
 5. Throw `RefusedException` (or a subclass) to refuse; never write a status of your own.
 6. Extend `FormatModuleContract` in its tests.

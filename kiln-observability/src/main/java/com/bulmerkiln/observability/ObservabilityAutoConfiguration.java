@@ -21,6 +21,6 @@ public class ObservabilityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     KilnMetrics kilnMetrics(MeterRegistry registry, ObservabilityProperties properties) {
-        return new KilnMetrics(registry, properties.orgLabel());
+        return new KilnMetrics(registry, properties.organizationLabel());
     }
 }

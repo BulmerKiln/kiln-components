@@ -19,7 +19,7 @@ import java.util.UUID;
 public record ScanJob(
         int protocol,
         UUID jobId,
-        UUID orgId,
+        UUID organizationId,
         Digest digest,
         String mediaType,
         URI blobUrl,
@@ -30,7 +30,7 @@ public record ScanJob(
     public ScanJob {
         ScanProtocol.requireVersion(protocol);
         Objects.requireNonNull(jobId, "jobId");
-        Objects.requireNonNull(orgId, "orgId");
+        Objects.requireNonNull(organizationId, "organizationId");
         Objects.requireNonNull(digest, "digest");
         Objects.requireNonNull(blobUrl, "blobUrl");
         Objects.requireNonNull(blobUrlExpiresAt, "blobUrlExpiresAt");

@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
  * content-addressed. Uploads are resumable sessions whose bytes are verified against the expected
  * digest before they become a blob.
  *
- * <p>Every method acts on the organization in {@link com.bulmerkiln.core.org.OrgContext}, and
+ * <p>Every method acts on the organization in {@link com.bulmerkiln.core.organization.OrganizationContext}, and
  * fails outside one. Blobs are never shared between organizations.
  */
 public interface BlobStore {

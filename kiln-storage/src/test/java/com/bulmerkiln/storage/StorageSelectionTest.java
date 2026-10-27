@@ -7,8 +7,8 @@ package com.bulmerkiln.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import com.bulmerkiln.core.org.Org;
-import com.bulmerkiln.core.org.OrgId;
+import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.core.organization.OrganizationId;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class StorageSelectionTest {
 
-    private static final Org ACME = new Org(new OrgId(UUID.randomUUID()), "acme");
+    private static final Organization ACME = new Organization(new OrganizationId(UUID.randomUUID()), "acme");
 
     private final InMemoryBlobStore memory = new InMemoryBlobStore();
     private final StorageBackend memoryBackend = backend("memory", memory);
@@ -81,7 +81,7 @@ class StorageSelectionTest {
 
     @Test
     void createsNoStoreWhenARouterIsProvided() {
-        StorageRouter custom = org -> memory;
+        StorageRouter custom = organization -> memory;
         StorageBackend exploding = new StorageBackend() {
             @Override
             public String type() {

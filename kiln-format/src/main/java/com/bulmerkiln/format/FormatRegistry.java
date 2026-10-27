@@ -5,7 +5,7 @@
 package com.bulmerkiln.format;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
-import com.bulmerkiln.core.org.Org;
+import com.bulmerkiln.core.organization.Organization;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,9 +24,10 @@ public final class FormatRegistry {
     public FormatRegistry(Collection<FormatModule> modules) {
         for (FormatModule module : modules) {
             String segment = module.pathSegment();
-            if (!SEGMENT.matcher(segment).matches() || !Org.RESERVED_SLUGS.contains(segment)) {
+            if (!SEGMENT.matcher(segment).matches() || !Organization.RESERVED_SLUGS.contains(segment)) {
                 throw new IllegalStateException("Format " + module.format() + " uses route /" + segment
-                        + "/, which is not a reserved organization slug; reserve it in Org.RESERVED_SLUGS first");
+                        + "/, which is not a reserved organization slug; reserve it in "
+                        + "Organization.RESERVED_SLUGS first");
             }
             if (byFormat.putIfAbsent(module.format(), module) != null) {
                 throw new IllegalStateException("Two modules both implement format " + module.format());

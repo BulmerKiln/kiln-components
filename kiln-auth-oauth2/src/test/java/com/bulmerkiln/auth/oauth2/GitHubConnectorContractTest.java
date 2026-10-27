@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** The GitHub preset: groups come from the {@code /user/teams} lookup as {@code org/team}. */
+/** The GitHub preset: groups come from the {@code /user/teams} lookup as {@code organization/team}. */
 class GitHubConnectorContractTest extends IdentityConnectorContract {
 
     private final OAuth2Connector github = OAuth2Connector.from(new OAuth2Properties.Connector(
@@ -40,7 +40,10 @@ class GitHubConnectorContractTest extends IdentityConnectorContract {
         return null;
     }
 
-    /** Each group "org/team" becomes a team in that org; plain names become teams in org "acme". */
+    /**
+     * Each group "organization/team" becomes a team in that organization; plain names become teams in
+     * organization "acme".
+     */
     @Override
     protected IdpResponse response(Object subject, String email, List<String> groups) {
         Map<String, Object> user = new HashMap<>();
@@ -70,7 +73,7 @@ class GitHubConnectorContractTest extends IdentityConnectorContract {
     }
 
     @Test
-    void namesGroupsByOrgAndTeam() {
+    void namesGroupsByOrganizationAndTeam() {
         assertThat(github.identify(response(583231, null, List.of("Platform"))).groups())
                 .containsExactlyInAnyOrder("acme", "acme/platform");
     }
