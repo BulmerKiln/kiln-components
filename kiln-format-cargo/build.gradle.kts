@@ -7,10 +7,10 @@ description = "Bulmer Kiln Cargo registry format"
 dependencies {
     api(project(":kiln-format"))
     api(project(":kiln-web"))
-    implementation(project(":kiln-registry"))
+    api(project(":kiln-registry"))
+    api(project(":kiln-permissions"))
     api(project(":kiln-database"))
     api(project(":kiln-storage"))
-    implementation("org.jooq:jooq")
     api("tools.jackson.core:jackson-databind")
     implementation("tools.jackson.core:jackson-core")
 
@@ -20,13 +20,11 @@ dependencies {
     // The web server provides these at runtime; the controller only exists in a web application.
     compileOnly("jakarta.servlet:jakarta.servlet-api")
     compileOnly("org.springframework:spring-web")
-    // jOOQ's settings carry JAXB annotations; the compiler needs them to read its classes, nothing does at runtime.
-    compileOnly("jakarta.xml.bind:jakarta.xml.bind-api")
 
     testImplementation(testFixtures(project(":kiln-format")))
     testImplementation(testFixtures(project(":kiln-database")))
+    testImplementation(testFixtures(project(":kiln-registry")))
     testImplementation(project(":kiln-storage-fs"))
-    testImplementation(project(":kiln-permissions"))
     testImplementation("org.springframework:spring-test")
     testImplementation("org.springframework:spring-web")
     testImplementation("org.springframework.boot:spring-boot-test")
@@ -35,5 +33,4 @@ dependencies {
     testRuntimeOnly("org.springframework:spring-webmvc")
     testRuntimeOnly("com.jayway.jsonpath:json-path")
     testRuntimeOnly("org.skyscreamer:jsonassert")
-    testCompileOnly("jakarta.xml.bind:jakarta.xml.bind-api")
 }

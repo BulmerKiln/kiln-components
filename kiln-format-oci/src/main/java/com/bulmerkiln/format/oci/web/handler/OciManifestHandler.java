@@ -5,15 +5,13 @@
 package com.bulmerkiln.format.oci.web.handler;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.oci.domain.OciReference;
+import com.bulmerkiln.format.oci.domain.OciStoredManifest;
 import com.bulmerkiln.format.oci.dto.OciManifestPushResponse;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
-import com.bulmerkiln.format.oci.entity.OciManifestEntity;
-import com.bulmerkiln.format.oci.service.OciAccessService;
+import com.bulmerkiln.format.oci.service.OciDeleteService;
 import com.bulmerkiln.format.oci.service.OciManifestService;
 import com.bulmerkiln.format.oci.util.OciResponseUtils;
-import com.bulmerkiln.format.service.ArtifactEventService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,17 +21,13 @@ import java.io.IOException;
 public final class OciManifestHandler {
 
     private final OciManifestService manifests;
+    private final OciDeleteService deletes;
     private final int maxManifestSize;
 
-    OciManifestHandler(OciManifestService manifests, int maxManifestSize) {
+    public OciManifestHandler(OciManifestService manifests, OciDeleteService deletes, int maxManifestSize) {
         this.manifests = manifests;
+        this.deletes = deletes;
         this.maxManifestSize = maxManifestSize;
-    }
-
-    public static OciManifestHandler of(
-            Database database, OciAccessService access, ArtifactEventService events, int maxManifestSize) {
-        return new OciManifestHandler(
-                new OciManifestService(database, access, events, maxManifestSize), maxManifestSize);
     }
 
     public void handle(
@@ -43,7 +37,7 @@ public final class OciManifestHandler {
             case "GET", "HEAD" -> pull(response, oci, reference, "HEAD".equals(request.getMethod()));
             case "PUT" -> push(request, response, oci, reference);
             case "DELETE" -> {
-                manifests.delete(oci, reference);
+                deletes.delete(oci, reference);
                 OciResponseUtils.empty(response, 202);
             }
             default -> throw OciResponseUtils.unsupported();
@@ -52,10 +46,11 @@ public final class OciManifestHandler {
 
     private void pull(HttpServletResponse response, OciRepositoryRequest oci, OciReference reference, boolean head)
             throws IOException {
-        OciManifestEntity manifest = manifests.pull(oci, reference, head);
+        OciStoredManifest manifest = manifests.pull(oci, reference, head);
         response.setStatus(200);
-        response.setContentType(manifest.getMediaType());
-        response.setHeader(OciResponseUtils.DIGEST, manifest.getDigest().toString());
+        response.setContentType(manifest.getRecord().getMediaType());
+        response.setHeader(
+                OciResponseUtils.DIGEST, manifest.getRecord().getDigest().toString());
         response.setContentLength(manifest.getContent().length);
         if (!head) {
             response.getOutputStream().write(manifest.getContent());

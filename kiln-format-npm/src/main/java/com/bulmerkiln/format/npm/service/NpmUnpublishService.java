@@ -9,20 +9,17 @@ import com.bulmerkiln.format.constant.Operation;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.npm.NpmException;
 import com.bulmerkiln.format.npm.NpmFormatModule;
+import com.bulmerkiln.format.npm.domain.NpmPackage;
 import com.bulmerkiln.format.npm.domain.NpmPackumentBuilder;
+import com.bulmerkiln.format.npm.domain.NpmPublishedVersion;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
-import com.bulmerkiln.format.npm.entity.NpmPackageEntity;
-import com.bulmerkiln.format.npm.store.NpmPackageStore;
-import com.bulmerkiln.registry.entity.PackageVersionEntity;
-import com.bulmerkiln.registry.store.BlockStore;
-import com.bulmerkiln.registry.store.PackageStore;
+import com.bulmerkiln.registry.service.BlockService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.jooq.DSLContext;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -36,10 +33,15 @@ public final class NpmUnpublishService {
 
     private final Database database;
     private final NpmAccessService access;
+    private final NpmPackageService packages;
+    private final BlockService blocks;
 
-    public NpmUnpublishService(Database database, NpmAccessService access) {
+    public NpmUnpublishService(
+            Database database, NpmAccessService access, NpmPackageService packages, BlockService blocks) {
         this.database = database;
         this.access = access;
+        this.packages = packages;
+        this.blocks = blocks;
     }
 
     /**
@@ -55,22 +57,22 @@ public final class NpmUnpublishService {
         JsonNode packument = NpmPackumentBuilder.JSON.readTree(bytes);
         JsonNode kept = packument.path("versions");
         JsonNode tags = packument.path("dist-tags");
-        database.run(tx -> {
-            NpmPackageEntity snapshot = load(tx, request);
-            List<PackageVersionEntity> removed = snapshot.getVersions().stream()
+        database.run(() -> {
+            NpmPackage snapshot = load(request);
+            List<NpmPublishedVersion> removed = snapshot.getVersions().stream()
                     .filter(version -> !kept.has(version.getVersion()))
                     .toList();
             if (removed.size() == snapshot.getVersions().size()) {
-                removeAll(tx, request, snapshot);
+                removeAll(request, snapshot);
                 return;
             }
             Set<String> gone = new HashSet<>();
-            for (PackageVersionEntity version : removed) {
-                remove(tx, request, version);
+            for (NpmPublishedVersion version : removed) {
+                remove(request, version);
                 gone.add(version.getVersion());
             }
             Map<String, String> distTags = retag(snapshot.getDistTags(), gone, kept, tags);
-            PackageStore.updateMetadata(tx, snapshot.getEntry().getId(), NpmPackageStore.metadata(distTags));
+            packages.setDistTags(snapshot.getStored().getId(), distTags);
         });
     }
 
@@ -80,8 +82,8 @@ public final class NpmUnpublishService {
      */
     public void removeTarball(NpmPackageRequest request, String file) {
         access.requireToWrite(request, Operation.DELETE);
-        database.run(tx -> {
-            NpmPackageEntity snapshot = load(tx, request);
+        database.run(() -> {
+            NpmPackage snapshot = load(request);
             boolean published = snapshot.getVersions().stream()
                     .anyMatch(
                             version -> request.tarballFile(version.getVersion()).equals(file));
@@ -94,7 +96,7 @@ public final class NpmUnpublishService {
     /** {@code DELETE <name>/-rev/<rev>}: every version, and then the package. */
     public void removePackage(NpmPackageRequest request) {
         access.requireToWrite(request, Operation.DELETE);
-        database.run(tx -> removeAll(tx, request, load(tx, request)));
+        database.run(() -> removeAll(request, load(request)));
     }
 
     /** Each tag on an unpublished version moves where the packument says, or goes. */
@@ -113,19 +115,19 @@ public final class NpmUnpublishService {
         return distTags;
     }
 
-    private static NpmPackageEntity load(DSLContext tx, NpmPackageRequest request) {
-        return NpmPackageStore.load(tx, request.getName()).orElseThrow(NpmException::notFound);
+    private NpmPackage load(NpmPackageRequest request) {
+        return packages.load(request.getName()).orElseThrow(NpmException::notFound);
     }
 
-    private static void removeAll(DSLContext tx, NpmPackageRequest request, NpmPackageEntity snapshot) {
-        for (PackageVersionEntity version : snapshot.getVersions()) {
-            remove(tx, request, version);
+    private void removeAll(NpmPackageRequest request, NpmPackage snapshot) {
+        for (NpmPublishedVersion version : snapshot.getVersions()) {
+            remove(request, version);
         }
-        PackageStore.delete(tx, snapshot.getEntry().getId());
+        packages.removePackage(snapshot);
     }
 
-    private static void remove(DSLContext tx, NpmPackageRequest request, PackageVersionEntity version) {
-        BlockStore.tombstone(tx, NpmFormatModule.FORMAT, request.getName().toString(), version.getVersion());
-        PackageStore.deleteVersion(tx, version.getId());
+    private void remove(NpmPackageRequest request, NpmPublishedVersion version) {
+        blocks.tombstone(NpmFormatModule.FORMAT, request.getName().toString(), version.getVersion());
+        packages.removeVersion(version);
     }
 }

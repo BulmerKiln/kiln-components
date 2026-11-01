@@ -17,7 +17,6 @@ import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.format.oci.OciFormatModule;
 import com.bulmerkiln.format.oci.OciHarness;
 import com.bulmerkiln.format.oci.constant.OciMediaTypes;
-import com.bulmerkiln.registry.store.BlockStore;
 import java.nio.file.Path;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -132,9 +131,16 @@ class OciAccessServiceTest {
         oci.push("acme/private", "2", image, OciMediaTypes.OCI_MANIFEST);
         OrganizationContext.run(
                 oci.acme(),
-                () -> oci.database().run(tx -> {
-                    BlockStore.block(tx, OciFormatModule.FORMAT, "acme/private", digest.toString(), "CVE-2026-0001");
-                    BlockStore.tombstone(tx, OciFormatModule.FORMAT, "acme/private", "3");
+                () -> oci.database().run(() -> {
+                    oci.registry()
+                            .getBlocks()
+                            .block(
+                                    OciFormatModule.FORMAT,
+                                    "acme/private",
+                                    digest.toString(),
+                                    "CVE-2026-0001",
+                                    OciHarness.ADMIN);
+                    oci.registry().getBlocks().tombstone(OciFormatModule.FORMAT, "acme/private", "3");
                 }));
 
         oci.mvc()

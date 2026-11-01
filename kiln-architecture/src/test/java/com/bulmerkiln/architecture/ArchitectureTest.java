@@ -104,9 +104,7 @@ class ArchitectureTest {
             "crypto",
             "database",
             "format",
-            "format.npm",
             "observability",
-            "registry",
             "scan",
             "storage",
             "web");

@@ -1,2 +1,3 @@
 com.bulmerkiln.format.cargo.autoconfigure.CargoFormatAutoConfiguration
+com.bulmerkiln.format.cargo.autoconfigure.CargoDataAutoConfiguration
 com.bulmerkiln.format.cargo.autoconfigure.CargoWebAutoConfiguration

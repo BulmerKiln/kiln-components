@@ -12,10 +12,8 @@ import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
 import com.bulmerkiln.format.oci.dto.OciUploadProgressResponse;
 import com.bulmerkiln.format.oci.dto.OciUploadResponse;
-import com.bulmerkiln.format.oci.store.OciRepositoryStore;
-import com.bulmerkiln.format.oci.store.OciUploadStore;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.store.BlobRecordStore;
+import com.bulmerkiln.registry.service.BlobRecordService;
 import com.bulmerkiln.storage.domain.BlobInfo;
 import com.bulmerkiln.storage.domain.UploadId;
 import java.io.IOException;
@@ -32,21 +30,30 @@ public final class OciUploadService {
 
     private final Database database;
     private final OciAccessService access;
-    private final OciUploadStore store;
+    private final OciRepositoryService repositories;
+    private final BlobRecordService blobs;
+    private final OciUploadStorageService storage;
 
-    public OciUploadService(Database database, OciAccessService access, OciUploadStore store) {
+    public OciUploadService(
+            Database database,
+            OciAccessService access,
+            OciRepositoryService repositories,
+            BlobRecordService blobs,
+            OciUploadStorageService storage) {
         this.database = database;
         this.access = access;
-        this.store = store;
+        this.repositories = repositories;
+        this.blobs = blobs;
+        this.storage = storage;
     }
 
     /** Starts an upload session (FMT-OCI-22). */
     public OciUploadProgressResponse start(OciRepositoryRequest request) throws IOException {
         Namespace namespace = access.requireToWrite(request, Operation.PUSH);
-        UploadId upload = store.create();
-        database.run(tx -> {
-            UUID repository = OciRepositoryStore.ensure(tx, request.getRepository(), namespace);
-            OciRepositoryStore.startUpload(tx, repository, upload.getValue());
+        UploadId upload = storage.create();
+        database.run(() -> {
+            UUID repository = repositories.ensure(request.getRepository(), namespace);
+            repositories.startUpload(repository, upload.getValue());
         });
         return progress(request, upload, 0);
     }
@@ -54,7 +61,7 @@ public final class OciUploadService {
     /** Uploads a whole blob in one request, {@code POST ?digest=} (FMT-OCI-22). */
     public OciUploadResponse upload(OciRepositoryRequest request, Digest digest, InputStream body) throws IOException {
         UploadId upload = new UploadId(start(request).getSession());
-        store.append(upload, 0L, body);
+        storage.append(upload, 0L, body);
         return finish(request, upload, digest);
     }
 
@@ -70,13 +77,13 @@ public final class OciUploadService {
         } catch (RefusedException e) {
             return Optional.empty();
         }
-        boolean mounted = database.transaction(tx -> {
-            Optional<UUID> source = OciRepositoryStore.find(tx, from.getRepository());
-            if (source.isEmpty() || !OciRepositoryStore.linked(tx, source.get(), digest)) {
+        boolean mounted = database.transaction(() -> {
+            Optional<UUID> source = repositories.find(from.getRepository());
+            if (source.isEmpty() || !repositories.linked(source.get(), digest)) {
                 return false;
             }
-            UUID repository = OciRepositoryStore.ensure(tx, request.getRepository(), namespace);
-            OciRepositoryStore.link(tx, repository, digest);
+            UUID repository = repositories.ensure(request.getRepository(), namespace);
+            repositories.link(repository, digest);
             return true;
         });
         return mounted ? Optional.of(stored(request, digest)) : Optional.empty();
@@ -86,12 +93,12 @@ public final class OciUploadService {
     public OciUploadProgressResponse patch(
             OciRepositoryRequest request, String session, @Nullable Long offset, InputStream body) throws IOException {
         UploadId upload = session(request, session);
-        return progress(request, upload, store.append(upload, offset, body));
+        return progress(request, upload, storage.append(upload, offset, body));
     }
 
     public OciUploadProgressResponse status(OciRepositoryRequest request, String session) throws IOException {
         UploadId upload = session(request, session);
-        return progress(request, upload, store.size(upload));
+        return progress(request, upload, storage.size(upload));
     }
 
     /** Appends any final chunk, verifies the digest, and makes the blob part of the repository. */
@@ -100,31 +107,30 @@ public final class OciUploadService {
             throws IOException {
         UploadId upload = session(request, session);
         if (body != null) {
-            store.append(upload, null, body);
+            storage.append(upload, null, body);
         }
         return finish(request, upload, digest);
     }
 
     public void cancel(OciRepositoryRequest request, String session) throws IOException {
         UploadId upload = session(request, session);
-        store.abort(upload);
+        storage.abort(upload);
         endUpload(upload);
     }
 
     private OciUploadResponse finish(OciRepositoryRequest request, UploadId upload, Digest digest) throws IOException {
         BlobInfo blob;
         try {
-            blob = store.commit(upload, digest);
+            blob = storage.commit(upload, digest);
         } catch (OciException e) {
             endUpload(upload);
             throw e;
         }
-        database.run(tx -> {
-            UUID repository =
-                    OciRepositoryStore.find(tx, request.getRepository()).orElseThrow();
-            BlobRecordStore.record(tx, blob.getDigest(), blob.getSize());
-            OciRepositoryStore.link(tx, repository, blob.getDigest());
-            OciRepositoryStore.endUpload(tx, upload.getValue());
+        database.run(() -> {
+            UUID repository = repositories.find(request.getRepository()).orElseThrow();
+            blobs.record(blob.getDigest(), blob.getSize());
+            repositories.link(repository, blob.getDigest());
+            repositories.endUpload(upload.getValue());
         });
         return stored(request, blob.getDigest());
     }
@@ -132,18 +138,19 @@ public final class OciUploadService {
     /** The session, if it was started through this repository; anyone else's is unknown here. */
     private UploadId session(OciRepositoryRequest request, String session) {
         access.requireToWrite(request, Operation.PUSH);
-        UploadId upload = OciUploadStore.sessionId(session);
-        boolean belongs = database.transaction(tx -> OciRepositoryStore.find(tx, request.getRepository())
-                .map(repository -> OciRepositoryStore.uploadBelongs(tx, repository, upload.getValue()))
+        UploadId upload = OciUploadStorageService.sessionId(session);
+        boolean belongs = database.transaction(() -> repositories
+                .find(request.getRepository())
+                .map(repository -> repositories.uploadBelongs(repository, upload.getValue()))
                 .orElse(false));
         if (!belongs) {
-            throw OciUploadStore.unknown();
+            throw OciUploadStorageService.unknown();
         }
         return upload;
     }
 
     private void endUpload(UploadId upload) {
-        database.run(tx -> OciRepositoryStore.endUpload(tx, upload.getValue()));
+        database.run(() -> repositories.endUpload(upload.getValue()));
     }
 
     private static OciUploadProgressResponse progress(OciRepositoryRequest request, UploadId upload, long size) {

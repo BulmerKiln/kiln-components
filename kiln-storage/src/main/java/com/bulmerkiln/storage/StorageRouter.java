@@ -5,6 +5,7 @@
 package com.bulmerkiln.storage;
 
 import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.storage.service.SingleStoreRouter;
 
 /**
@@ -14,4 +15,9 @@ import com.bulmerkiln.storage.service.SingleStoreRouter;
 public interface StorageRouter {
 
     BlobStore store(Organization organization);
+
+    /** The store of the organization in {@link OrganizationContext}; fails outside one (STO-1). */
+    default BlobStore current() {
+        return store(OrganizationContext.current());
+    }
 }

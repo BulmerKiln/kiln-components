@@ -28,7 +28,9 @@ re-encoding it, and parses strictly wherever two parsers could read one manifest
 - Map refusals to the spec's error codes and envelope
 - Serve the `/v2/` API: pulls, pushes, chunked, monolithic and single-request uploads,
   cross-repository mounts, tag listing, referrers and deletes, while the format is enabled
-- Keep repositories, manifests (their exact bytes), tags and upload sessions, per organization
+- Keep repositories, manifests, tags and upload sessions, per organization, on `kiln-registry`'s
+  tables: a repository is a registry package, a manifest a version named by its digest, with its
+  exact bytes as a blob, and tags point at manifests of their own repository
 
 **Does not**
 

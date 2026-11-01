@@ -5,21 +5,17 @@
 package com.bulmerkiln.format.oci.web.handler;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import com.bulmerkiln.format.oci.domain.OciRepositoryName;
 import com.bulmerkiln.format.oci.domain.OciRoute;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
 import com.bulmerkiln.format.oci.dto.OciUploadResponse;
-import com.bulmerkiln.format.oci.service.OciAccessService;
 import com.bulmerkiln.format.oci.service.OciBlobService;
 import com.bulmerkiln.format.oci.service.OciUploadService;
-import com.bulmerkiln.format.oci.store.OciUploadStore;
 import com.bulmerkiln.format.oci.util.OciHeaderUtils;
 import com.bulmerkiln.format.oci.util.OciResponseUtils;
 import com.bulmerkiln.storage.BlobRead;
-import com.bulmerkiln.storage.StorageRouter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -32,16 +28,9 @@ public final class OciBlobHandler {
     private final OciBlobService blobs;
     private final OciUploadService uploads;
 
-    OciBlobHandler(OciBlobService blobs, OciUploadService uploads) {
+    public OciBlobHandler(OciBlobService blobs, OciUploadService uploads) {
         this.blobs = blobs;
         this.uploads = uploads;
-    }
-
-    public static OciBlobHandler of(
-            Database database, OciAccessService access, StorageRouter storage, long maxBlobSize) {
-        return new OciBlobHandler(
-                new OciBlobService(database, access, storage),
-                new OciUploadService(database, access, new OciUploadStore(storage, maxBlobSize)));
     }
 
     public void blob(HttpServletRequest request, HttpServletResponse response, OciRepositoryRequest oci, Digest digest)

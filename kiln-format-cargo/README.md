@@ -49,11 +49,12 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-CARGO-6 | Errors must be Cargo's `{"errors":[{"detail":"<message>"}]}` | `CargoFormatModuleTest` |
 | FMT-CARGO-7 | Routes below `/cargo/` must be the sparse index (`index/config.json`, `index/<path>` at exactly the path the name defines) and the API (`api/v1/crates/new`, `…/<name>/<version>/download`, `yank`, `unyank`); route parsing never throws anything but a refusal | `CargoRouteTest` (fuzz target) |
 | FMT-CARGO-8 | Access must be decided before anything about the crate is looked up. A crate belongs to the namespace owning the longest prefix of its canonical name, and publishing needs one | `CargoAccessServiceTest` |
-| FMT-CARGO-9 | A version's index line must be built from the publish: `req` from `version_req`, a renamed dependency with its real name in `package`, `cksum` the SHA-256 of the `.crate`, `v` 2 | `CargoRegistryTest` |
+| FMT-CARGO-9 | A version's index line must be built from the publish: `req` from `version_req`, a renamed dependency with its real name in `package`, `cksum` the SHA-256 of the `.crate`, `rust_version` as published, `pubtime` the publish time in UTC to the second (unchanged by a yank), `v` 2 | `CargoRegistryTest` |
 | FMT-CARGO-10 | A version must never change, and a name can't be published under another spelling of a crate that exists; the metadata must name a valid crate and SemVer version; past `max-crate-size` is `413` | `CargoRegistryTest` |
 | FMT-CARGO-11 | `config.json` must name `dl` and `api` from the external URL and require auth, and be readable by anyone since Cargo asks before it sends credentials. Index files carry `ETag` and `Last-Modified`, and `If-None-Match` is `304`. Unsupported commands (`owner`, `search`) get guidance in Cargo's error format | `CargoRegistryTest`, `CargoAccessServiceTest` |
 | FMT-CARGO-12 | A yanked version must stay in the index, marked, and downloadable, so lockfiles keep working; a blocked one leaves the index and is `403`; a tombstoned one can't be published | `CargoRegistryTest` |
 | FMT-CARGO-13 | The `/cargo/` routes must exist only in a web application while `kiln.format.cargo.enabled` isn't `false`. Publishes and downloads reach the event listeners | `CargoWebAutoConfigurationTest`, `CargoRegistryTest` |
+| FMT-CARGO-14 | An index file's `Last-Modified` must be the crate's last change, a yank included, since a yank changes the file without a new version. The publish metadata the index doesn't carry (description, license, readme and the rest) must be kept as received | `CargoRegistryTest` |
 
 ## How it plugs in *(implementation only)*
 

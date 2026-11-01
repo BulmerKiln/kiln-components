@@ -6,8 +6,9 @@ package com.bulmerkiln.format.npm.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.database.Database;
 import com.bulmerkiln.database.KilnPostgres;
+import com.bulmerkiln.database.autoconfigure.DataJdbcAutoConfiguration;
+import com.bulmerkiln.database.autoconfigure.DatabaseAutoConfiguration;
 import com.bulmerkiln.format.ArtifactAccess;
 import com.bulmerkiln.format.ArtifactEventListener;
 import com.bulmerkiln.format.ArtifactPolicy;
@@ -17,6 +18,7 @@ import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.format.npm.web.NpmController;
 import com.bulmerkiln.format.service.ArtifactEventService;
 import com.bulmerkiln.permissions.domain.Principal;
+import com.bulmerkiln.registry.autoconfigure.RegistryAutoConfiguration;
 import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.storage.fs.FsBlobStore;
 import com.bulmerkiln.storage.service.SingleStoreRouter;
@@ -92,8 +94,14 @@ class NpmWebAutoConfigurationTest {
                 throw new IllegalStateException(e);
             }
         };
-        return runner.withConfiguration(AutoConfigurations.of(NpmWebAutoConfiguration.class))
-                .withBean(Database.class, KilnPostgres::database)
+        return runner.withConfiguration(AutoConfigurations.of(
+                        DatabaseAutoConfiguration.class,
+                        DataJdbcAutoConfiguration.class,
+                        RegistryAutoConfiguration.class,
+                        NpmDataAutoConfiguration.class,
+                        NpmServiceAutoConfiguration.class,
+                        NpmWebAutoConfiguration.class))
+                .withPropertyValues(KilnPostgres.propertyValues(KilnPostgres.newDatabase()))
                 .withBean(
                         FormatRequests.class,
                         () -> new FormatRequests(

@@ -7,11 +7,9 @@ package com.bulmerkiln.format.npm.service;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.constant.Operation;
 import com.bulmerkiln.format.npm.NpmException;
+import com.bulmerkiln.format.npm.domain.NpmPackage;
 import com.bulmerkiln.format.npm.domain.NpmVersion;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
-import com.bulmerkiln.format.npm.entity.NpmPackageEntity;
-import com.bulmerkiln.format.npm.store.NpmPackageStore;
-import com.bulmerkiln.registry.store.PackageStore;
 import java.util.Map;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
@@ -24,10 +22,12 @@ public final class NpmTagService {
 
     private final Database database;
     private final NpmAccessService access;
+    private final NpmPackageService packages;
 
-    public NpmTagService(Database database, NpmAccessService access) {
+    public NpmTagService(Database database, NpmAccessService access, NpmPackageService packages) {
         this.database = database;
         this.access = access;
+        this.packages = packages;
     }
 
     public void set(NpmPackageRequest request, String tag, NpmVersion version) {
@@ -48,9 +48,8 @@ public final class NpmTagService {
 
     private void change(
             NpmPackageRequest request, Predicate<Map<String, String>> edit, @Nullable String requiredVersion) {
-        database.run(tx -> {
-            NpmPackageEntity snapshot =
-                    NpmPackageStore.load(tx, request.getName()).orElseThrow(NpmException::notFound);
+        database.run(() -> {
+            NpmPackage snapshot = packages.load(request.getName()).orElseThrow(NpmException::notFound);
             if (requiredVersion != null) {
                 snapshot.version(requiredVersion);
             }
@@ -58,7 +57,7 @@ public final class NpmTagService {
             if (!edit.test(tags)) {
                 throw NpmException.notFound();
             }
-            PackageStore.updateMetadata(tx, snapshot.getEntry().getId(), NpmPackageStore.metadata(tags));
+            packages.setDistTags(snapshot.getStored().getId(), tags);
         });
     }
 }

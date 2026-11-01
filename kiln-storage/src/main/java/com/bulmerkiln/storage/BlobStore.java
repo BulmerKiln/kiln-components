@@ -9,8 +9,11 @@ import com.bulmerkiln.storage.domain.BlobInfo;
 import com.bulmerkiln.storage.domain.ByteRange;
 import com.bulmerkiln.storage.domain.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.Channels;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
@@ -72,6 +75,44 @@ public interface BlobStore {
 
     /** Deletes a blob, returning whether it existed. Only GC calls this. */
     boolean delete(Digest digest) throws IOException;
+
+    /**
+     * Stores bytes already in hand, such as a manifest or a crate, as a blob verified against
+     * {@code expected}. On any failure the upload is aborted, so nothing stays behind (STO-15).
+     *
+     * @throws DigestMismatchException if the content doesn't match
+     */
+    default BlobInfo write(Digest expected, byte[] content) throws IOException {
+        UploadId upload = createUpload();
+        try {
+            append(upload, 0, new ByteArrayInputStream(content), content.length);
+            return commit(upload, expected);
+        } catch (IOException | RuntimeException e) {
+            abortUpload(upload);
+            throw e;
+        }
+    }
+
+    /**
+     * A small blob's bytes, read whole, such as a manifest. A blob larger than {@code maxSize} is
+     * refused before any of it is read, so a caller never holds more than it expects (STO-15).
+     *
+     * @throws BlobTooLargeException if the blob is larger than {@code maxSize}
+     */
+    default Optional<byte[]> readBytes(Digest digest, int maxSize) throws IOException {
+        Optional<BlobRead> found = read(digest, null);
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        try (BlobRead read = found.get()) {
+            if (read.getLength() > maxSize) {
+                throw new BlobTooLargeException(maxSize);
+            }
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream((int) read.getLength());
+            read.transferTo(Channels.newChannel(bytes));
+            return Optional.of(bytes.toByteArray());
+        }
+    }
 
     /** Every stored blob, for the GC sweep. The stream must be closed. */
     @MustBeClosed

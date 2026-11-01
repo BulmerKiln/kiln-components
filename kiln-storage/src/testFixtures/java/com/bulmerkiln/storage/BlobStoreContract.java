@@ -76,6 +76,24 @@ public abstract class BlobStoreContract {
         assertThat(in(acme, () -> readAll(HELLO_DIGEST, null))).isEqualTo(HELLO);
     }
 
+    /** STO-15: bytes in hand are stored and read back whole, and a mismatch leaves nothing behind. */
+    @Test
+    void writesAndReadsBytesInHand() throws Exception {
+        assertThat(in(acme, () -> store.write(HELLO_DIGEST, HELLO)))
+                .isEqualTo(new BlobInfo(HELLO_DIGEST, HELLO.length));
+        assertThat(in(acme, () -> store.readBytes(HELLO_DIGEST, HELLO.length))).contains(HELLO);
+        assertThat(in(acme, () -> store.readBytes(Digest.sha256(new byte[] {1}), 64)))
+                .isEmpty();
+        assertThatThrownBy(() -> in(acme, () -> store.readBytes(HELLO_DIGEST, HELLO.length - 1)))
+                .isInstanceOf(BlobTooLargeException.class);
+
+        byte[] other = "other".getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> in(acme, () -> store.write(HELLO_DIGEST, other)))
+                .isInstanceOf(DigestMismatchException.class);
+        assertThat(in(acme, () -> store.stat(Digest.sha256(other)))).isEmpty();
+        assertNoUploadsLeft(acme);
+    }
+
     @Test
     void storesAChunkedUpload() throws Exception {
         in(acme, () -> {

@@ -4,14 +4,17 @@
  */
 package com.bulmerkiln.format.npm.service;
 
-import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.constant.Operation;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.npm.NpmException;
+import com.bulmerkiln.format.npm.domain.NpmPublication;
+import com.bulmerkiln.format.npm.domain.NpmTarballSink;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
 import com.bulmerkiln.format.npm.dto.NpmPublishRequest;
 import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.permissions.CurrentPrincipal;
+import com.bulmerkiln.permissions.domain.Principal;
 import com.bulmerkiln.storage.BlobStore;
 import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.storage.domain.BlobInfo;
@@ -21,8 +24,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ObjectNode;
 
 /**
  * {@code npm publish} and {@code npm deprecate}, which both {@code PUT} the package document. A
@@ -34,6 +35,7 @@ public final class NpmPublishService {
 
     private final Database database;
     private final NpmAccessService access;
+    private final NpmPackageService packages;
     private final StorageRouter storage;
     private final ArtifactEventService events;
     private final long maxTarballSize;
@@ -41,11 +43,13 @@ public final class NpmPublishService {
     public NpmPublishService(
             Database database,
             NpmAccessService access,
+            NpmPackageService packages,
             StorageRouter storage,
             ArtifactEventService events,
             long maxTarballSize) {
         this.database = database;
         this.access = access;
+        this.packages = packages;
         this.storage = storage;
         this.events = events;
         this.maxTarballSize = maxTarballSize;
@@ -53,7 +57,7 @@ public final class NpmPublishService {
 
     public void put(NpmPackageRequest request, InputStream body) throws IOException {
         var namespace = access.requireToWrite(request, Operation.PUSH);
-        BlobStore store = storage.store(OrganizationContext.current());
+        BlobStore store = storage.current();
         UploadId upload = store.createUpload();
         AtomicReference<NpmTarballSink> sink = new AtomicReference<>();
         try {
@@ -70,13 +74,17 @@ public final class NpmPublishService {
             NpmTarballSink tarball = sink.get();
             if (tarball == null) {
                 store.abortUpload(upload);
-                NpmPublication.deprecate(database, request, parsed.getVersions());
+                database.run(() -> packages.deprecate(request.getName(), parsed.getVersions()));
                 return;
             }
             NpmPublication publication = NpmPublication.of(request, parsed);
             NpmPublication.verify(publication, tarball);
             BlobInfo blob = store.commit(upload, tarball.digest());
-            database.run(tx -> publication.store(tx, request, namespace, blob));
+            Principal publisher = CurrentPrincipal.get();
+            database.run(() -> {
+                access.checkWrite(request, namespace, publication.getVersion());
+                packages.publish(request.getName(), namespace, publication, blob, publisher);
+            });
             events.pushed(
                     NpmAccessService.artifact(request, Optional.of(namespace), publication.getVersion()),
                     blob.getSize());
@@ -90,18 +98,5 @@ public final class NpmPublishService {
         if (!request.getName().toString().equals(parsed.getName())) {
             throw new NpmException(Reason.INVALID, "The package name doesn't match the URL");
         }
-    }
-
-    /** A version's manifest field, or an empty string. */
-    static String text(JsonNode manifest, String field) {
-        JsonNode value = manifest.get(field);
-        return value == null || !value.isString() ? "" : value.asString();
-    }
-
-    static ObjectNode object(JsonNode node) {
-        if (node instanceof ObjectNode object) {
-            return object;
-        }
-        throw new NpmException(Reason.INVALID, "A version must be an object");
     }
 }

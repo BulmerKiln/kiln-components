@@ -14,7 +14,7 @@ import com.bulmerkiln.format.maven.domain.MavenPath;
 import com.bulmerkiln.format.maven.service.MavenAccessService;
 import com.bulmerkiln.format.maven.service.MavenFileService;
 import com.bulmerkiln.format.maven.service.MavenMetadataService;
-import com.bulmerkiln.format.maven.store.MavenFileStore;
+import com.bulmerkiln.format.maven.util.MavenChecksumUtils;
 import com.bulmerkiln.storage.BlobRead;
 import com.bulmerkiln.web.FormatRequests;
 import jakarta.servlet.http.HttpServletRequest;
@@ -97,7 +97,7 @@ public final class MavenRouteDispatcher {
         byte[] xml = metadata.read(m);
         MavenChecksumAlgorithm checksum = m.getChecksum();
         if (checksum != null) {
-            text(response, MavenFileStore.checksum(xml, checksum));
+            text(response, MavenChecksumUtils.checksum(xml, checksum));
             return;
         }
         FormatRequests.write(

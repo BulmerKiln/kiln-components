@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.format.maven.service;
 
+import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.RefusedException;
 import com.bulmerkiln.format.constant.Operation;
@@ -15,11 +16,11 @@ import com.bulmerkiln.format.maven.domain.MavenPath;
 import com.bulmerkiln.format.maven.domain.MavenPlugin;
 import com.bulmerkiln.format.maven.domain.MavenPluginMetadata;
 import com.bulmerkiln.format.maven.domain.MavenSnapshots;
-import com.bulmerkiln.format.maven.store.MavenPluginStore;
+import com.bulmerkiln.format.maven.repository.MavenPluginRepository;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.entity.PackageEntity;
-import com.bulmerkiln.registry.entity.PackageVersionEntity;
-import com.bulmerkiln.registry.store.PackageStore;
+import com.bulmerkiln.registry.domain.PackageVersion;
+import com.bulmerkiln.registry.domain.RegistryPackage;
+import com.bulmerkiln.registry.service.PackageService;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -40,10 +42,15 @@ public final class MavenMetadataService {
 
     private final Database database;
     private final MavenAccessService access;
+    private final PackageService packages;
+    private final MavenPluginRepository plugins;
 
-    public MavenMetadataService(Database database, MavenAccessService access) {
+    public MavenMetadataService(
+            Database database, MavenAccessService access, PackageService packages, MavenPluginRepository plugins) {
         this.database = database;
         this.access = access;
+        this.packages = packages;
+        this.plugins = plugins;
     }
 
     public byte[] read(MavenPath.Metadata metadata) {
@@ -68,8 +75,14 @@ public final class MavenMetadataService {
         for (MavenPlugin plugin : MavenPluginMetadata.parse(xml)) {
             MavenPath.Metadata artifact = new MavenPath.Metadata(group, plugin.getArtifactId(), null, null);
             access.requireToWrite(artifact);
-            database.run(tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(artifact))
-                    .ifPresent(entry -> MavenPluginStore.save(tx, entry.getId(), group, plugin)));
+            database.run(() -> packages.find(MavenFormatModule.FORMAT, MavenAccessService.name(artifact))
+                    .ifPresent(entry -> plugins.save(
+                            organization(),
+                            entry.getId(),
+                            group,
+                            plugin.getArtifactId(),
+                            plugin.getPrefix(),
+                            plugin.getName())));
         }
     }
 
@@ -78,24 +91,25 @@ public final class MavenMetadataService {
      * the group's plugins they may read. With neither, the artifact's own refusal, or not found.
      */
     private String artifact(MavenPath.Metadata metadata) {
-        List<PackageVersionEntity> readable = access.mayRead(metadata) ? readable(metadata) : List.of();
+        List<PackageVersion> readable = access.mayRead(metadata) ? readable(metadata) : List.of();
         String group = group(metadata);
-        List<MavenPlugin> plugins = database.transaction(tx -> MavenPluginStore.inGroup(tx, group)).stream()
+        List<MavenPlugin> inGroup = database.transaction(() -> plugins.findByGroup(organization(), group)).stream()
+                .map(row -> new MavenPlugin(row.getArtifactId(), row.getPrefix(), row.getName()))
                 .filter(plugin -> access.mayRead(new MavenPath.Metadata(group, plugin.getArtifactId(), null, null)))
                 .toList();
-        if (readable.isEmpty() && plugins.isEmpty()) {
+        if (readable.isEmpty() && inGroup.isEmpty()) {
             access.require(metadata, Operation.PULL);
             throw notFound();
         }
         return MavenMetadata.artifact(
                 metadata.getGroupId(),
                 metadata.getArtifactId(),
-                readable.stream().map(PackageVersionEntity::getVersion).toList(),
-                readable.isEmpty() ? null : readable.getLast().getPublishedAt(),
-                plugins);
+                readable.stream().map(PackageVersion::getVersion).toList(),
+                readable.isEmpty() ? null : updated(metadata),
+                inGroup);
     }
 
-    private List<PackageVersionEntity> readable(MavenPath.Metadata metadata) {
+    private List<PackageVersion> readable(MavenPath.Metadata metadata) {
         Optional<Namespace> namespace = access.require(metadata, Operation.PULL);
         return versions(metadata).stream()
                 .filter(v ->
@@ -103,19 +117,26 @@ public final class MavenMetadataService {
                 .toList();
     }
 
+    /** When the artifact last changed, which is its metadata's {@code lastUpdated}. */
+    private Instant updated(MavenPath.Metadata metadata) {
+        return database.transaction(() -> packages.find(MavenFormatModule.FORMAT, MavenAccessService.name(metadata)))
+                .map(RegistryPackage::getUpdatedAt)
+                .orElseThrow(MavenMetadataService::notFound);
+    }
+
     /** Versions with a POM, oldest first; none when the artifact doesn't exist. */
-    private List<PackageVersionEntity> versions(MavenPath.Metadata metadata) {
-        return database.transaction(tx -> {
-            Optional<PackageEntity> found =
-                    PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(metadata));
+    private List<PackageVersion> versions(MavenPath.Metadata metadata) {
+        return database.transaction(() -> {
+            Optional<RegistryPackage> found =
+                    packages.find(MavenFormatModule.FORMAT, MavenAccessService.name(metadata));
             if (found.isEmpty()) {
-                return List.<PackageVersionEntity>of();
+                return List.<PackageVersion>of();
             }
-            PackageEntity entry = found.get();
-            List<PackageVersionEntity> withPom = new ArrayList<>();
-            for (PackageVersionEntity version : PackageStore.versions(tx, entry.getId())) {
+            RegistryPackage entry = found.get();
+            List<PackageVersion> withPom = new ArrayList<>();
+            for (PackageVersion version : packages.versions(entry.getId())) {
                 String pom = metadata.getArtifactId() + "-" + version.getVersion() + ".pom";
-                boolean hasPom = PackageStore.files(tx, version.getId()).stream()
+                boolean hasPom = packages.files(version.getId()).stream()
                         .anyMatch(f -> f.getName().equals(pom) || isSnapshotPom(version.getVersion(), f.getName()));
                 if (hasPom) {
                     withPom.add(version);
@@ -133,13 +154,13 @@ public final class MavenMetadataService {
     /** The latest build of each classifier and extension of a snapshot version. */
     private String snapshot(MavenPath.Metadata metadata) {
         String version = Objects.requireNonNull(metadata.getVersion());
-        List<MavenSnapshots.Build> builds = database.transaction(tx -> PackageStore.find(
-                        tx, MavenFormatModule.FORMAT, MavenAccessService.name(metadata))
-                .flatMap(entry -> PackageStore.version(tx, entry.getId(), version))
+        List<MavenSnapshots.Build> builds = database.transaction(() -> packages.find(
+                        MavenFormatModule.FORMAT, MavenAccessService.name(metadata))
+                .flatMap(entry -> packages.version(entry.getId(), version))
                 .map(v -> MavenSnapshots.builds(
                         new MavenPath.ArtifactFile(
                                 metadata.getGroupId(), metadata.getArtifactId(), version, null, null, "pom", null),
-                        PackageStore.files(tx, v.getId())))
+                        packages.files(v.getId())))
                 .orElseThrow(MavenMetadataService::notFound));
         if (builds.isEmpty()) {
             throw notFound();
@@ -155,6 +176,10 @@ public final class MavenMetadataService {
         Collection<MavenSnapshots.Build> values = latest.values();
         return MavenMetadata.snapshot(
                 metadata.getGroupId(), metadata.getArtifactId(), version, List.copyOf(values), Instant.now());
+    }
+
+    private static UUID organization() {
+        return OrganizationContext.current().getId().getValue();
     }
 
     private static boolean isSnapshotPom(String version, String fileName) {

@@ -4,26 +4,27 @@
  */
 package com.bulmerkiln.format.cargo.service;
 
-import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.RefusedException;
 import com.bulmerkiln.format.cargo.CargoException;
-import com.bulmerkiln.format.cargo.CargoFormatModule;
 import com.bulmerkiln.format.cargo.domain.CargoCrateName;
 import com.bulmerkiln.format.cargo.domain.CargoIndexEntry;
+import com.bulmerkiln.format.cargo.domain.CargoPublishedVersion;
 import com.bulmerkiln.format.cargo.dto.CargoIndexFileResponse;
 import com.bulmerkiln.format.constant.Operation;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.service.ArtifactEventService;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.entity.PackageFileEntity;
-import com.bulmerkiln.registry.entity.PackageVersionEntity;
-import com.bulmerkiln.registry.store.PackageStore;
+import com.bulmerkiln.registry.domain.PackageFile;
+import com.bulmerkiln.registry.domain.PackageVersion;
+import com.bulmerkiln.registry.domain.RegistryPackage;
 import com.bulmerkiln.storage.BlobRead;
 import com.bulmerkiln.storage.StorageRouter;
 import java.io.IOException;
-import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.node.ObjectNode;
@@ -35,15 +36,25 @@ import tools.jackson.databind.node.ObjectNode;
  */
 public final class CargoReadService {
 
+    /** The index's {@code pubtime}: UTC, to the second, as the index format asks. */
+    private static final DateTimeFormatter PUBTIME =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).withZone(ZoneOffset.UTC);
+
     private final Database database;
     private final CargoAccessService access;
+    private final CargoCrateService crates;
     private final StorageRouter storage;
     private final ArtifactEventService events;
 
     public CargoReadService(
-            Database database, CargoAccessService access, StorageRouter storage, ArtifactEventService events) {
+            Database database,
+            CargoAccessService access,
+            CargoCrateService crates,
+            StorageRouter storage,
+            ArtifactEventService events) {
         this.database = database;
         this.access = access;
+        this.crates = crates;
         this.storage = storage;
         this.events = events;
     }
@@ -51,38 +62,33 @@ public final class CargoReadService {
     public CargoIndexFileResponse index(CargoCrateName name) {
         Optional<Namespace> namespace = access.require(name, Operation.PULL);
         refuseIfBlocked(name, namespace, null);
-        List<PackageVersionEntity> versions =
-                database.transaction(tx -> PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical())
-                        .map(entry -> PackageStore.versions(tx, entry.getId()))
-                        .orElseThrow(CargoReadService::notFound));
+        RegistryPackage crate = database.transaction(() -> crates.find(name)).orElseThrow(CargoReadService::notFound);
+        List<CargoPublishedVersion> versions = database.transaction(() -> crates.versions(crate));
         StringBuilder body = new StringBuilder();
-        Instant modified = Instant.EPOCH;
-        for (PackageVersionEntity version : versions) {
+        for (CargoPublishedVersion version : versions) {
             if (access.readRefusal(name, namespace, version.getVersion()).isPresent()) {
                 continue;
             }
-            ObjectNode line = (ObjectNode) CargoIndexEntry.JSON.readTree(version.getMetadata());
+            ObjectNode line = (ObjectNode) CargoIndexEntry.JSON.readTree(version.getIndexEntry());
             line.put("yanked", version.isYanked());
+            line.put("pubtime", PUBTIME.format(version.getPublishedAt()));
             body.append(CargoIndexEntry.JSON.writeValueAsString(line)).append('\n');
-            modified = version.getPublishedAt().isAfter(modified) ? version.getPublishedAt() : modified;
         }
         if (body.isEmpty()) {
             throw notFound();
         }
-        return new CargoIndexFileResponse(body.toString(), modified);
+        // A yank changes the file without a new version, so it's the crate's last change that counts.
+        return new CargoIndexFileResponse(body.toString(), crate.getUpdatedAt());
     }
 
     public BlobRead download(CargoCrateName name, String version) throws IOException {
         Optional<Namespace> namespace = access.require(name, Operation.PULL);
         refuseIfBlocked(name, namespace, version);
-        PackageFileEntity crate = database.transaction(
-                        tx -> PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical())
-                                .flatMap(entry -> PackageStore.version(tx, entry.getId(), version))
-                                .flatMap(v -> PackageStore.file(tx, v.getId(), name + "-" + version + ".crate")))
+        PackageFile crate = database.transaction(() -> crates.find(name)
+                        .flatMap(entry -> crates.version(entry, version))
+                        .flatMap(v -> crates.crate(v.getId(), name + "-" + version + ".crate")))
                 .orElseThrow(CargoReadService::notFound);
-        BlobRead read = storage.store(OrganizationContext.current())
-                .read(crate.getDigest(), null)
-                .orElseThrow(CargoReadService::notFound);
+        BlobRead read = storage.current().read(crate.getDigest(), null).orElseThrow(CargoReadService::notFound);
         events.pulled(CargoAccessService.artifact(name, namespace, version), read.getLength());
         return read;
     }
@@ -90,11 +96,10 @@ public final class CargoReadService {
     /** {@code cargo yank} and {@code --undo}: marks the version, which stays downloadable. */
     public void yank(CargoCrateName name, String version, boolean yanked) {
         access.requireToWrite(name, Operation.PUSH);
-        database.run(tx -> {
-            PackageVersionEntity found = PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical())
-                    .flatMap(entry -> PackageStore.version(tx, entry.getId(), version))
-                    .orElseThrow(CargoReadService::notFound);
-            PackageStore.setYanked(tx, found.getId(), yanked);
+        database.run(() -> {
+            RegistryPackage crate = crates.find(name).orElseThrow(CargoReadService::notFound);
+            PackageVersion found = crates.version(crate, version).orElseThrow(CargoReadService::notFound);
+            crates.setYanked(crate, found, yanked);
         });
     }
 

@@ -1,13 +1,15 @@
 -- Group-level plugin metadata: each Maven plugin's goal prefix, from the metadata its deploy
--- uploads (FMT-MVN-17). One row per plugin package.
+-- uploads (FMT-MVN-17). One row per plugin package, with its artifactId, so a group's plugins are
+-- listed from this table alone.
 CREATE TABLE maven_plugins (
     organization_id uuid NOT NULL REFERENCES organizations (id),
     package_id      uuid NOT NULL,
     group_id        text NOT NULL,
+    artifact_id     text NOT NULL,
     prefix          text NOT NULL,
     name            text,
     PRIMARY KEY (organization_id, package_id),
-    FOREIGN KEY (organization_id, package_id) REFERENCES packages (organization_id, id)
+    FOREIGN KEY (organization_id, package_id) REFERENCES packages (organization_id, id) ON DELETE CASCADE
 );
 CREATE INDEX maven_plugins_group ON maven_plugins (organization_id, group_id);
 

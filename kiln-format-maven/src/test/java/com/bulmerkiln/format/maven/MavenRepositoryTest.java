@@ -14,8 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.service.SchemaLinter;
 import com.bulmerkiln.format.maven.constant.MavenChecksumAlgorithm;
-import com.bulmerkiln.format.maven.store.MavenFileStore;
-import com.bulmerkiln.registry.store.BlockStore;
+import com.bulmerkiln.format.maven.util.MavenChecksumUtils;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import org.junit.jupiter.api.AfterAll;
@@ -109,7 +108,7 @@ class MavenRepositoryTest {
         maven.mvc()
                 .perform(MavenHarness.at(HttpMethod.GET, "/maven/" + CORE + "maven-metadata.xml.sha1"))
                 .andExpect(content()
-                        .string(MavenFileStore.checksum(
+                        .string(MavenChecksumUtils.checksum(
                                 xml.getBytes(StandardCharsets.UTF_8), MavenChecksumAlgorithm.SHA1)));
         maven.mvc()
                 .perform(MavenHarness.at(HttpMethod.GET, "/maven/org/acme/none/maven-metadata.xml"))
@@ -219,9 +218,16 @@ class MavenRepositoryTest {
         maven.deploy(dir + "1.1/risky-1.1.pom", "<project/>");
         OrganizationContext.run(
                 maven.acme(),
-                () -> maven.database().run(tx -> {
-                    BlockStore.block(tx, MavenFormatModule.FORMAT, "org.acme:risky", "1.1", "CVE-2026-0002");
-                    BlockStore.tombstone(tx, MavenFormatModule.FORMAT, "org.acme:risky", "2.0");
+                () -> maven.database().run(() -> {
+                    maven.registry()
+                            .getBlocks()
+                            .block(
+                                    MavenFormatModule.FORMAT,
+                                    "org.acme:risky",
+                                    "1.1",
+                                    "CVE-2026-0002",
+                                    MavenHarness.ADMIN);
+                    maven.registry().getBlocks().tombstone(MavenFormatModule.FORMAT, "org.acme:risky", "2.0");
                 }));
 
         maven.mvc()

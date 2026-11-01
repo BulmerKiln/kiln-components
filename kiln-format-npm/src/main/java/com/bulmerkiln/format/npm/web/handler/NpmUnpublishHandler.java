@@ -4,9 +4,7 @@
  */
 package com.bulmerkiln.format.npm.web.handler;
 
-import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
-import com.bulmerkiln.format.npm.service.NpmAccessService;
 import com.bulmerkiln.format.npm.service.NpmUnpublishService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,10 +19,6 @@ public final class NpmUnpublishHandler {
 
     public NpmUnpublishHandler(NpmUnpublishService unpublish) {
         this.unpublish = unpublish;
-    }
-
-    public static NpmUnpublishHandler of(Database database, NpmAccessService access) {
-        return new NpmUnpublishHandler(new NpmUnpublishService(database, access));
     }
 
     /** {@code PUT} drops the versions the packument leaves out; {@code DELETE} drops the package. */

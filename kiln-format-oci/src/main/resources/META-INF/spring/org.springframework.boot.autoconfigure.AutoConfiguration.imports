@@ -1,2 +1,5 @@
 com.bulmerkiln.format.oci.autoconfigure.OciFormatAutoConfiguration
+com.bulmerkiln.format.oci.autoconfigure.OciDataAutoConfiguration
+com.bulmerkiln.format.oci.autoconfigure.OciAccessAutoConfiguration
+com.bulmerkiln.format.oci.autoconfigure.OciServiceAutoConfiguration
 com.bulmerkiln.format.oci.autoconfigure.OciWebAutoConfiguration

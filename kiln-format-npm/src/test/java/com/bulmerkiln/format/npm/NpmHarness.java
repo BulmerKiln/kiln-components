@@ -13,7 +13,10 @@ import com.bulmerkiln.database.Database;
 import com.bulmerkiln.database.KilnPostgres;
 import com.bulmerkiln.format.ArtifactEventListener;
 import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.npm.repository.NpmDistTagRepository;
+import com.bulmerkiln.format.npm.repository.NpmVersionRepository;
 import com.bulmerkiln.format.npm.service.NpmAccessService;
+import com.bulmerkiln.format.npm.service.NpmPackageService;
 import com.bulmerkiln.format.npm.service.NpmPublishService;
 import com.bulmerkiln.format.npm.service.NpmReadService;
 import com.bulmerkiln.format.npm.service.NpmTagService;
@@ -34,10 +37,9 @@ import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
 import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
 import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
 import com.bulmerkiln.permissions.repository.RoleBindingRepository;
+import com.bulmerkiln.registry.KilnRegistry;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
-import com.bulmerkiln.registry.service.RegistryPolicy;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.domain.NamespaceClaim;
 import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.storage.fs.FsBlobStore;
 import com.bulmerkiln.storage.service.SingleStoreRouter;
@@ -76,6 +78,7 @@ public final class NpmHarness implements AutoCloseable {
 
     private final Database database;
     private final Organization acme;
+    private final KilnRegistry registry;
     private final MockMvc mvc;
     private final List<String> events = new ArrayList<>();
     private Principal caller = WRITER;
@@ -83,12 +86,13 @@ public final class NpmHarness implements AutoCloseable {
     public NpmHarness(Path blobs, String prefix) throws IOException {
         database = KilnPostgres.database();
         acme = KilnPostgres.organization(database, "acme");
+        registry = KilnRegistry.of(database);
         StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
                 database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
         OrganizationContext.run(acme, () -> {
-            database.run(tx -> {
-                NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "@acme", List.of("acme-")));
-                NamespaceStore.create(tx, namespace("pub", Visibility.PUBLIC, "@pub", List.of()));
+            database.run(() -> {
+                namespace("acme", Visibility.PRIVATE, "@acme", List.of("acme-"));
+                namespace("pub", Visibility.PUBLIC, "@pub", List.of());
             });
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("acme")));
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("pub")));
@@ -99,8 +103,15 @@ public final class NpmHarness implements AutoCloseable {
                 : Optional.empty();
         NpmAccessService access = new NpmAccessService(
                 database,
-                new FormatAccess(new RoleBasedPolicy(bindings), new NamespaceVisibilityLookup(database)),
-                new RegistryPolicy(database));
+                registry.getNamespaces(),
+                registry.getBlocks(),
+                new FormatAccess(new RoleBasedPolicy(bindings), registry.getVisibility()),
+                registry.getPolicy());
+        NpmPackageService packages = new NpmPackageService(
+                registry.getPackages(),
+                registry.getBlobs(),
+                KilnPostgres.repository(database, NpmVersionRepository.class),
+                KilnPostgres.repository(database, NpmDistTagRepository.class));
         ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
             @Override
             public void pushed(ArtifactRef artifact, long bytes) {
@@ -116,10 +127,11 @@ public final class NpmHarness implements AutoCloseable {
         mvc = MockMvcBuilders.standaloneSetup(new NpmController(new NpmRouteDispatcher(
                         new FormatRequests(organizations, request -> caller, "http://localhost"),
                         new NpmPackageHandler(
-                                new NpmReadService(database, access, storage, recorded),
-                                new NpmPublishService(database, access, storage, recorded, 1024),
-                                new NpmTagService(database, access)),
-                        new NpmUnpublishHandler(new NpmUnpublishService(database, access)))))
+                                new NpmReadService(database, access, packages, storage, recorded),
+                                new NpmPublishService(database, access, packages, storage, recorded, 1024),
+                                new NpmTagService(database, access, packages)),
+                        new NpmUnpublishHandler(
+                                new NpmUnpublishService(database, access, packages, registry.getBlocks())))))
                 .build();
     }
 
@@ -192,8 +204,17 @@ public final class NpmHarness implements AutoCloseable {
         }
     }
 
-    private static Namespace namespace(String name, Visibility visibility, String scope, List<String> prefixes) {
-        return new Namespace(UUID.randomUUID(), name, visibility, null, scope, prefixes, List.of(), List.of());
+    /** A namespace claiming an npm scope ({@code @acme/...}) and unscoped name prefixes. */
+    private void namespace(String name, Visibility visibility, String scope, List<String> prefixes) {
+        List<NamespaceClaim> claims = new ArrayList<>();
+        claims.add(new NamespaceClaim(NpmFormatModule.FORMAT, scope, "/"));
+        prefixes.forEach(prefix -> claims.add(new NamespaceClaim(NpmFormatModule.FORMAT, prefix, null)));
+        registry.getNamespaces().create(new Namespace(UUID.randomUUID(), name, visibility), claims);
+    }
+
+    /** The registry's services over this harness's database. */
+    KilnRegistry registry() {
+        return registry;
     }
 
     private static RoleBinding.Subject member(Principal principal) {

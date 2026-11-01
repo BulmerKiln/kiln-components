@@ -4,32 +4,48 @@
  */
 package com.bulmerkiln.registry.autoconfigure;
 
-import com.bulmerkiln.core.lookup.Lookup;
-import com.bulmerkiln.database.Database;
-import com.bulmerkiln.database.autoconfigure.DatabaseAutoConfiguration;
-import com.bulmerkiln.format.ArtifactPolicy;
-import com.bulmerkiln.permissions.constant.Visibility;
-import com.bulmerkiln.permissions.domain.Scope;
-import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
-import com.bulmerkiln.registry.service.RegistryPolicy;
+import com.bulmerkiln.database.autoconfigure.DataJdbcAutoConfiguration;
+import com.bulmerkiln.registry.mapper.NamespaceMapperImpl;
+import com.bulmerkiln.registry.mapper.PackageMapperImpl;
+import com.bulmerkiln.registry.repository.BlobRepository;
+import com.bulmerkiln.registry.repository.BlockRepository;
+import com.bulmerkiln.registry.repository.NamespaceClaimRepository;
+import com.bulmerkiln.registry.repository.NamespaceRepository;
+import com.bulmerkiln.registry.repository.PackageFileRepository;
+import com.bulmerkiln.registry.repository.PackageRepository;
+import com.bulmerkiln.registry.repository.PackageVersionRepository;
+import com.bulmerkiln.registry.repository.TombstoneRepository;
+import com.bulmerkiln.registry.service.BlobRecordService;
+import com.bulmerkiln.registry.service.BlockService;
+import com.bulmerkiln.registry.service.NamespaceService;
+import com.bulmerkiln.registry.service.PackageService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 
-/** Answers the formats' policy port and the permissions' visibility port from the registry. */
-@AutoConfiguration(after = DatabaseAutoConfiguration.class)
+/** The registry's tables, and the services formats store through. */
+@AutoConfiguration(after = DataJdbcAutoConfiguration.class)
+@EnableJdbcRepositories(basePackageClasses = PackageRepository.class, enableDefaultTransactions = false)
 public class RegistryAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean(ArtifactPolicy.class)
-    ArtifactPolicy registryPolicy(Database database) {
-        return new RegistryPolicy(database);
+    NamespaceService namespaceService(NamespaceRepository namespaces, NamespaceClaimRepository claims) {
+        return new NamespaceService(namespaces, claims, new NamespaceMapperImpl());
     }
 
-    /** Declared as the generic lookup, so an assembly's own visibility lookup replaces it. */
     @Bean
-    @ConditionalOnMissingBean
-    Lookup<Scope, Visibility> namespaceVisibility(Database database) {
-        return new NamespaceVisibilityLookup(database);
+    PackageService packageService(
+            PackageRepository packages, PackageVersionRepository versions, PackageFileRepository files) {
+        return new PackageService(packages, versions, files, new PackageMapperImpl());
+    }
+
+    @Bean
+    BlobRecordService blobRecordService(BlobRepository blobs) {
+        return new BlobRecordService(blobs, new PackageMapperImpl());
+    }
+
+    @Bean
+    BlockService blockService(BlockRepository blocks, TombstoneRepository tombstones) {
+        return new BlockService(blocks, tombstones);
     }
 }

@@ -16,7 +16,8 @@ import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.format.maven.MavenFormatModule;
 import com.bulmerkiln.format.maven.domain.MavenPath;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.service.BlockService;
+import com.bulmerkiln.registry.service.NamespaceService;
 import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -29,17 +30,26 @@ import org.jspecify.annotations.Nullable;
 public final class MavenAccessService {
 
     private final Database database;
+    private final NamespaceService namespaces;
+    private final BlockService blocks;
     private final ArtifactAccess access;
     private final ArtifactPolicy policy;
 
-    public MavenAccessService(Database database, ArtifactAccess access, ArtifactPolicy policy) {
+    public MavenAccessService(
+            Database database,
+            NamespaceService namespaces,
+            BlockService blocks,
+            ArtifactAccess access,
+            ArtifactPolicy policy) {
         this.database = database;
+        this.namespaces = namespaces;
+        this.blocks = blocks;
         this.access = access;
         this.policy = policy;
     }
 
     Optional<Namespace> require(MavenPath path, Operation operation) {
-        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.getGroupId()));
+        Optional<Namespace> namespace = owner(path.getGroupId());
         Optional<Refusal> refusal = access.check(artifact(path, namespace, null), operation)
                 .toRefusal(
                         "You may not " + operation.name().toLowerCase(Locale.ROOT) + " " + name(path),
@@ -52,7 +62,7 @@ public final class MavenAccessService {
 
     /** Whether the caller may read {@code path}, for choosing what to list; never throws. */
     boolean mayRead(MavenPath path) {
-        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.getGroupId()));
+        Optional<Namespace> namespace = owner(path.getGroupId());
         return allowed(artifact(path, namespace, null), Operation.PULL)
                 && readRefusal(path, namespace, null).isEmpty();
     }
@@ -64,7 +74,7 @@ public final class MavenAccessService {
     public void requireToWriteMetadata(MavenPath.Metadata metadata) {
         if (metadata.getVersion() == null) {
             String group = metadata.getGroupId() + "." + metadata.getArtifactId();
-            Optional<Namespace> owner = database.transaction(tx -> NamespaceStore.forMaven(tx, group));
+            Optional<Namespace> owner = owner(group);
             if (owner.isPresent()
                     && allowed(
                             new ArtifactRef(
@@ -74,6 +84,22 @@ public final class MavenAccessService {
             }
         }
         requireToWrite(metadata);
+    }
+
+    /** The namespace owning a groupId: the longest claimed prefix, {@code org.acme} owning {@code org.acme.core}. */
+    private Optional<Namespace> owner(String groupId) {
+        return database.transaction(() -> namespaces.owner(MavenFormatModule.FORMAT, groupId));
+    }
+
+    /**
+     * Refuses writing {@code file}'s version when a block or tombstone stops it, inside the caller's
+     * transaction, so the check and the write commit together (REG-4).
+     */
+    void checkWrite(MavenPath.ArtifactFile file, Namespace namespace) {
+        blocks.checkWrite(artifact(file, Optional.of(namespace), file.getVersion()))
+                .ifPresent(refusal -> {
+                    throw new RefusedException(refusal);
+                });
     }
 
     private boolean allowed(ArtifactRef artifact, Operation operation) {

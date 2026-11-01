@@ -21,6 +21,7 @@ import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import javax.sql.DataSource;
 import lombok.Value;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -53,6 +54,9 @@ public final class KilnPostgres {
     private static final int ROLES_LOCK = 0x6b696c6e;
 
     private static final Server SERVER = Server.connect();
+
+    /** The repositories' context of each database, built once and kept for the test JVM's life. */
+    private static final Map<Database, AnnotationConfigApplicationContext> CONTEXTS = new WeakHashMap<>();
 
     private KilnPostgres() {}
 
@@ -173,10 +177,18 @@ public final class KilnPostgres {
     /**
      * A repository over {@code database}, as an assembly's context would make it: every Kiln
      * repository on the classpath is available, each needing the caller's transaction. For tests and
-     * harnesses that build services by hand. The context holds nothing to close; {@code database}
-     * keeps owning the pool.
+     * harnesses that build services by hand. One context serves every repository of a database, and
+     * holds nothing to close; {@code database} keeps owning the pool.
      */
     public static <R> R repository(Database database, Class<R> type) {
+        AnnotationConfigApplicationContext context;
+        synchronized (CONTEXTS) {
+            context = CONTEXTS.computeIfAbsent(database, KilnPostgres::repositories);
+        }
+        return context.getBean(type);
+    }
+
+    private static AnnotationConfigApplicationContext repositories(Database database) {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
         context.registerBean(DataSource.class, database::dataSource, bean -> bean.setDestroyMethodName(""));
         context.registerBean("transactionManager", PlatformTransactionManager.class, database::transactionManager);
@@ -184,7 +196,7 @@ public final class KilnPostgres {
                 NamedParameterJdbcOperations.class, () -> new NamedParameterJdbcTemplate(database.dataSource()));
         context.register(Repositories.class);
         context.refresh();
-        return context.getBean(type);
+        return context;
     }
 
     /** Spring Data JDBC over every Kiln repository, without defaults that open transactions. */
@@ -228,6 +240,13 @@ public final class KilnPostgres {
                 "kiln.database.password", APP_PASSWORD,
                 "kiln.database.migrator-username", MIGRATOR,
                 "kiln.database.migrator-password", MIGRATOR_PASSWORD);
+    }
+
+    /** The same properties, as {@code key=value} pairs for a context runner. */
+    public static String[] propertyValues(String url) {
+        return properties(url).entrySet().stream()
+                .map(property -> property.getKey() + "=" + property.getValue())
+                .toArray(String[]::new);
     }
 
     private static void execute(String url, String user, String password, String sql) {

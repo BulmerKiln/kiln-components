@@ -5,7 +5,6 @@
 package com.bulmerkiln.format.oci.service;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.RefusedException;
 import com.bulmerkiln.format.constant.Operation;
@@ -14,7 +13,6 @@ import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
-import com.bulmerkiln.format.oci.store.OciRepositoryStore;
 import com.bulmerkiln.registry.domain.Namespace;
 import com.bulmerkiln.storage.BlobRead;
 import com.bulmerkiln.storage.BlobStore;
@@ -31,11 +29,14 @@ public final class OciBlobService {
 
     private final Database database;
     private final OciAccessService access;
+    private final OciRepositoryService repositories;
     private final StorageRouter storage;
 
-    public OciBlobService(Database database, OciAccessService access, StorageRouter storage) {
+    public OciBlobService(
+            Database database, OciAccessService access, OciRepositoryService repositories, StorageRouter storage) {
         this.database = database;
         this.access = access;
+        this.repositories = repositories;
         this.storage = storage;
     }
 
@@ -45,14 +46,15 @@ public final class OciBlobService {
      */
     public BlobRead pull(OciRepositoryRequest request, Digest digest, @Nullable String range) throws IOException {
         Optional<Namespace> namespace = access.require(request, Operation.PULL);
-        boolean linked = database.transaction(tx -> OciRepositoryStore.find(tx, request.getRepository())
-                .map(repository -> OciRepositoryStore.linked(tx, repository, digest))
+        boolean linked = database.transaction(() -> repositories
+                .find(request.getRepository())
+                .map(repository -> repositories.linked(repository, digest))
                 .orElse(false));
         if (!linked) {
             throw new OciException(OciErrorCode.BLOB_UNKNOWN, "Blob unknown");
         }
         access.checkRead(request, namespace, digest.toString());
-        BlobStore store = storage.store(OrganizationContext.current());
+        BlobStore store = storage.current();
         BlobInfo info =
                 store.stat(digest).orElseThrow(() -> new OciException(OciErrorCode.BLOB_UNKNOWN, "Blob unknown"));
         try {

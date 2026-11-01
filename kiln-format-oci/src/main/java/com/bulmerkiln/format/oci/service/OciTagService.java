@@ -10,14 +10,12 @@ import com.bulmerkiln.format.constant.Operation;
 import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import com.bulmerkiln.format.oci.constant.OciMediaTypes;
+import com.bulmerkiln.format.oci.domain.OciManifestRecord;
 import com.bulmerkiln.format.oci.dto.OciIndexResponse;
 import com.bulmerkiln.format.oci.dto.OciReferrersResponse;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
 import com.bulmerkiln.format.oci.dto.OciTagListResponse;
 import com.bulmerkiln.format.oci.dto.OciTagPageResponse;
-import com.bulmerkiln.format.oci.entity.OciManifestEntity;
-import com.bulmerkiln.format.oci.store.OciManifestStore;
-import com.bulmerkiln.format.oci.store.OciRepositoryStore;
 import com.bulmerkiln.format.util.FormatJsonUtils;
 import java.util.List;
 import java.util.UUID;
@@ -28,11 +26,20 @@ public final class OciTagService {
 
     private final Database database;
     private final OciAccessService access;
+    private final OciRepositoryService repositories;
+    private final OciManifestRecordService manifests;
     private final int maxPageSize;
 
-    public OciTagService(Database database, OciAccessService access, int maxPageSize) {
+    public OciTagService(
+            Database database,
+            OciAccessService access,
+            OciRepositoryService repositories,
+            OciManifestRecordService manifests,
+            int maxPageSize) {
         this.database = database;
         this.access = access;
+        this.repositories = repositories;
+        this.manifests = manifests;
         this.maxPageSize = maxPageSize;
     }
 
@@ -40,10 +47,11 @@ public final class OciTagService {
     public OciTagPageResponse tags(OciRepositoryRequest request, @Nullable Integer n, @Nullable String last) {
         access.require(request, Operation.PULL);
         int size = n == null ? maxPageSize : Math.clamp(n, 0, maxPageSize);
-        List<String> tags = database.transaction(tx -> {
-            UUID repository = OciRepositoryStore.find(tx, request.getRepository())
+        List<String> tags = database.transaction(() -> {
+            UUID repository = repositories
+                    .find(request.getRepository())
                     .orElseThrow(() -> new OciException(OciErrorCode.NAME_UNKNOWN, "Repository unknown"));
-            return OciManifestStore.tags(tx, repository, last, size + 1);
+            return manifests.tags(repository, last, size + 1);
         });
         boolean more = tags.size() > size;
         List<String> page = more ? tags.subList(0, size) : tags;
@@ -55,13 +63,13 @@ public final class OciTagService {
     /** An index of the manifests whose subject is {@code digest}; an unknown digest has none. */
     public OciReferrersResponse referrers(OciRepositoryRequest request, Digest digest, @Nullable String artifactType) {
         access.require(request, Operation.PULL);
-        List<OciManifestEntity> referrers =
-                database.transaction(tx -> OciRepositoryStore.find(tx, request.getRepository())
-                        .map(repository -> OciManifestStore.referrers(tx, repository, digest, artifactType))
-                        .orElse(List.of()));
+        List<OciManifestRecord> referrers = database.transaction(() -> repositories
+                .find(request.getRepository())
+                .map(repository -> manifests.referrers(repository, digest, artifactType))
+                .orElse(List.of()));
         List<OciIndexResponse.Entry> entries = referrers.stream()
                 .map(m -> new OciIndexResponse.Entry(
-                        m.getMediaType(), m.getDigest().toString(), m.getContent().length, m.getArtifactType()))
+                        m.getMediaType(), m.getDigest().toString(), m.getSize(), m.getArtifactType()))
                 .toList();
         return new OciReferrersResponse(
                 FormatJsonUtils.write(new OciIndexResponse(2, OciMediaTypes.OCI_INDEX, entries)), artifactType != null);

@@ -15,7 +15,20 @@ import com.bulmerkiln.database.KilnPostgres;
 import com.bulmerkiln.format.ArtifactEventListener;
 import com.bulmerkiln.format.domain.ArtifactRef;
 import com.bulmerkiln.format.oci.constant.OciMediaTypes;
+import com.bulmerkiln.format.oci.repository.OciManifestRefRepository;
+import com.bulmerkiln.format.oci.repository.OciManifestRepository;
+import com.bulmerkiln.format.oci.repository.OciRepositoryBlobRepository;
+import com.bulmerkiln.format.oci.repository.OciTagRepository;
+import com.bulmerkiln.format.oci.repository.OciUploadSessionRepository;
 import com.bulmerkiln.format.oci.service.OciAccessService;
+import com.bulmerkiln.format.oci.service.OciBlobService;
+import com.bulmerkiln.format.oci.service.OciDeleteService;
+import com.bulmerkiln.format.oci.service.OciManifestRecordService;
+import com.bulmerkiln.format.oci.service.OciManifestService;
+import com.bulmerkiln.format.oci.service.OciRepositoryService;
+import com.bulmerkiln.format.oci.service.OciTagService;
+import com.bulmerkiln.format.oci.service.OciUploadService;
+import com.bulmerkiln.format.oci.service.OciUploadStorageService;
 import com.bulmerkiln.format.oci.web.OciController;
 import com.bulmerkiln.format.oci.web.OciRouteDispatcher;
 import com.bulmerkiln.format.oci.web.handler.OciBlobHandler;
@@ -33,10 +46,9 @@ import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
 import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
 import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
 import com.bulmerkiln.permissions.repository.RoleBindingRepository;
+import com.bulmerkiln.registry.KilnRegistry;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
-import com.bulmerkiln.registry.service.RegistryPolicy;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.domain.NamespaceClaim;
 import com.bulmerkiln.storage.fs.FsBlobStore;
 import com.bulmerkiln.storage.service.SingleStoreRouter;
 import com.bulmerkiln.web.FormatRequests;
@@ -71,6 +83,7 @@ public final class OciHarness implements AutoCloseable {
 
     private final Database database;
     private final Organization acme;
+    private final KilnRegistry registry;
     private final MockMvc mvc;
     private final List<String> events = new ArrayList<>();
     private Principal caller = WRITER;
@@ -83,12 +96,13 @@ public final class OciHarness implements AutoCloseable {
     public OciHarness(Path blobs, UnaryOperator<String> addressing) throws IOException {
         database = KilnPostgres.database();
         acme = KilnPostgres.organization(database, "acme");
+        registry = KilnRegistry.of(database);
         StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
                 database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
         OrganizationContext.run(acme, () -> {
-            database.run(tx -> {
-                NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "acme"));
-                NamespaceStore.create(tx, namespace("pub", Visibility.PUBLIC, "pub"));
+            database.run(() -> {
+                namespace("acme", Visibility.PRIVATE);
+                namespace("pub", Visibility.PUBLIC);
             });
             bindings.add(new RoleBinding(subject(WRITER), Role.WRITER, Scope.namespace("acme")));
             bindings.add(new RoleBinding(subject(WRITER), Role.WRITER, Scope.namespace("pub")));
@@ -101,8 +115,23 @@ public final class OciHarness implements AutoCloseable {
                 : Optional.empty();
         OciAccessService access = new OciAccessService(
                 database,
-                new FormatAccess(new RoleBasedPolicy(bindings), new NamespaceVisibilityLookup(database)),
-                new RegistryPolicy(database));
+                registry.getNamespaces(),
+                registry.getBlocks(),
+                new FormatAccess(new RoleBasedPolicy(bindings), registry.getVisibility()),
+                registry.getPolicy());
+        OciRepositoryService repositories = new OciRepositoryService(
+                registry.getPackages(),
+                KilnPostgres.repository(database, OciRepositoryBlobRepository.class),
+                KilnPostgres.repository(database, OciUploadSessionRepository.class));
+        OciManifestRecordService manifests = new OciManifestRecordService(
+                registry.getPackages(),
+                registry.getBlobs(),
+                KilnPostgres.repository(database, OciManifestRepository.class),
+                KilnPostgres.repository(database, OciManifestRefRepository.class),
+                KilnPostgres.repository(database, OciTagRepository.class),
+                KilnPostgres.repository(database, OciRepositoryBlobRepository.class));
+        SingleStoreRouter storage = router(blobs);
+        OciUploadStorageService stored = new OciUploadStorageService(storage, 64);
         ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
             @Override
             public void pushed(ArtifactRef artifact, long bytes) {
@@ -116,9 +145,14 @@ public final class OciHarness implements AutoCloseable {
         }));
         OciController controller = new OciController(new OciRouteDispatcher(
                 new FormatRequests(organizations, request -> caller, "http://localhost"),
-                OciManifestHandler.of(database, access, recorded, 4096),
-                OciBlobHandler.of(database, access, router(blobs), 64),
-                OciTagHandler.of(database, access, 3)));
+                new OciManifestHandler(
+                        new OciManifestService(database, access, repositories, manifests, storage, recorded, 4096),
+                        new OciDeleteService(database, access, repositories, manifests),
+                        4096),
+                new OciBlobHandler(
+                        new OciBlobService(database, access, repositories, storage),
+                        new OciUploadService(database, access, repositories, registry.getBlobs(), stored)),
+                new OciTagHandler(new OciTagService(database, access, repositories, manifests, 3))));
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -128,6 +162,11 @@ public final class OciHarness implements AutoCloseable {
 
     public Database database() {
         return database;
+    }
+
+    /** The registry's services over this harness's database. */
+    public KilnRegistry registry() {
+        return registry;
     }
 
     public Organization acme() {
@@ -206,8 +245,12 @@ public final class OciHarness implements AutoCloseable {
         return "{\"mediaType\":\"" + mediaType + "\",\"digest\":\"" + digest + "\",\"size\":" + size + "}";
     }
 
-    private static Namespace namespace(String name, Visibility visibility, String prefix) {
-        return new Namespace(UUID.randomUUID(), name, visibility, prefix, null, List.of(), List.of(), List.of());
+    /** A namespace claiming OCI repositories under {@code name/}. */
+    private void namespace(String name, Visibility visibility) {
+        registry.getNamespaces()
+                .create(
+                        new Namespace(UUID.randomUUID(), name, visibility),
+                        List.of(new NamespaceClaim(OciFormatModule.FORMAT, name, "/")));
     }
 
     private static RoleBinding.Subject subject(Principal principal) {

@@ -5,13 +5,11 @@
 package com.bulmerkiln.format.oci.web.handler;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.database.Database;
 import com.bulmerkiln.format.dto.FormatResponse;
 import com.bulmerkiln.format.oci.constant.OciMediaTypes;
 import com.bulmerkiln.format.oci.dto.OciReferrersResponse;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
 import com.bulmerkiln.format.oci.dto.OciTagPageResponse;
-import com.bulmerkiln.format.oci.service.OciAccessService;
 import com.bulmerkiln.format.oci.service.OciTagService;
 import com.bulmerkiln.format.oci.util.OciHeaderUtils;
 import com.bulmerkiln.format.oci.util.OciResponseUtils;
@@ -26,12 +24,8 @@ public final class OciTagHandler {
 
     private final OciTagService tags;
 
-    OciTagHandler(OciTagService tags) {
+    public OciTagHandler(OciTagService tags) {
         this.tags = tags;
-    }
-
-    public static OciTagHandler of(Database database, OciAccessService access, int maxPageSize) {
-        return new OciTagHandler(new OciTagService(database, access, maxPageSize));
     }
 
     public void tags(HttpServletRequest request, HttpServletResponse response, OciRepositoryRequest oci)

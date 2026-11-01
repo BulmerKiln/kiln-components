@@ -10,6 +10,7 @@ import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import java.util.regex.Pattern;
 import lombok.Value;
+import org.jspecify.annotations.Nullable;
 
 /** The {@code <reference>} of a manifest URL: a tag or a digest. */
 public sealed interface OciReference {
@@ -44,6 +45,21 @@ public sealed interface OciReference {
         public String toString() {
             return digest.toString();
         }
+    }
+
+    /** Whether this names a digest other than {@code digest}: a push whose content doesn't match its URL. */
+    default boolean contradicts(Digest digest) {
+        return this instanceof ByDigest byDigest && !byDigest.getDigest().equals(digest);
+    }
+
+    /** The digest this names, if it's a digest. */
+    default @Nullable Digest digest() {
+        return this instanceof ByDigest byDigest ? byDigest.getDigest() : null;
+    }
+
+    /** The tag this names, if it's a tag. */
+    default @Nullable String tag() {
+        return this instanceof Tag tag ? tag.getValue() : null;
     }
 
     /** Tags can't contain {@code :}, and every digest does. */

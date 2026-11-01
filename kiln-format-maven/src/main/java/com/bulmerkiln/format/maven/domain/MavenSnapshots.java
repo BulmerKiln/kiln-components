@@ -4,7 +4,7 @@
  */
 package com.bulmerkiln.format.maven.domain;
 
-import com.bulmerkiln.registry.entity.PackageFileEntity;
+import com.bulmerkiln.registry.domain.PackageFile;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -47,9 +47,8 @@ public final class MavenSnapshots {
     }
 
     /** The stored file a request names: exactly, or for a snapshot, its latest build. */
-    public static Optional<PackageFileEntity> resolve(
-            MavenPath.ArtifactFile file, String fileName, List<PackageFileEntity> files) {
-        Optional<PackageFileEntity> exact =
+    public static Optional<PackageFile> resolve(MavenPath.ArtifactFile file, String fileName, List<PackageFile> files) {
+        Optional<PackageFile> exact =
                 files.stream().filter(f -> f.getName().equals(fileName)).findFirst();
         if (exact.isPresent() || !file.isSnapshot() || file.getBuildVersion() != null) {
             return exact;
@@ -64,7 +63,7 @@ public final class MavenSnapshots {
     }
 
     /** The timestamped builds among a snapshot version's files, without checksums. */
-    public static List<Build> builds(MavenPath.ArtifactFile version, List<PackageFileEntity> files) {
+    public static List<Build> builds(MavenPath.ArtifactFile version, List<PackageFile> files) {
         String directory = version.getGroupId().replace('.', '/') + "/" + version.getArtifactId() + "/"
                 + version.getVersion() + "/";
         return files.stream()

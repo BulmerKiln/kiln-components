@@ -40,7 +40,7 @@ shared test suite.
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| STO-1 | Every blob operation must act on the organization in `OrganizationContext`, and fail outside one | `BlobStoreContract` |
+| STO-1 | Every blob operation must act on the organization in `OrganizationContext`, and fail outside one | `BlobStoreContract`, `StorageRouterTest` |
 | STO-2 | Blobs and uploads must never be shared across organizations. The same content is stored separately for each, and no organization can read, abort or delete another's. Deduplicating across organizations would reveal that another organization holds a blob | `BlobStoreContract` |
 | STO-3 | A chunk must be applied entirely or not at all: if the upload would exceed its size limit, or the client disconnects mid-chunk, the session is left as it was | `BlobStoreContract` |
 | STO-4 | A chunk must start exactly where the upload ends. A gap or an overlap is refused, reporting the offset to resume from | `BlobStoreContract` |
@@ -54,6 +54,7 @@ shared test suite.
 | STO-12 | `kiln.storage.type` must select exactly one backend. Startup fails, naming the available types, when it's unset, unknown, or claimed by two backends, or when no backend is on the classpath | `StorageSelectionTest` |
 | STO-13 | Stores must be reachable only through `StorageRouter`, never as a bean of their own. When the assembly provides its own router, no store is created here | `StorageSelectionTest` |
 | STO-14 | Every backend must pass `BlobStoreContract` | `InMemoryBlobStoreTest`, `FsBlobStoreTest` |
+| STO-15 | Bytes already in hand must be stored through one call that verifies them against their digest and, on any failure, leaves no upload behind; a small blob must be readable whole, refused before reading when it's larger than the caller's limit | `BlobStoreContract` |
 
 ## Contract *(subsystem only)*
 
@@ -124,7 +125,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: STO-1 to STO-14.
+Implemented: STO-1 to STO-15.
 
 Planned: upload sessions and quota reservations in Postgres, the GC sweep of expired uploads and
 unreferenced blobs (M1); presigned-redirect serving (M3, with `kiln-storage-s3`).

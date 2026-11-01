@@ -4,19 +4,27 @@
  */
 package com.bulmerkiln.format.oci.entity;
 
-import com.bulmerkiln.core.digest.Digest;
+import java.util.UUID;
 import lombok.Value;
 import org.jspecify.annotations.Nullable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
 
-/** A stored manifest row: its digest, media and artifact type, and the bytes exactly as pushed. */
+/** A row of {@code oci_manifests}: a manifest's media types and subject; its bytes are the file. */
 @Value
+@Table("oci_manifests")
 public final class OciManifestEntity {
 
-    private final Digest digest;
+    @Id
+    private final OciVersionKey id;
+
+    private final UUID packageId;
 
     private final String mediaType;
 
     private final @Nullable String artifactType;
 
-    private final byte[] content;
+    private final @Nullable String subject;
+
+    private final UUID fileId;
 }

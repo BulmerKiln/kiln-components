@@ -13,10 +13,11 @@ import com.bulmerkiln.database.Database;
 import com.bulmerkiln.database.KilnPostgres;
 import com.bulmerkiln.format.ArtifactEventListener;
 import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.maven.repository.MavenPluginRepository;
 import com.bulmerkiln.format.maven.service.MavenAccessService;
 import com.bulmerkiln.format.maven.service.MavenFileService;
+import com.bulmerkiln.format.maven.service.MavenFileStorageService;
 import com.bulmerkiln.format.maven.service.MavenMetadataService;
-import com.bulmerkiln.format.maven.store.MavenFileStore;
 import com.bulmerkiln.format.maven.web.MavenController;
 import com.bulmerkiln.format.maven.web.MavenRouteDispatcher;
 import com.bulmerkiln.format.service.ArtifactEventService;
@@ -31,10 +32,9 @@ import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
 import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
 import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
 import com.bulmerkiln.permissions.repository.RoleBindingRepository;
+import com.bulmerkiln.registry.KilnRegistry;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
-import com.bulmerkiln.registry.service.RegistryPolicy;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.domain.NamespaceClaim;
 import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.storage.fs.FsBlobStore;
 import com.bulmerkiln.storage.service.SingleStoreRouter;
@@ -70,6 +70,7 @@ public final class MavenHarness implements AutoCloseable {
 
     private final Database database;
     private final Organization acme;
+    private final KilnRegistry registry;
     private final MockMvc mvc;
     private final List<String> events = new ArrayList<>();
     private Principal caller = WRITER;
@@ -77,12 +78,13 @@ public final class MavenHarness implements AutoCloseable {
     public MavenHarness(Path blobs, String prefix) throws IOException {
         database = KilnPostgres.database();
         acme = KilnPostgres.organization(database, "acme");
+        registry = KilnRegistry.of(database);
         StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
                 database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
         OrganizationContext.run(acme, () -> {
-            database.run(tx -> {
-                NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "org.acme"));
-                NamespaceStore.create(tx, namespace("pub", Visibility.PUBLIC, "org.pub"));
+            database.run(() -> {
+                namespace("acme", Visibility.PRIVATE, "org.acme");
+                namespace("pub", Visibility.PUBLIC, "org.pub");
             });
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("acme")));
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("pub")));
@@ -93,8 +95,10 @@ public final class MavenHarness implements AutoCloseable {
                 : Optional.empty();
         MavenAccessService access = new MavenAccessService(
                 database,
-                new FormatAccess(new RoleBasedPolicy(bindings), new NamespaceVisibilityLookup(database)),
-                new RegistryPolicy(database));
+                registry.getNamespaces(),
+                registry.getBlocks(),
+                new FormatAccess(new RoleBasedPolicy(bindings), registry.getVisibility()),
+                registry.getPolicy());
         ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
             @Override
             public void pushed(ArtifactRef artifact, long bytes) {
@@ -109,8 +113,18 @@ public final class MavenHarness implements AutoCloseable {
         StorageRouter storage = new SingleStoreRouter(new FsBlobStore(blobs));
         mvc = MockMvcBuilders.standaloneSetup(new MavenController(new MavenRouteDispatcher(
                         new FormatRequests(organizations, request -> caller, "http://localhost"),
-                        new MavenFileService(database, access, new MavenFileStore(storage, 64), recorded),
-                        new MavenMetadataService(database, access),
+                        new MavenFileService(
+                                database,
+                                access,
+                                registry.getPackages(),
+                                registry.getBlobs(),
+                                new MavenFileStorageService(database, registry.getBlobs(), storage, 64),
+                                recorded),
+                        new MavenMetadataService(
+                                database,
+                                access,
+                                registry.getPackages(),
+                                KilnPostgres.repository(database, MavenPluginRepository.class)),
                         access)))
                 .build();
     }
@@ -165,8 +179,17 @@ public final class MavenHarness implements AutoCloseable {
         }
     }
 
-    private static Namespace namespace(String name, Visibility visibility, String scope) {
-        return new Namespace(UUID.randomUUID(), name, visibility, null, null, List.of(), List.of(scope), List.of());
+    /** A namespace claiming a groupId prefix: {@code org.acme} owns {@code org.acme.core}. */
+    private void namespace(String name, Visibility visibility, String groupPrefix) {
+        registry.getNamespaces()
+                .create(
+                        new Namespace(UUID.randomUUID(), name, visibility),
+                        List.of(new NamespaceClaim(MavenFormatModule.FORMAT, groupPrefix, ".")));
+    }
+
+    /** The registry's services over this harness's database. */
+    KilnRegistry registry() {
+        return registry;
     }
 
     private static RoleBinding.Subject member(Principal principal) {

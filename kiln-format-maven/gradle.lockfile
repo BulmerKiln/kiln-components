@@ -1,7 +1,7 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
-# To regenerate this file, run: ./gradlew :kiln-components:kiln-format-maven:dependencies --write-locks
+# To regenerate this file, run: ./gradlew :kiln-format-maven:dependencies --write-locks
 antlr:antlr:2.7.7=pitest
 com.code-intelligence:jazzer-api:0.30.0=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 com.code-intelligence:jazzer-junit:0.30.0=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
@@ -51,9 +51,7 @@ io.micrometer:micrometer-bom:1.17.2=annotationProcessor,checkstyle,compileClassp
 io.micrometer:micrometer-commons:1.17.2=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 io.micrometer:micrometer-observation:1.17.2=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 io.r2dbc:r2dbc-spi:1.0.0.RELEASE=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
-jakarta.activation:jakarta.activation-api:2.1.4=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath
 jakarta.servlet:jakarta.servlet-api:6.1.0=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
-jakarta.xml.bind:jakarta.xml.bind-api:4.0.5=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath
 javax.inject:javax.inject:1=annotationProcessor,testAnnotationProcessor
 jaxen:jaxen:2.0.6=spotbugs
 net.bytebuddy:byte-buddy:1.18.15=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath

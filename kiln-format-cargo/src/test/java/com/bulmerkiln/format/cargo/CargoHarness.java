@@ -12,7 +12,9 @@ import com.bulmerkiln.core.organization.OrganizationResolver;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.database.KilnPostgres;
 import com.bulmerkiln.format.ArtifactEventListener;
+import com.bulmerkiln.format.cargo.repository.CargoVersionRepository;
 import com.bulmerkiln.format.cargo.service.CargoAccessService;
+import com.bulmerkiln.format.cargo.service.CargoCrateService;
 import com.bulmerkiln.format.cargo.service.CargoPublishService;
 import com.bulmerkiln.format.cargo.service.CargoReadService;
 import com.bulmerkiln.format.cargo.web.CargoController;
@@ -30,10 +32,9 @@ import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
 import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
 import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
 import com.bulmerkiln.permissions.repository.RoleBindingRepository;
+import com.bulmerkiln.registry.KilnRegistry;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
-import com.bulmerkiln.registry.service.RegistryPolicy;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.domain.NamespaceClaim;
 import com.bulmerkiln.storage.StorageRouter;
 import com.bulmerkiln.storage.fs.FsBlobStore;
 import com.bulmerkiln.storage.service.SingleStoreRouter;
@@ -69,6 +70,7 @@ public final class CargoHarness implements AutoCloseable {
 
     private final Database database;
     private final Organization acme;
+    private final KilnRegistry registry;
     private final MockMvc mvc;
     private final List<String> events = new ArrayList<>();
     private Principal caller = WRITER;
@@ -76,12 +78,13 @@ public final class CargoHarness implements AutoCloseable {
     public CargoHarness(Path blobs, String prefix) throws IOException {
         database = KilnPostgres.database();
         acme = KilnPostgres.organization(database, "acme");
+        registry = KilnRegistry.of(database);
         StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
                 database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
         OrganizationContext.run(acme, () -> {
-            database.run(tx -> {
-                NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "acme-"));
-                NamespaceStore.create(tx, namespace("pub", Visibility.PUBLIC, "pub-"));
+            database.run(() -> {
+                namespace("acme", Visibility.PRIVATE, "acme-");
+                namespace("pub", Visibility.PUBLIC, "pub-");
             });
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("acme")));
             bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("pub")));
@@ -92,8 +95,14 @@ public final class CargoHarness implements AutoCloseable {
                 : Optional.empty();
         CargoAccessService access = new CargoAccessService(
                 database,
-                new FormatAccess(new RoleBasedPolicy(bindings), new NamespaceVisibilityLookup(database)),
-                new RegistryPolicy(database));
+                registry.getNamespaces(),
+                registry.getBlocks(),
+                new FormatAccess(new RoleBasedPolicy(bindings), registry.getVisibility()),
+                registry.getPolicy());
+        CargoCrateService crates = new CargoCrateService(
+                registry.getPackages(),
+                registry.getBlobs(),
+                KilnPostgres.repository(database, CargoVersionRepository.class));
         ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
             @Override
             public void pushed(ArtifactRef artifact, long bytes) {
@@ -108,8 +117,8 @@ public final class CargoHarness implements AutoCloseable {
         StorageRouter storage = new SingleStoreRouter(new FsBlobStore(blobs));
         mvc = MockMvcBuilders.standaloneSetup(new CargoController(new CargoRouteDispatcher(
                         new FormatRequests(organizations, request -> caller, "http://localhost"),
-                        new CargoReadService(database, access, storage, recorded),
-                        new CargoPublishService(database, access, storage, recorded, 64))))
+                        new CargoReadService(database, access, crates, storage, recorded),
+                        new CargoPublishService(database, access, crates, storage, recorded, 64))))
                 .build();
     }
 
@@ -158,7 +167,8 @@ public final class CargoHarness implements AutoCloseable {
                    "default_features":true,"target":null,"kind":"normal","registry":null},
                   {"name":"tokio","version_req":"^1","features":[],"optional":true,"default_features":false,
                    "target":"cfg(unix)","kind":"dev","registry":null,"explicit_name_in_toml":"rt"}],
-                 "features":{"full":["rt"]},"authors":["a"],"description":"A crate","links":null}
+                 "features":{"full":["rt"]},"authors":["a"],"description":"A crate","links":null,
+                 "rust_version":"1.80"}
                 """, name, version);
     }
 
@@ -176,8 +186,17 @@ public final class CargoHarness implements AutoCloseable {
         database.close();
     }
 
-    private static Namespace namespace(String name, Visibility visibility, String scope) {
-        return new Namespace(UUID.randomUUID(), name, visibility, null, null, List.of(), List.of(), List.of(scope));
+    /** A namespace claiming a crate name prefix: {@code acme-} owns {@code acme-core}. */
+    private void namespace(String name, Visibility visibility, String prefix) {
+        registry.getNamespaces()
+                .create(
+                        new Namespace(UUID.randomUUID(), name, visibility),
+                        List.of(new NamespaceClaim(CargoFormatModule.FORMAT, prefix, null)));
+    }
+
+    /** The registry's services over this harness's database. */
+    KilnRegistry registry() {
+        return registry;
     }
 
     private static RoleBinding.Subject member(Principal principal) {

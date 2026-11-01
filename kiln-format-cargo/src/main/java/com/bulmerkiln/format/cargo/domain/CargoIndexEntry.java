@@ -17,7 +17,8 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * A version's line in its crate's index file, built from what {@code cargo publish} sends
  * (FMT-CARGO-9). Dependencies are rewritten as the index has them: {@code version_req} becomes
- * {@code req}, and a renamed dependency keeps its real name in {@code package}.
+ * {@code req}, and a renamed dependency keeps its real name in {@code package}. The minimum Rust
+ * version is kept as {@code rust_version}; {@code pubtime} is added when the line is served.
  */
 @Value
 public final class CargoIndexEntry {
@@ -54,6 +55,10 @@ public final class CargoIndexEntry {
         entry.put("yanked", false);
         JsonNode links = sent.get("links");
         entry.set("links", links != null && links.isString() ? links : JSON.nullNode());
+        JsonNode rustVersion = sent.get("rust_version");
+        if (rustVersion != null && rustVersion.isString()) {
+            entry.put("rust_version", rustVersion.asString());
+        }
         entry.put("v", 2);
         return new CargoIndexEntry(name.toString(), version, entry);
     }

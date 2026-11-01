@@ -11,17 +11,18 @@ import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.format.maven.MavenFormatModule;
 import com.bulmerkiln.format.maven.constant.MavenChecksumAlgorithm;
+import com.bulmerkiln.format.maven.domain.MavenDeployedFile;
 import com.bulmerkiln.format.maven.domain.MavenPath;
 import com.bulmerkiln.format.maven.domain.MavenSnapshots;
-import com.bulmerkiln.format.maven.store.MavenFileStore;
 import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.permissions.CurrentPrincipal;
+import com.bulmerkiln.permissions.domain.Principal;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.entity.PackageEntity;
-import com.bulmerkiln.registry.entity.PackageFileEntity;
-import com.bulmerkiln.registry.entity.PackageVersionEntity;
-import com.bulmerkiln.registry.store.BlobRecordStore;
-import com.bulmerkiln.registry.store.BlockStore;
-import com.bulmerkiln.registry.store.PackageStore;
+import com.bulmerkiln.registry.domain.PackageFile;
+import com.bulmerkiln.registry.domain.PackageVersion;
+import com.bulmerkiln.registry.domain.RegistryPackage;
+import com.bulmerkiln.registry.service.BlobRecordService;
+import com.bulmerkiln.registry.service.PackageService;
 import com.bulmerkiln.storage.BlobRead;
 import com.bulmerkiln.storage.domain.BlobInfo;
 import java.io.IOException;
@@ -33,20 +34,30 @@ import java.util.Optional;
 /**
  * Deploying and downloading a version's files, and their checksums (FMT-MVN-10 to FMT-MVN-13). A
  * deploy is many independent {@code PUT}s; each file is immutable once stored, and the version
- * becomes visible once its POM lands.
+ * becomes visible once its POM lands. Every checksum Maven asks for is taken while the file streams
+ * in and kept with its blob (FMT-MVN-12).
  */
 public final class MavenFileService {
 
     private final Database database;
     private final MavenAccessService access;
-    private final MavenFileStore blobs;
+    private final PackageService packages;
+    private final BlobRecordService blobs;
+    private final MavenFileStorageService storage;
     private final ArtifactEventService events;
 
     public MavenFileService(
-            Database database, MavenAccessService access, MavenFileStore blobs, ArtifactEventService events) {
+            Database database,
+            MavenAccessService access,
+            PackageService packages,
+            BlobRecordService blobs,
+            MavenFileStorageService storage,
+            ArtifactEventService events) {
         this.database = database;
         this.access = access;
+        this.packages = packages;
         this.blobs = blobs;
+        this.storage = storage;
         this.events = events;
     }
 
@@ -61,17 +72,16 @@ public final class MavenFileService {
             verifyUploadedChecksum(file, fileName, checksum, body);
             return;
         }
-        BlobInfo blob = blobs.store(body);
-        database.run(tx -> {
-            BlockStore.checkWrite(tx, MavenAccessService.artifact(file, Optional.of(namespace), file.getVersion()))
-                    .ifPresent(refusal -> {
-                        throw new RefusedException(refusal);
-                    });
+        Principal publisher = CurrentPrincipal.get();
+        MavenDeployedFile deployed = storage.store(body);
+        BlobInfo blob = deployed.getBlob();
+        database.run(() -> {
+            access.checkWrite(file, namespace);
             String name = MavenAccessService.name(file);
-            PackageEntity entry = PackageStore.create(tx, MavenFormatModule.FORMAT, namespace.getId(), name, name);
-            PackageVersionEntity version = PackageStore.ensureVersion(tx, entry.getId(), file.getVersion());
-            BlobRecordStore.record(tx, blob.getDigest(), blob.getSize());
-            PackageStore.addFile(tx, version.getId(), fileName, blob.getDigest(), blob.getSize());
+            RegistryPackage entry = packages.create(MavenFormatModule.FORMAT, namespace.getId(), name, name);
+            PackageVersion version = packages.ensureVersion(entry.getId(), file.getVersion(), publisher);
+            blobs.record(blob.getDigest(), blob.getSize(), deployed.getChecksums());
+            packages.addFile(version.getId(), fileName, blob.getDigest(), blob.getSize());
         });
         if (isPom(file)) {
             events.pushed(MavenAccessService.artifact(file, Optional.of(namespace), file.getVersion()), blob.getSize());
@@ -82,29 +92,32 @@ public final class MavenFileService {
     public BlobRead download(MavenPath.ArtifactFile file, String fileName) throws IOException {
         Optional<Namespace> namespace = access.require(file, Operation.PULL);
         access.checkRead(file, namespace, file.getVersion());
-        PackageFileEntity stored = locate(file, fileName);
-        BlobRead read = blobs.open(stored.getDigest());
+        PackageFile stored = locate(file, fileName);
+        BlobRead read = storage.open(stored.getDigest());
         if (isPom(file)) {
             events.pulled(MavenAccessService.artifact(file, namespace, file.getVersion()), read.getLength());
         }
         return read;
     }
 
-    /** A file's checksum, computed on the server for whichever algorithm is asked for (FMT-MVN-12). */
+    /** A file's checksum, for whichever algorithm is asked for (FMT-MVN-12). */
     public String checksum(MavenPath.ArtifactFile file, String fileName, MavenChecksumAlgorithm algorithm)
             throws IOException {
         Optional<Namespace> namespace = access.require(file, Operation.PULL);
         access.checkRead(file, namespace, file.getVersion());
         String target =
                 fileName.substring(0, fileName.length() - algorithm.suffix().length());
-        return blobs.checksum(locate(file, target).getDigest(), algorithm);
+        return storage.checksum(locate(file, target), algorithm);
     }
 
-    private PackageFileEntity locate(MavenPath.ArtifactFile file, String fileName) {
-        return database.transaction(tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(file))
-                        .flatMap(entry -> PackageStore.version(tx, entry.getId(), file.getVersion()))
-                        .flatMap(version ->
-                                MavenSnapshots.resolve(file, fileName, PackageStore.files(tx, version.getId()))))
+    public static boolean isPom(MavenPath.ArtifactFile file) {
+        return "pom".equals(file.getExtension()) && file.getClassifier() == null && file.getChecksum() == null;
+    }
+
+    private PackageFile locate(MavenPath.ArtifactFile file, String fileName) {
+        return database.transaction(() -> packages.find(MavenFormatModule.FORMAT, MavenAccessService.name(file))
+                        .flatMap(entry -> packages.version(entry.getId(), file.getVersion()))
+                        .flatMap(version -> MavenSnapshots.resolve(file, fileName, packages.files(version.getId()))))
                 .orElseThrow(() -> new RefusedException(Refusal.of(Reason.NOT_FOUND, "Not found")));
     }
 
@@ -118,21 +131,17 @@ public final class MavenFileService {
         String sent = new String(body.readNBytes(1024), StandardCharsets.US_ASCII).strip();
         String target =
                 fileName.substring(0, fileName.length() - algorithm.suffix().length());
-        Optional<PackageFileEntity> stored = database.transaction(
-                tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(file))
-                        .flatMap(entry -> PackageStore.version(tx, entry.getId(), file.getVersion()))
-                        .flatMap(version -> PackageStore.file(tx, version.getId(), target)));
+        Optional<PackageFile> stored =
+                database.transaction(() -> packages.find(MavenFormatModule.FORMAT, MavenAccessService.name(file))
+                        .flatMap(entry -> packages.version(entry.getId(), file.getVersion()))
+                        .flatMap(version -> packages.file(version.getId(), target)));
         if (stored.isEmpty()) {
             return;
         }
-        String actual = blobs.checksum(stored.get().getDigest(), algorithm);
+        String actual = storage.checksum(stored.get(), algorithm);
         String first = sent.split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
         if (!actual.equals(first)) {
             throw new RefusedException(Refusal.of(Reason.INVALID, "The checksum doesn't match " + target));
         }
-    }
-
-    public static boolean isPom(MavenPath.ArtifactFile file) {
-        return "pom".equals(file.getExtension()) && file.getClassifier() == null && file.getChecksum() == null;
     }
 }

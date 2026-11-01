@@ -7,15 +7,20 @@ package com.bulmerkiln.registry.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.core.lookup.Lookup;
-import com.bulmerkiln.database.Database;
 import com.bulmerkiln.database.KilnPostgres;
+import com.bulmerkiln.database.autoconfigure.DataJdbcAutoConfiguration;
+import com.bulmerkiln.database.autoconfigure.DatabaseAutoConfiguration;
 import com.bulmerkiln.format.ArtifactPolicy;
 import com.bulmerkiln.format.domain.ArtifactRef;
 import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.permissions.constant.Visibility;
 import com.bulmerkiln.permissions.domain.Scope;
-import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
-import com.bulmerkiln.registry.service.RegistryPolicy;
+import com.bulmerkiln.registry.lookup.NamespaceVisibilityLookup;
+import com.bulmerkiln.registry.policy.RegistryPolicy;
+import com.bulmerkiln.registry.service.BlobRecordService;
+import com.bulmerkiln.registry.service.BlockService;
+import com.bulmerkiln.registry.service.NamespaceService;
+import com.bulmerkiln.registry.service.PackageService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -40,21 +45,33 @@ class RegistryAutoConfigurationTest {
         }
     }
 
-    private final ApplicationContextRunner runner =
-            new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(RegistryAutoConfiguration.class));
-
-    /** REG-4, REG-5: the registry answers the policy and visibility ports. */
-    @Test
-    void answersThePolicyAndVisibilityPorts() {
-        try (Database database = KilnPostgres.database()) {
-            runner.withBean(Database.class, () -> database).run(context -> {
-                assertThat(context.getBean(ArtifactPolicy.class)).isInstanceOf(RegistryPolicy.class);
-                assertThat(context.getBeanProvider(VISIBILITY_LOOKUP).getObject())
-                        .isInstanceOf(NamespaceVisibilityLookup.class);
-            });
-        }
+    /** Each run gets its own database, since the context closes the pool when it ends. */
+    private static ApplicationContextRunner runner() {
+        return new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        DatabaseAutoConfiguration.class,
+                        DataJdbcAutoConfiguration.class,
+                        RegistryAutoConfiguration.class,
+                        RegistryPortsAutoConfiguration.class))
+                .withPropertyValues(KilnPostgres.propertyValues(KilnPostgres.newDatabase()));
     }
 
+    /** REG-7: the registry answers the policy and visibility ports, and gives formats its services. */
+    @Test
+    void answersThePolicyAndVisibilityPorts() {
+        runner().run(context -> {
+            assertThat(context.getBean(ArtifactPolicy.class)).isInstanceOf(RegistryPolicy.class);
+            assertThat(context.getBeanProvider(VISIBILITY_LOOKUP).getObject())
+                    .isInstanceOf(NamespaceVisibilityLookup.class);
+            assertThat(context)
+                    .hasSingleBean(NamespaceService.class)
+                    .hasSingleBean(PackageService.class)
+                    .hasSingleBean(BlobRecordService.class)
+                    .hasSingleBean(BlockService.class);
+        });
+    }
+
+    /** REG-7: an assembly's own policy and visibility lookup replace the registry's. */
     @Test
     void stepsAsideForTheAssemblysOwn() {
         ArtifactPolicy policy = new ArtifactPolicy() {
@@ -68,15 +85,12 @@ class RegistryAutoConfigurationTest {
                 return Optional.empty();
             }
         };
-        try (Database database = KilnPostgres.database()) {
-            runner.withBean(Database.class, () -> database)
-                    .withBean(ArtifactPolicy.class, () -> policy)
-                    .withUserConfiguration(OwnVisibility.class)
-                    .run(context -> {
-                        assertThat(context.getBean(ArtifactPolicy.class)).isSameAs(policy);
-                        assertThat(context.getBeanProvider(VISIBILITY_LOOKUP).getObject())
-                                .isSameAs(OWN_VISIBILITY);
-                    });
-        }
+        runner().withBean(ArtifactPolicy.class, () -> policy)
+                .withUserConfiguration(OwnVisibility.class)
+                .run(context -> {
+                    assertThat(context.getBean(ArtifactPolicy.class)).isSameAs(policy);
+                    assertThat(context.getBeanProvider(VISIBILITY_LOOKUP).getObject())
+                            .isSameAs(OWN_VISIBILITY);
+                });
     }
 }

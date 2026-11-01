@@ -4,18 +4,27 @@
  */
 package com.bulmerkiln.registry.entity;
 
+import java.time.Instant;
 import java.util.UUID;
 import lombok.Value;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Table;
 
-/** A package, by the name it was first published under. */
+/** A row of {@code packages}. */
 @Value
+@Table("packages")
 public final class PackageEntity {
 
-    private final UUID id;
+    @Id
+    private final RegistryKey id;
 
     private final UUID namespaceId;
 
+    private final String format;
+
     private final String name;
 
-    private final String metadata;
+    private final String normalizedName;
+
+    private final Instant updatedAt;
 }

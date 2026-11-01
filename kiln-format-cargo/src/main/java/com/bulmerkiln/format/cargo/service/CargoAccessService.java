@@ -16,7 +16,8 @@ import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.domain.ArtifactRef;
 import com.bulmerkiln.format.domain.Refusal;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.service.BlockService;
+import com.bulmerkiln.registry.service.NamespaceService;
 import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -28,17 +29,27 @@ import org.jspecify.annotations.Nullable;
 public final class CargoAccessService {
 
     private final Database database;
+    private final NamespaceService namespaces;
+    private final BlockService blocks;
     private final ArtifactAccess access;
     private final ArtifactPolicy policy;
 
-    public CargoAccessService(Database database, ArtifactAccess access, ArtifactPolicy policy) {
+    public CargoAccessService(
+            Database database,
+            NamespaceService namespaces,
+            BlockService blocks,
+            ArtifactAccess access,
+            ArtifactPolicy policy) {
         this.database = database;
+        this.namespaces = namespaces;
+        this.blocks = blocks;
         this.access = access;
         this.policy = policy;
     }
 
     Optional<Namespace> require(CargoCrateName name, Operation operation) {
-        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forCargo(tx, name.canonical()));
+        Optional<Namespace> namespace =
+                database.transaction(() -> namespaces.owner(CargoFormatModule.FORMAT, name.canonical()));
         Optional<Refusal> refusal = access.check(artifact(name, namespace, null), operation)
                 .toRefusal(
                         "You may not " + operation.name().toLowerCase(Locale.ROOT) + " " + name,
@@ -53,6 +64,16 @@ public final class CargoAccessService {
         return require(name, operation)
                 .orElseThrow(() -> new CargoException(
                         Reason.DENIED, "No namespace owns " + name + "; an admin creates one with a crate prefix"));
+    }
+
+    /**
+     * Refuses writing {@code version} when a block or tombstone stops it, inside the caller's
+     * transaction, so the check and the write commit together (REG-4).
+     */
+    void checkWrite(CargoCrateName name, Namespace namespace, String version) {
+        blocks.checkWrite(artifact(name, Optional.of(namespace), version)).ifPresent(refusal -> {
+            throw new RefusedException(refusal);
+        });
     }
 
     Optional<Refusal> readRefusal(CargoCrateName name, Optional<Namespace> namespace, @Nullable String version) {

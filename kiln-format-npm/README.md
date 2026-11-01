@@ -58,6 +58,7 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-NPM-15 | The `/npm/` routes must exist only in a web application while `kiln.format.npm.enabled` isn't `false`. Publishes and tarball downloads reach the event listeners | `NpmWebAutoConfigurationTest`, `NpmRegistryTest` |
 | FMT-NPM-16 | `-/ping` and `-/whoami` must answer, `whoami` asking anonymous callers to sign in. npm commands Kiln doesn't serve (`search`, `login`, `audit`, `owner`, `access`, …) are a `404` with npm's `error` and an `npm-notice` naming the alternative, never a `5xx` | `NpmAccessServiceTest` |
 | FMT-NPM-17 | `npm unpublish` must work for members allowed to delete: `PUT <name>/-rev/<rev>` drops the versions the packument leaves out (dist-tags on them follow the packument or go), `DELETE <name>/-/<file>/-rev/<rev>` succeeds once the file's version is gone, and `DELETE <name>/-rev/<rev>` drops the package. Every unpublished version is tombstoned, so its number can't be published again. The packument carries the `_rev` npm addresses these by; Kiln doesn't check it | `NpmRegistryTest`, `NpmRouteTest`, `NpmAccessServiceTest` |
+| FMT-NPM-18 | A packument's `time.modified`, and the abbreviated packument's `modified`, must be the package's last change: a publish, dist-tag change, deprecation or unpublish, not only the last version's publish time | `NpmRegistryTest` |
 
 ## How it plugs in *(implementation only)*
 

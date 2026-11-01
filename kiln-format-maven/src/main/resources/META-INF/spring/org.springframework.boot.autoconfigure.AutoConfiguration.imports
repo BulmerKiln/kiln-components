@@ -1,2 +1,4 @@
 com.bulmerkiln.format.maven.autoconfigure.MavenFormatAutoConfiguration
+com.bulmerkiln.format.maven.autoconfigure.MavenDataAutoConfiguration
+com.bulmerkiln.format.maven.autoconfigure.MavenServiceAutoConfiguration
 com.bulmerkiln.format.maven.autoconfigure.MavenWebAutoConfiguration

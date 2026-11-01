@@ -14,8 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.database.service.SchemaLinter;
 import com.bulmerkiln.format.npm.domain.NpmPackumentBuilder;
-import com.bulmerkiln.registry.store.BlockStore;
 import java.nio.file.Path;
+import java.time.Instant;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -244,6 +244,43 @@ class NpmRegistryTest {
     }
 
     /**
+     * FMT-NPM-18: the packument's last modification is the package's last change, so moving a
+     * dist-tag shows, in the full and abbreviated packuments alike.
+     */
+    @Test
+    void reportsTheLastChangeAsModified() throws Exception {
+        npm.publish("@acme%2fdated", NpmHarness.publishBody("@acme/dated", "1.0.0", "x"));
+        Instant published = Instant.parse(modified());
+        npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.PUT, "/npm/-/package/@acme%2fdated/dist-tags/next")
+                        .contentType("application/json")
+                        .content("\"1.0.0\""))
+                .andExpect(status().isCreated());
+
+        assertThat(Instant.parse(modified())).isAfter(published);
+        String abbreviated = npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.GET, "/npm/@acme%2fdated")
+                        .header("Accept", "application/vnd.npm.install-v1+json"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(NpmPackumentBuilder.JSON
+                        .readTree(abbreviated)
+                        .get("modified")
+                        .asString())
+                .isEqualTo(modified());
+    }
+
+    private static String modified() throws Exception {
+        String packument = npm.mvc()
+                .perform(NpmHarness.at(HttpMethod.GET, "/npm/@acme%2fdated"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return NpmPackumentBuilder.JSON.readTree(packument).at("/time/modified").asString();
+    }
+
+    /**
      * FMT-NPM-17: a member who may delete unpublishes one version, then the package. Both numbers are
      * tombstoned, so neither comes back; a writer may not unpublish.
      */
@@ -299,9 +336,11 @@ class NpmRegistryTest {
         npm.publish("@acme%2frisky", NpmHarness.publishBody("@acme/risky", "1.0.1", "bad"));
         OrganizationContext.run(
                 npm.acme(),
-                () -> npm.database().run(tx -> {
-                    BlockStore.block(tx, NpmFormatModule.FORMAT, "@acme/risky", "1.0.1", "malware");
-                    BlockStore.tombstone(tx, NpmFormatModule.FORMAT, "@acme/risky", "2.0.0");
+                () -> npm.database().run(() -> {
+                    npm.registry()
+                            .getBlocks()
+                            .block(NpmFormatModule.FORMAT, "@acme/risky", "1.0.1", "malware", NpmHarness.ADMIN);
+                    npm.registry().getBlocks().tombstone(NpmFormatModule.FORMAT, "@acme/risky", "2.0.0");
                 }));
 
         npm.mvc()

@@ -17,7 +17,8 @@ import com.bulmerkiln.format.oci.OciFormatModule;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import com.bulmerkiln.format.oci.dto.OciRepositoryRequest;
 import com.bulmerkiln.registry.domain.Namespace;
-import com.bulmerkiln.registry.store.NamespaceStore;
+import com.bulmerkiln.registry.service.BlockService;
+import com.bulmerkiln.registry.service.NamespaceService;
 import java.net.URI;
 import java.util.Locale;
 import java.util.Optional;
@@ -31,11 +32,20 @@ import org.jspecify.annotations.Nullable;
 public final class OciAccessService {
 
     private final Database database;
+    private final NamespaceService namespaces;
+    private final BlockService blocks;
     private final ArtifactAccess access;
     private final ArtifactPolicy policy;
 
-    public OciAccessService(Database database, ArtifactAccess access, ArtifactPolicy policy) {
+    public OciAccessService(
+            Database database,
+            NamespaceService namespaces,
+            BlockService blocks,
+            ArtifactAccess access,
+            ArtifactPolicy policy) {
         this.database = database;
+        this.namespaces = namespaces;
+        this.blocks = blocks;
         this.access = access;
         this.policy = policy;
     }
@@ -45,8 +55,8 @@ public final class OciAccessService {
      * namespace that owns it, if one does.
      */
     Optional<Namespace> require(OciRepositoryRequest request, Operation operation) {
-        Optional<Namespace> namespace = database.transaction(
-                tx -> NamespaceStore.forOci(tx, request.getRepository().getValue()));
+        Optional<Namespace> namespace = database.transaction(() ->
+                namespaces.owner(OciFormatModule.FORMAT, request.getRepository().getValue()));
         Access decision = access.check(artifact(request, namespace, null), operation);
         Optional<Refusal> refusal = decision.toRefusal(
                 verb(operation) + " access to " + request.getAddressed() + " is denied",
@@ -67,6 +77,16 @@ public final class OciAccessService {
     /** Refuses reading {@code version} (a tag or digest) when policy blocks it. */
     void checkRead(OciRepositoryRequest request, Optional<Namespace> namespace, String version) {
         policy.checkRead(artifact(request, namespace, version)).ifPresent(refusal -> {
+            throw new RefusedException(refusal);
+        });
+    }
+
+    /**
+     * Refuses writing {@code version} (a tag or digest) when a block or tombstone stops it, inside
+     * the caller's transaction, so the check and the write commit together (REG-4).
+     */
+    void checkWrite(OciRepositoryRequest request, Namespace namespace, String version) {
+        blocks.checkWrite(artifact(request, Optional.of(namespace), version)).ifPresent(refusal -> {
             throw new RefusedException(refusal);
         });
     }

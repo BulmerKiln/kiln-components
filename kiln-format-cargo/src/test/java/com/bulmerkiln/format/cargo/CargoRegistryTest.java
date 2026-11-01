@@ -14,11 +14,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.organization.OrganizationContext;
+import com.bulmerkiln.database.KilnPostgres;
 import com.bulmerkiln.database.service.SchemaLinter;
 import com.bulmerkiln.format.cargo.domain.CargoIndexEntry;
-import com.bulmerkiln.registry.store.BlockStore;
+import com.bulmerkiln.format.cargo.repository.CargoVersionRepository;
+import com.bulmerkiln.registry.domain.RegistryPackage;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -89,6 +94,8 @@ class CargoRegistryTest {
         assertThat(first.get("deps").get(1).get("package").asString()).isEqualTo("tokio");
         assertThat(first.get("deps").get(1).get("kind").asString()).isEqualTo("dev");
         assertThat(first.get("yanked").asBoolean()).isFalse();
+        assertThat(first.get("rust_version").asString()).isEqualTo("1.80");
+        assertThat(first.get("pubtime").asString()).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z");
         cargo.mvc()
                 .perform(CargoHarness.at(HttpMethod.GET, "/cargo/index/ac/me/acme-core")
                         .header("If-None-Match", result.getResponse().getHeader("ETag")))
@@ -132,6 +139,61 @@ class CargoRegistryTest {
                 .andExpect(status().isMethodNotAllowed());
     }
 
+    /**
+     * FMT-CARGO-14: a yank changes the index file without a new version, so its {@code Last-Modified}
+     * moves; the publish metadata the index doesn't carry is kept.
+     */
+    @Test
+    void reportsYanksAsChangesAndKeepsTheMetadata() throws Exception {
+        assertThat(cargo.publish("acme-dated", "1.0.0", "dated")).isEqualTo(200);
+        cargo.mvc()
+                .perform(CargoHarness.at(HttpMethod.DELETE, "/cargo/api/v1/crates/acme-dated/1.0.0/yank"))
+                .andExpect(status().isOk());
+
+        RegistryPackage yanked = OrganizationContext.call(
+                cargo.acme(),
+                () -> cargo.database()
+                        .transaction(() -> cargo.registry()
+                                .getPackages()
+                                .find(CargoFormatModule.FORMAT, "acme-dated")
+                                .orElseThrow()));
+        Instant published = OrganizationContext.call(
+                cargo.acme(),
+                () -> cargo.database()
+                        .transaction(() -> cargo.registry()
+                                .getPackages()
+                                .versions(yanked.getId())
+                                .getFirst()
+                                .getPublishedAt()));
+        assertThat(yanked.getUpdatedAt()).isAfter(published);
+        assertThat(lastModified())
+                .isEqualTo(DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                        yanked.getUpdatedAt().atOffset(ZoneOffset.UTC)));
+        String metadata = OrganizationContext.call(
+                cargo.acme(),
+                () -> cargo.database().transaction(() -> {
+                    RegistryPackage crate = cargo.registry()
+                            .getPackages()
+                            .find(CargoFormatModule.FORMAT, "acme-dated")
+                            .orElseThrow();
+                    return KilnPostgres.repository(cargo.database(), CargoVersionRepository.class)
+                            .findAll(cargo.acme().getId().getValue(), crate.getId())
+                            .getFirst()
+                            .getPublishMetadata();
+                }));
+        assertThat(CargoIndexEntry.JSON.readTree(metadata).get("description").asString())
+                .isEqualTo("A crate");
+    }
+
+    /** The index file's {@code Last-Modified}. */
+    private static String lastModified() throws Exception {
+        return cargo.mvc()
+                .perform(CargoHarness.at(HttpMethod.GET, "/cargo/index/ac/me/acme-dated"))
+                .andReturn()
+                .getResponse()
+                .getHeader("Last-Modified");
+    }
+
     /** FMT-CARGO-10, FMT-CARGO-3: versions never change, and a name can't be taken under another spelling. */
     @Test
     void refusesRepublishingAndLookalikes() throws Exception {
@@ -169,9 +231,11 @@ class CargoRegistryTest {
         cargo.publish("acme-risky", "1.0.1", "bad");
         OrganizationContext.run(
                 cargo.acme(),
-                () -> cargo.database().run(tx -> {
-                    BlockStore.block(tx, CargoFormatModule.FORMAT, "acme-risky", "1.0.1", "malware");
-                    BlockStore.tombstone(tx, CargoFormatModule.FORMAT, "acme-risky", "2.0.0");
+                () -> cargo.database().run(() -> {
+                    cargo.registry()
+                            .getBlocks()
+                            .block(CargoFormatModule.FORMAT, "acme-risky", "1.0.1", "malware", CargoHarness.ADMIN);
+                    cargo.registry().getBlocks().tombstone(CargoFormatModule.FORMAT, "acme-risky", "2.0.0");
                 }));
 
         cargo.mvc()
