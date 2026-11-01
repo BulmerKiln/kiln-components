@@ -37,8 +37,11 @@ abstract class KilnPostgresServer : BuildService<KilnPostgresServer.Params>, Aut
     fun start() {
         if (container != null) return
         removeOrphans()
+        // Pulled on its own and quietly: `run` reports both output streams together, so a pull
+        // inside `docker run` would put its progress in front of the container ID.
+        docker("pull", "--quiet", parameters.image.get())
         val password = UUID.randomUUID().toString()
-        val id = docker(
+        val output = docker(
             "run", "--detach", "--rm",
             "--label", "$LABEL=postgres",
             "--label", "$HOST_LABEL=$HOST",
@@ -51,6 +54,8 @@ abstract class KilnPostgresServer : BuildService<KilnPostgresServer.Params>, Aut
             "postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off",
             "-c", "max_connections=500",
         ).trim()
+        val id = output.takeIf { CONTAINER_ID.matches(it) }
+            ?: throw GradleException("docker run printed something other than a container ID:\n$output")
         container = id
         awaitReady(id)
         val port = docker("port", id, "$PORT/tcp").lineSequence().first().substringAfterLast(':').trim()
@@ -125,6 +130,7 @@ abstract class KilnPostgresServer : BuildService<KilnPostgresServer.Params>, Aut
         const val LABEL = "com.bulmerkiln.kiln-build"
         const val HOST_LABEL = "com.bulmerkiln.kiln-build.host"
         const val PID_LABEL = "com.bulmerkiln.kiln-build.pid"
+        val CONTAINER_ID = Regex("[0-9a-f]{64}")
         val HOST: String = InetAddress.getLocalHost().hostName
         val STARTUP: Duration = Duration.ofSeconds(60)
         val POLL: Duration = Duration.ofMillis(200)
