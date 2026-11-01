@@ -35,7 +35,7 @@ class FsBlobStoreTest extends BlobStoreContract {
     @Override
     protected void assertNoUploadsLeft(Organization organization) throws IOException {
         try (Stream<Path> uploads =
-                Files.list(root.resolve(organization.id().toString()).resolve("_uploads"))) {
+                Files.list(root.resolve(organization.getId().toString()).resolve("_uploads"))) {
             assertThat(uploads).isEmpty();
         }
     }
@@ -43,17 +43,17 @@ class FsBlobStoreTest extends BlobStoreContract {
     @Test
     void laysBlobsOutByOrganizationAndDigest() throws Exception {
         BlobInfo info = in(acme, () -> push(HELLO));
-        assertThat(root.resolve(acme.id().toString())
+        assertThat(root.resolve(acme.getId().toString())
                         .resolve("blobs/sha256")
-                        .resolve(info.digest().encoded().substring(0, 2))
-                        .resolve(info.digest().encoded()))
+                        .resolve(info.getDigest().getEncoded().substring(0, 2))
+                        .resolve(info.getDigest().getEncoded()))
                 .exists();
     }
 
     @Test
     void listSkipsFilesThatAreNotBlobs() throws Exception {
         in(acme, () -> push(HELLO));
-        Path blobs = root.resolve(acme.id().toString()).resolve("blobs");
+        Path blobs = root.resolve(acme.getId().toString()).resolve("blobs");
         Files.createDirectories(blobs.resolve("sha256/zz"));
         Files.writeString(blobs.resolve("sha256/zz/not-a-digest"), "x");
         Files.writeString(blobs.resolve("sha256/stray"), "x");
@@ -84,7 +84,7 @@ class FsBlobStoreTest extends BlobStoreContract {
             normalized.append(upload, 0, new ByteArrayInputStream(HELLO), 100);
             return normalized.commit(upload, HELLO_DIGEST);
         });
-        assertThat(root.resolve("store").resolve(acme.id().toString())).isDirectory();
+        assertThat(root.resolve("store").resolve(acme.getId().toString())).isDirectory();
         assertThat(root.resolve("x")).doesNotExist();
     }
 

@@ -51,10 +51,10 @@ public final class OciManifestService {
         OciManifestEntity manifest = database.transaction(tx -> resolve(tx, request, reference))
                 .orElseThrow(() -> new OciException(OciErrorCode.MANIFEST_UNKNOWN, "Manifest unknown"));
         access.checkRead(request, namespace, reference.toString());
-        access.checkRead(request, namespace, manifest.digest().toString());
+        access.checkRead(request, namespace, manifest.getDigest().toString());
         if (!head) {
             events.pulled(
-                    OciAccessService.artifact(request, namespace, reference.toString()), manifest.content().length);
+                    OciAccessService.artifact(request, namespace, reference.toString()), manifest.getContent().length);
         }
         return manifest;
     }
@@ -68,22 +68,22 @@ public final class OciManifestService {
         Namespace namespace = access.requireToWrite(request, Operation.PUSH);
         OciManifest manifest = parser.parse(content, contentType);
         if (reference instanceof OciReference.ByDigest byDigest
-                && !byDigest.digest().equals(manifest.digest())) {
+                && !byDigest.getDigest().equals(manifest.getDigest())) {
             throw new OciException(OciErrorCode.DIGEST_INVALID, "The manifest doesn't match its digest");
         }
         database.run(tx -> {
             refuseIfPolicyBlocks(tx, request, namespace, reference.toString());
-            refuseIfPolicyBlocks(tx, request, namespace, manifest.digest().toString());
-            UUID repository = OciRepositoryStore.ensure(tx, request.repository(), namespace);
+            refuseIfPolicyBlocks(tx, request, namespace, manifest.getDigest().toString());
+            UUID repository = OciRepositoryStore.ensure(tx, request.getRepository(), namespace);
             requireReferenced(tx, repository, manifest);
             OciManifestStore.store(tx, repository, manifest, content);
             if (reference instanceof OciReference.Tag tag) {
-                OciManifestStore.setTag(tx, repository, tag.value(), manifest.digest());
+                OciManifestStore.setTag(tx, repository, tag.getValue(), manifest.getDigest());
             }
         });
         events.pushed(OciAccessService.artifact(request, Optional.of(namespace), reference.toString()), content.length);
-        OciDescriptor subject = manifest.subject();
-        return new OciManifestPushResponse(manifest.digest(), subject == null ? null : subject.digest());
+        OciDescriptor subject = manifest.getSubject();
+        return new OciManifestPushResponse(manifest.getDigest(), subject == null ? null : subject.getDigest());
     }
 
     /**
@@ -93,18 +93,19 @@ public final class OciManifestService {
     public void delete(OciRepositoryRequest request, OciReference reference) {
         access.require(request, Operation.DELETE);
         boolean deleted = database.transaction(tx -> {
-            UUID repository = OciRepositoryStore.find(tx, request.repository()).orElse(null);
+            UUID repository =
+                    OciRepositoryStore.find(tx, request.getRepository()).orElse(null);
             if (repository == null) {
                 return false;
             }
             return switch (reference) {
-                case OciReference.Tag tag -> OciManifestStore.deleteTag(tx, repository, tag.value());
+                case OciReference.Tag tag -> OciManifestStore.deleteTag(tx, repository, tag.getValue());
                 case OciReference.ByDigest byDigest -> {
-                    if (OciManifestStore.referencedByIndex(tx, repository, byDigest.digest())) {
+                    if (OciManifestStore.referencedByIndex(tx, repository, byDigest.getDigest())) {
                         throw new RefusedException(Refusal.of(
                                 Reason.UNSUPPORTED, "An index references this manifest; delete the index first"));
                     }
-                    yield OciManifestStore.delete(tx, repository, byDigest.digest());
+                    yield OciManifestStore.delete(tx, repository, byDigest.getDigest());
                 }
             };
         });
@@ -115,10 +116,10 @@ public final class OciManifestService {
 
     private static Optional<OciManifestEntity> resolve(
             DSLContext tx, OciRepositoryRequest request, OciReference reference) {
-        return OciRepositoryStore.find(tx, request.repository()).flatMap(repository -> {
+        return OciRepositoryStore.find(tx, request.getRepository()).flatMap(repository -> {
             Optional<Digest> digest = switch (reference) {
-                case OciReference.Tag tag -> OciManifestStore.tag(tx, repository, tag.value());
-                case OciReference.ByDigest byDigest -> Optional.of(byDigest.digest());
+                case OciReference.Tag tag -> OciManifestStore.tag(tx, repository, tag.getValue());
+                case OciReference.ByDigest byDigest -> Optional.of(byDigest.getDigest());
             };
             return digest.flatMap(d -> OciManifestStore.find(tx, repository, d));
         });
@@ -133,14 +134,14 @@ public final class OciManifestService {
     }
 
     private static void requireReferenced(DSLContext tx, UUID repository, OciManifest manifest) {
-        for (OciDescriptor blob : manifest.blobs()) {
-            if (!OciRepositoryStore.linked(tx, repository, blob.digest())) {
-                throw new OciException(OciErrorCode.MANIFEST_BLOB_UNKNOWN, "Blob unknown: " + blob.digest());
+        for (OciDescriptor blob : manifest.getBlobs()) {
+            if (!OciRepositoryStore.linked(tx, repository, blob.getDigest())) {
+                throw new OciException(OciErrorCode.MANIFEST_BLOB_UNKNOWN, "Blob unknown: " + blob.getDigest());
             }
         }
-        for (OciDescriptor child : manifest.manifests()) {
-            if (OciManifestStore.find(tx, repository, child.digest()).isEmpty()) {
-                throw new OciException(OciErrorCode.MANIFEST_BLOB_UNKNOWN, "Manifest unknown: " + child.digest());
+        for (OciDescriptor child : manifest.getManifests()) {
+            if (OciManifestStore.find(tx, repository, child.getDigest()).isEmpty()) {
+                throw new OciException(OciErrorCode.MANIFEST_BLOB_UNKNOWN, "Manifest unknown: " + child.getDigest());
             }
         }
     }

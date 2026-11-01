@@ -32,9 +32,9 @@ public final class ScannerAdapterRunner {
      * </ul>
      */
     public static ScanResult run(ScannerAdapter adapter, ScanJob job, ToolRun run) {
-        String version = printable(run.toolVersion(), 128);
-        String database = printable(run.databaseVersion(), 255);
-        if (!run.timedOut() && run.limitHit() == null && !adapter.completed(run.exitCode())) {
+        String version = printable(run.getToolVersion(), 128);
+        String database = printable(run.getDatabaseVersion(), 255);
+        if (!run.isTimedOut() && run.getLimitHit() == null && !adapter.completed(run.getExitCode())) {
             return failed(adapter, job, version, database);
         }
         List<Finding> findings;
@@ -46,12 +46,12 @@ public final class ScannerAdapterRunner {
         if (findings.size() > ScanResult.MAX_FINDINGS) {
             return failed(adapter, job, version, database);
         }
-        String limitHit = run.limitHit();
-        if (run.timedOut() || limitHit != null) {
+        String limitHit = run.getLimitHit();
+        if (run.isTimedOut() || limitHit != null) {
             String reason = limitHit == null ? "timed out" : printable(limitHit, 512);
             return new ScanResult(
                     ScanProtocol.VERSION,
-                    job.jobId(),
+                    job.getJobId(),
                     adapter.scanner(),
                     version,
                     database,
@@ -61,7 +61,7 @@ public final class ScannerAdapterRunner {
         }
         return new ScanResult(
                 ScanProtocol.VERSION,
-                job.jobId(),
+                job.getJobId(),
                 adapter.scanner(),
                 version,
                 database,
@@ -73,7 +73,7 @@ public final class ScannerAdapterRunner {
     private static ScanResult failed(ScannerAdapter adapter, ScanJob job, String version, String database) {
         return new ScanResult(
                 ScanProtocol.VERSION,
-                job.jobId(),
+                job.getJobId(),
                 adapter.scanner(),
                 version,
                 database,

@@ -19,13 +19,13 @@ public final class MetricsEventListener implements ArtifactEventListener {
 
     @Override
     public void pushed(ArtifactRef artifact, long bytes) {
-        metrics.push(artifact.format(), artifact.namespace());
-        metrics.bytesReceived(artifact.format(), artifact.namespace(), bytes);
+        metrics.push(artifact.getFormat(), artifact.getNamespace());
+        metrics.bytesReceived(artifact.getFormat(), artifact.getNamespace(), bytes);
     }
 
     @Override
     public void pulled(ArtifactRef artifact, long bytes) {
-        metrics.pull(artifact.format(), artifact.namespace());
-        metrics.bytesServed(artifact.format(), artifact.namespace(), bytes);
+        metrics.pull(artifact.getFormat(), artifact.getNamespace());
+        metrics.bytesServed(artifact.getFormat(), artifact.getNamespace(), bytes);
     }
 }

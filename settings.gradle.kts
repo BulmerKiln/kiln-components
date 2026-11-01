@@ -15,6 +15,7 @@ include(
     "kiln-dependencies",
     "kiln-architecture",
     "kiln-core",
+    "kiln-crypto",
     "kiln-database",
     "kiln-auth",
     "kiln-auth-oidc",

@@ -5,31 +5,39 @@
 package com.bulmerkiln.database.autoconfigure;
 
 import java.util.regex.Pattern;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * The database settings, under {@code kiln.database}.
- *
- * @param url the JDBC URL; only PostgreSQL is supported
- * @param username the runtime role, {@code kiln_app}: no owner, no superuser, no {@code BYPASSRLS}
- * @param password the runtime role's password
- * @param migratorUsername the role that owns the schema and runs migrations, {@code kiln_migrator}
- * @param migratorPassword the migrator's password
- * @param schema the schema Kiln's tables live in; {@code kiln} unless set
- * @param migrate whether to run migrations at startup; on unless set to {@code false}
- * @param maximumPoolSize the runtime connection pool's size; 10 unless set
  */
 @ConfigurationProperties("kiln.database")
-public record DatabaseProperties(
-        @Nullable String url,
-        @Nullable String username,
-        @Nullable String password,
-        @Nullable String migratorUsername,
-        @Nullable String migratorPassword,
-        @Nullable String schema,
-        @Nullable Boolean migrate,
-        @Nullable Integer maximumPoolSize) {
+@Value
+public final class DatabaseProperties {
+    /** The JDBC URL; only PostgreSQL is supported. */
+    private final @Nullable String url;
+
+    /** The runtime role, {@code kiln_app}: no owner, no superuser, no {@code BYPASSRLS}. */
+    private final @Nullable String username;
+
+    /** The runtime role's password. */
+    private final @Nullable String password;
+
+    /** The role that owns the schema and runs migrations, {@code kiln_migrator}. */
+    private final @Nullable String migratorUsername;
+
+    /** The migrator's password. */
+    private final @Nullable String migratorPassword;
+
+    /** The schema Kiln's tables live in; {@code kiln} unless set. */
+    private final @Nullable String schema;
+
+    /** Whether to run migrations at startup; on unless set to {@code false}. */
+    private final @Nullable Boolean migrate;
+
+    /** The runtime connection pool's size; 10 unless set. */
+    private final @Nullable Integer maximumPoolSize;
 
     /** Lowercase, so it never needs quoting in SQL. */
     private static final Pattern SCHEMA = Pattern.compile("[a-z_][a-z0-9_]{0,62}");

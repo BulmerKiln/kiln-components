@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.format.domain;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import java.util.regex.Pattern;
 
 /**
@@ -21,8 +22,9 @@ public final class SemanticVersion {
     private SemanticVersion() {}
 
     /** The core by pattern; the pre-release and build labels by hand, so nothing can backtrack. */
+    @UntrustedInput
     public static boolean isValid(String value) {
-        if (value.length() > 256) {
+        if (value == null || value.length() > 256) {
             return false;
         }
         int plus = value.indexOf('+');

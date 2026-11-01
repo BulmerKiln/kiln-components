@@ -13,6 +13,7 @@ import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
 import com.bulmerkiln.auth.connector.domain.SecretRef;
 import com.bulmerkiln.auth.connector.util.DomainUtils;
 import com.bulmerkiln.auth.connector.util.EndpointUtils;
+import com.bulmerkiln.auth.connector.util.IdentityUtils;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.net.URI;
@@ -46,8 +47,8 @@ class ConnectorContractTest {
         ExternalIdentity identity = new ExternalIdentity(GITHUB, "https://github.com", "123", null, groups);
         groups.add("acme/admins");
 
-        assertThat(identity.groups()).containsExactly("acme/platform");
-        assertThatThrownBy(() -> identity.groups().add("x")).isInstanceOf(UnsupportedOperationException.class);
+        assertThat(identity.getGroups()).containsExactly("acme/platform");
+        assertThatThrownBy(() -> identity.getGroups().add("x")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -162,6 +163,32 @@ class ConnectorContractTest {
             SecretRef.parse(data.consumeRemainingAsString());
         } catch (IllegalArgumentException expected) {
             // The only failure a configured reference may cause.
+        }
+    }
+
+    /** Whatever the IdP sends as a subject, validation fails only with InvalidIdentityException. */
+    @FuzzTest
+    void subjectValidationFailsOnlyWithInvalidIdentity(FuzzedDataProvider data) {
+        try {
+            IdentityUtils.subject(data.consumeString(512));
+        } catch (InvalidIdentityException expected) {
+            // The only failure a crafted subject may cause.
+        }
+    }
+
+    /** Whatever the IdP sends as an email claim, validation never throws. */
+    @FuzzTest
+    void emailValidationNeverThrows(FuzzedDataProvider data) {
+        IdentityUtils.verifiedEmail(data.consumeString(512), true);
+    }
+
+    /** Whatever the IdP sends as a groups claim, validation fails only with InvalidIdentityException. */
+    @FuzzTest
+    void groupsValidationFailsOnlyWithInvalidIdentity(FuzzedDataProvider data) {
+        try {
+            IdentityUtils.groups(data.consumeString(512));
+        } catch (InvalidIdentityException expected) {
+            // The only failure a crafted groups claim may cause.
         }
     }
 }

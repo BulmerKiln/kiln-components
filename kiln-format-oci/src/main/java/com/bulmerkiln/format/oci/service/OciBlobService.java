@@ -45,7 +45,7 @@ public final class OciBlobService {
      */
     public BlobRead pull(OciRepositoryRequest request, Digest digest, @Nullable String range) throws IOException {
         Optional<Namespace> namespace = access.require(request, Operation.PULL);
-        boolean linked = database.transaction(tx -> OciRepositoryStore.find(tx, request.repository())
+        boolean linked = database.transaction(tx -> OciRepositoryStore.find(tx, request.getRepository())
                 .map(repository -> OciRepositoryStore.linked(tx, repository, digest))
                 .orElse(false));
         if (!linked) {
@@ -56,8 +56,9 @@ public final class OciBlobService {
         BlobInfo info =
                 store.stat(digest).orElseThrow(() -> new OciException(OciErrorCode.BLOB_UNKNOWN, "Blob unknown"));
         try {
-            ByteRange resolved =
-                    range == null ? null : ByteRange.parse(range, info.size()).orElse(null);
+            ByteRange resolved = range == null
+                    ? null
+                    : ByteRange.parse(range, info.getSize()).orElse(null);
             return store.read(digest, resolved)
                     .orElseThrow(() -> new OciException(OciErrorCode.BLOB_UNKNOWN, "Blob unknown"));
         } catch (RangeNotSatisfiableException e) {

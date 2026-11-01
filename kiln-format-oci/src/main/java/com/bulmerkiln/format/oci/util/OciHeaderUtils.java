@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.format.oci.util;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import java.util.regex.Matcher;
@@ -21,6 +22,7 @@ public final class OciHeaderUtils {
     private OciHeaderUtils() {}
 
     /** Where a chunk starts, or null when the client sent no range and appends at the end. */
+    @UntrustedInput
     public static @Nullable Long contentRangeStart(@Nullable String header) {
         if (header == null) {
             return null;
@@ -33,6 +35,7 @@ public final class OciHeaderUtils {
     }
 
     /** The {@code n} parameter: a page size, or null to use the default. */
+    @UntrustedInput
     public static @Nullable Integer pageSize(@Nullable String n) {
         if (n == null) {
             return null;

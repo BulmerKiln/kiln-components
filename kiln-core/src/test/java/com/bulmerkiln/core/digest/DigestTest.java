@@ -34,8 +34,8 @@ class DigestTest {
     @Test
     void parsesRegisteredAlgorithms() {
         Digest digest = Digest.parse(EMPTY_SHA256);
-        assertThat(digest.algorithm()).isEqualTo(DigestAlgorithm.SHA256);
-        assertThat(Digest.parse("sha512:" + "a".repeat(128)).algorithm()).isEqualTo(DigestAlgorithm.SHA512);
+        assertThat(digest.getAlgorithm()).isEqualTo(DigestAlgorithm.SHA256);
+        assertThat(Digest.parse("sha512:" + "a".repeat(128)).getAlgorithm()).isEqualTo(DigestAlgorithm.SHA512);
     }
 
     @ParameterizedTest

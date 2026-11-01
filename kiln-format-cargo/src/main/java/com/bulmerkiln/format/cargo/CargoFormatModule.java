@@ -31,6 +31,6 @@ public final class CargoFormatModule implements FormatModule {
     public RefusalResponse render(Refusal refusal) {
         return RefusalResponse.of(
                 "application/json",
-                FormatJsonUtils.write(Map.of("errors", List.of(Map.of("detail", refusal.message())))));
+                FormatJsonUtils.write(Map.of("errors", List.of(Map.of("detail", refusal.getMessage())))));
     }
 }

@@ -9,6 +9,7 @@ import com.bulmerkiln.format.constant.Reason;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /**
  * A crate name, held to crates.io's rules: ASCII letters, digits, {@code -} and {@code _}, starting
@@ -16,7 +17,10 @@ import java.util.regex.Pattern;
  * difference between {@code -} and {@code _} are ignored, so {@code Serde_JSON} can't impersonate
  * {@code serde-json}.
  */
-public record CargoCrateName(String value) {
+@Value
+public final class CargoCrateName {
+
+    private final String value;
 
     public static final int MAX_LENGTH = 64;
 
@@ -55,10 +59,11 @@ public record CargoCrateName(String value) {
             "proc-macro",
             "test");
 
-    public CargoCrateName {
+    public CargoCrateName(String value) {
         if (!GRAMMAR.matcher(value).matches() || RESERVED.contains(canonical(value))) {
             throw new CargoException(Reason.INVALID, "Invalid crate name");
         }
+        this.value = value;
     }
 
     /** The form uniqueness is checked in: lowercase, with {@code _} as {@code -}. */

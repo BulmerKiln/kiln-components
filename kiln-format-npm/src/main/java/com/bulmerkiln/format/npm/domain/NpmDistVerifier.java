@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.format.npm.domain;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.npm.NpmException;
 import java.security.MessageDigest;
@@ -34,6 +35,7 @@ public final class NpmDistVerifier {
      * publish since npm 5. If several sha512 values are listed, one must match (W3C SRI, section
      * 3.3.5). Other algorithms in the list are ignored, as SRI uses only the strongest.
      */
+    @UntrustedInput
     public void verify(String integrity, @Nullable String shasum) {
         byte[] actual512 = sha512.digest();
         byte[] actual1 = sha1.digest();

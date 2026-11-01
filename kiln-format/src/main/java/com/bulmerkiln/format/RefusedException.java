@@ -18,7 +18,7 @@ public class RefusedException extends RuntimeException {
     private final Refusal refusal;
 
     public RefusedException(Refusal refusal) {
-        super(refusal.message());
+        super(refusal.getMessage());
         this.refusal = refusal;
     }
 
@@ -27,6 +27,6 @@ public class RefusedException extends RuntimeException {
     }
 
     public int status() {
-        return refusal.reason().status();
+        return refusal.getReason().status();
     }
 }

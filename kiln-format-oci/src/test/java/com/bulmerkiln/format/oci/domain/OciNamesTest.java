@@ -159,7 +159,7 @@ class OciNamesTest {
         String name = data.consumeString(300);
         String reference = data.consumeRemainingAsString();
         try {
-            assertThat(new OciRepositoryName(name).value()).doesNotContain("..", "//");
+            assertThat(new OciRepositoryName(name).getValue()).doesNotContain("..", "//");
         } catch (OciException expected) {
             // Rejected names are always reported as registry errors.
         }

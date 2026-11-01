@@ -23,9 +23,9 @@ public final class NpmMetaHandler {
     /** {@code npm whoami}: who the credentials belong to; anyone without them is asked for some. */
     public static void whoami(HttpServletResponse response, String registry) throws IOException {
         String username = switch (CurrentPrincipal.get()) {
-            case Principal.Member member -> member.id().value().toString();
-            case Principal.ServiceAccount account -> account.id().value().toString();
-            case Principal.Workload workload -> workload.publisher();
+            case Principal.Member member -> member.getId().getValue().toString();
+            case Principal.ServiceAccount account -> account.getId().getValue().toString();
+            case Principal.Workload workload -> workload.getPublisher();
             case Principal.Anonymous _ ->
                 throw new RefusedException(Refusal.unauthorized("Sign in first", "Bearer realm=\"" + registry + "\""));
         };

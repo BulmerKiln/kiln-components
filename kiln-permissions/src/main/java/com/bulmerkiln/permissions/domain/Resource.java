@@ -6,13 +6,21 @@ package com.bulmerkiln.permissions.domain;
 
 import com.bulmerkiln.permissions.constant.Visibility;
 import java.util.Objects;
+import lombok.Value;
 
 /** What an action targets, in the current organization. */
-public record Resource(Scope scope, Visibility visibility) {
+@Value
+public final class Resource {
 
-    public Resource {
+    private final Scope scope;
+
+    private final Visibility visibility;
+
+    public Resource(Scope scope, Visibility visibility) {
         Objects.requireNonNull(scope, "scope");
         Objects.requireNonNull(visibility, "visibility");
+        this.scope = scope;
+        this.visibility = visibility;
     }
 
     public static Resource organization() {

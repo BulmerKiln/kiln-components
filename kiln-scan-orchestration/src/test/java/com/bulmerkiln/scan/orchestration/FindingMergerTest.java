@@ -38,10 +38,10 @@ class FindingMergerTest {
                 result(OSV_SCANNER, vuln("OSV-2024-1", XZ, Severity.HIGH, "GHSA-rxwq-x6h5-x525"))));
 
         assertThat(merged).singleElement().satisfies(f -> {
-            assertThat(f.id()).isEqualTo("CVE-2024-3094");
-            assertThat(f.aliases()).containsExactlyInAnyOrder("GHSA-rxwq-x6h5-x525", "OSV-2024-1");
-            assertThat(f.severity()).isEqualTo(Severity.CRITICAL);
-            assertThat(f.reportedBy()).containsExactlyInAnyOrder(TRIVY, GRYPE, OSV_SCANNER);
+            assertThat(f.getId()).isEqualTo("CVE-2024-3094");
+            assertThat(f.getAliases()).containsExactlyInAnyOrder("GHSA-rxwq-x6h5-x525", "OSV-2024-1");
+            assertThat(f.getSeverity()).isEqualTo(Severity.CRITICAL);
+            assertThat(f.getReportedBy()).containsExactlyInAnyOrder(TRIVY, GRYPE, OSV_SCANNER);
             assertThat(f.reportedByAll()).isTrue();
         });
     }
@@ -52,8 +52,8 @@ class FindingMergerTest {
                 List.of(result(TRIVY, vuln("CVE-2024-1", XZ, Severity.MEDIUM)), result(GRYPE), result(OSV_SCANNER)));
 
         assertThat(merged).singleElement().satisfies(f -> {
-            assertThat(f.reportedBy()).containsExactly(TRIVY);
-            assertThat(f.scannersRun()).isEqualTo(3);
+            assertThat(f.getReportedBy()).containsExactly(TRIVY);
+            assertThat(f.getScannersRun()).isEqualTo(3);
             assertThat(f.reportedByAll()).isFalse();
         });
     }
@@ -80,7 +80,7 @@ class FindingMergerTest {
         ScanResult failed = new ScanResult(1, JOB, GRYPE, "0.80", "db", ScanResult.Status.FAILED, null, List.of());
         List<MergedFinding> merged =
                 FindingMerger.merge(List.of(result(TRIVY, vuln("CVE-1", XZ, Severity.LOW)), failed));
-        assertThat(merged.getFirst().scannersRun()).isEqualTo(1);
+        assertThat(merged.getFirst().getScannersRun()).isEqualTo(1);
     }
 
     @Test
@@ -97,7 +97,7 @@ class FindingMergerTest {
                         Finding.Kind.SECRET, "aws-access-token", List.of(), null, Severity.HIGH, null, "AWS key")));
         assertThat(FindingMerger.merge(List.of(incomplete)))
                 .singleElement()
-                .extracting(MergedFinding::kind)
+                .extracting(MergedFinding::getKind)
                 .isEqualTo(Finding.Kind.SECRET);
     }
 
@@ -106,7 +106,7 @@ class FindingMergerTest {
         assertThat(FindingMerger.merge(
                                 List.of(result(OSV_SCANNER, vuln("OSV-1", XZ, Severity.LOW, "GHSA-aaaa-bbbb-cccc"))))
                         .getFirst()
-                        .id())
+                        .getId())
                 .isEqualTo("GHSA-aaaa-bbbb-cccc");
         Finding malware = new Finding(
                 Finding.Kind.MALWARE,
@@ -118,7 +118,7 @@ class FindingMergerTest {
                 null);
         assertThat(FindingMerger.merge(List.of(result(MALICIOUS_PACKAGES, malware)))
                         .getFirst()
-                        .id())
+                        .getId())
                 .isEqualTo("MAL-2024-100");
     }
 
@@ -129,7 +129,7 @@ class FindingMergerTest {
                 vuln("CVE-3", "pkg:npm/c@1", Severity.LOW),
                 vuln("CVE-2", "pkg:npm/b@1", Severity.CRITICAL),
                 vuln("CVE-1", "pkg:npm/a@1", Severity.CRITICAL))));
-        assertThat(merged).extracting(MergedFinding::id).containsExactly("CVE-1", "CVE-2", "CVE-3");
+        assertThat(merged).extracting(MergedFinding::getId).containsExactly("CVE-1", "CVE-2", "CVE-3");
     }
 
     @Test
@@ -156,7 +156,9 @@ class FindingMergerTest {
         Collections.reverse(results);
         MergedFinding reversed = FindingMerger.merge(results).getFirst();
         assertThat(reversed).isEqualTo(forward);
-        assertThat(forward.fixedVersion()).as("from grype, first by scanner ID").isEqualTo("9.9.9");
+        assertThat(forward.getFixedVersion())
+                .as("from grype, first by scanner ID")
+                .isEqualTo("9.9.9");
     }
 
     @Test
@@ -174,7 +176,10 @@ class FindingMergerTest {
         }
         long start = System.nanoTime();
         List<MergedFinding> merged = FindingMerger.merge(List.of(result(OSV_SCANNER, chain.toArray(Finding[]::new))));
-        assertThat(merged).singleElement().extracting(f -> f.aliases().size()).isEqualTo(5_000);
+        assertThat(merged)
+                .singleElement()
+                .extracting(f -> f.getAliases().size())
+                .isEqualTo(5_000);
         assertThat(System.nanoTime() - start).isLessThan(5_000_000_000L);
     }
 
@@ -188,7 +193,7 @@ class FindingMergerTest {
         assertThat(counts.get(Severity.CRITICAL)).isEqualTo(2);
         assertThat(counts.get(Severity.LOW)).isEqualTo(1);
         assertThat(counts.get(Severity.HIGH)).isZero();
-        assertThat(counts.counts()).hasSize(Severity.values().length);
+        assertThat(counts.getCounts()).hasSize(Severity.values().length);
     }
 
     @Test
@@ -223,7 +228,7 @@ class FindingMergerTest {
                 result(OSV_SCANNER, vuln("CVE-2024-3094", "pkg:deb/debian/xz-utils@5.6.0", Severity.HIGH))));
         assertThat(merged)
                 .singleElement()
-                .satisfies(f -> assertThat(f.reportedBy()).hasSize(3));
+                .satisfies(f -> assertThat(f.getReportedBy()).hasSize(3));
     }
 
     @Test

@@ -7,22 +7,27 @@ package com.bulmerkiln.format.oci.domain;
 import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /**
  * A repository name such as {@code acme/team/app}, validated to the distribution-spec grammar
  * (spec.md, "Pulling manifests"), with Kiln's length limit.
  */
-public record OciRepositoryName(String value) {
+@Value
+public final class OciRepositoryName {
+
+    private final String value;
 
     /** Kiln's limit (FMT-OCI-1). */
     public static final int MAX_LENGTH = 255;
 
     private static final Pattern SLASH = Pattern.compile("/");
 
-    public OciRepositoryName {
+    public OciRepositoryName(String value) {
         if (value.length() > MAX_LENGTH || !isName(value)) {
             throw new OciException(OciErrorCode.NAME_INVALID, "Invalid repository name");
         }
+        this.value = value;
     }
 
     /** Components joined by single slashes. */

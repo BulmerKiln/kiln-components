@@ -23,8 +23,8 @@ class MavenFormatModuleTest extends FormatModuleContract {
     @Test
     void usesTheFormatsOwnErrorBody() {
         FormatResponse response = FormatResponse.refusal(module(), Refusal.of(Reason.NOT_FOUND, "no such package"));
-        assertThat(response.status()).isEqualTo(404);
-        assertThat(response.contentType()).isEqualTo("text/plain; charset=utf-8");
-        assertThat(response.body()).isEqualTo("no such package");
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getContentType()).isEqualTo("text/plain; charset=utf-8");
+        assertThat(response.getBody()).isEqualTo("no such package");
     }
 }

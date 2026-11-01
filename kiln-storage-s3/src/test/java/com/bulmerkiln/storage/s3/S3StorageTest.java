@@ -30,7 +30,7 @@ class S3StorageTest {
     @Test
     void laysOutKeysLikeTheFilesystemStore() {
         assertThat(new S3KeyUtils("").blob(ORGANIZATION, EMPTY))
-                .isEqualTo(ORGANIZATION + "/blobs/sha256/e3/" + EMPTY.encoded());
+                .isEqualTo(ORGANIZATION + "/blobs/sha256/e3/" + EMPTY.getEncoded());
         assertThat(new S3KeyUtils("kiln/prod").blob(ORGANIZATION, EMPTY))
                 .startsWith("kiln/prod/" + ORGANIZATION + "/blobs/");
         UploadId upload = UploadId.random();
@@ -108,7 +108,7 @@ class S3StorageTest {
         S3StorageProperties properties = properties("kiln-blobs", null, null);
         assertThatCode(properties::validate).doesNotThrowAnyException();
         assertThat(properties.presignTtlOrDefault()).isEqualTo(Duration.ofSeconds(60));
-        assertThat(properties.redirectPolicy().mode()).isEqualTo(S3RedirectMode.AUTO);
+        assertThat(properties.redirectPolicy().getMode()).isEqualTo(S3RedirectMode.AUTO);
     }
 
     @ParameterizedTest

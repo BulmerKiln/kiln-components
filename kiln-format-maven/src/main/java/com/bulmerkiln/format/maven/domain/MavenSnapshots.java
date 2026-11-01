@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -20,11 +21,23 @@ public final class MavenSnapshots {
     private MavenSnapshots() {}
 
     /** One stored build of a snapshot file, such as {@code lib-1.0-20261025.101500-3-sources.jar}. */
-    public record Build(String value, @Nullable String classifier, String extension, String fileName) {
+    @Value
+    public static final class Build {
+
+        private final String value;
+
+        private final @Nullable String classifier;
+
+        private final String extension;
+
+        private final String fileName;
 
         /** {@code 20261025.101500}: the 15 characters before the build number's dash. */
         public String timestamp() {
             int dash = value.lastIndexOf('-');
+            if (dash < 16) {
+                throw new IllegalArgumentException("Malformed snapshot build: " + value);
+            }
             return value.substring(dash - 15, dash);
         }
 
@@ -37,35 +50,35 @@ public final class MavenSnapshots {
     public static Optional<PackageFileEntity> resolve(
             MavenPath.ArtifactFile file, String fileName, List<PackageFileEntity> files) {
         Optional<PackageFileEntity> exact =
-                files.stream().filter(f -> f.name().equals(fileName)).findFirst();
-        if (exact.isPresent() || !file.isSnapshot() || file.buildVersion() != null) {
+                files.stream().filter(f -> f.getName().equals(fileName)).findFirst();
+        if (exact.isPresent() || !file.isSnapshot() || file.getBuildVersion() != null) {
             return exact;
         }
         return builds(file, files).stream()
-                .filter(b -> Objects.equals(b.classifier(), file.classifier())
-                        && b.extension().equals(file.extension()))
+                .filter(b -> Objects.equals(b.getClassifier(), file.getClassifier())
+                        && b.getExtension().equals(file.getExtension()))
                 .max(Comparator.comparing(Build::timestamp).thenComparingInt(Build::buildNumber))
                 .flatMap(b -> files.stream()
-                        .filter(f -> f.name().equals(b.fileName()))
+                        .filter(f -> f.getName().equals(b.getFileName()))
                         .findFirst());
     }
 
     /** The timestamped builds among a snapshot version's files, without checksums. */
     public static List<Build> builds(MavenPath.ArtifactFile version, List<PackageFileEntity> files) {
-        String directory =
-                version.groupId().replace('.', '/') + "/" + version.artifactId() + "/" + version.version() + "/";
+        String directory = version.getGroupId().replace('.', '/') + "/" + version.getArtifactId() + "/"
+                + version.getVersion() + "/";
         return files.stream()
-                .map(f -> MavenPath.parse(directory + f.name()))
+                .map(f -> MavenPath.parse(directory + f.getName()))
                 .filter(MavenPath.ArtifactFile.class::isInstance)
                 .map(MavenPath.ArtifactFile.class::cast)
-                .filter(f -> f.buildVersion() != null && f.checksum() == null)
-                .map(f ->
-                        new Build(Objects.requireNonNull(f.buildVersion()), f.classifier(), f.extension(), fileName(f)))
+                .filter(f -> f.getBuildVersion() != null && f.getChecksum() == null)
+                .map(f -> new Build(
+                        Objects.requireNonNull(f.getBuildVersion()), f.getClassifier(), f.getExtension(), fileName(f)))
                 .toList();
     }
 
     private static String fileName(MavenPath.ArtifactFile file) {
-        String classifier = file.classifier() == null ? "" : "-" + file.classifier();
-        return file.artifactId() + "-" + file.buildVersion() + classifier + "." + file.extension();
+        String classifier = file.getClassifier() == null ? "" : "-" + file.getClassifier();
+        return file.getArtifactId() + "-" + file.getBuildVersion() + classifier + "." + file.getExtension();
     }
 }

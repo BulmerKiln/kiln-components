@@ -21,7 +21,7 @@ public final class OciRepositoryStore {
         return tx.fetchOptional(
                         "SELECT id FROM repositories WHERE organization_id = ? AND name = ?",
                         organization(),
-                        name.value())
+                        name.getValue())
                 .map(row -> row.get(0, UUID.class));
     }
 
@@ -32,8 +32,8 @@ public final class OciRepositoryStore {
                         + " ON CONFLICT (organization_id, name) DO NOTHING",
                 organization(),
                 UUID.randomUUID(),
-                namespace.id(),
-                name.value());
+                namespace.getId(),
+                name.getValue());
         return find(tx, name).orElseThrow();
     }
 
@@ -77,6 +77,6 @@ public final class OciRepositoryStore {
     }
 
     static UUID organization() {
-        return OrganizationContext.current().id().value();
+        return OrganizationContext.current().getId().getValue();
     }
 }

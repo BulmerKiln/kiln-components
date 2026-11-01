@@ -24,8 +24,8 @@ public final class MavenPluginStore {
                 organization(),
                 packageId,
                 groupId,
-                plugin.prefix(),
-                plugin.name());
+                plugin.getPrefix(),
+                plugin.getName());
     }
 
     /** The plugins of {@code groupId}, by artifactId. */
@@ -48,6 +48,6 @@ public final class MavenPluginStore {
     }
 
     private static UUID organization() {
-        return OrganizationContext.current().id().value();
+        return OrganizationContext.current().getId().getValue();
     }
 }

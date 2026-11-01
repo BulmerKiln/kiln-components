@@ -8,21 +8,29 @@ import com.bulmerkiln.auth.connector.IdentityConnector;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.Value;
 
 /**
  * What an IdP returned, after the sign-in flow verified it.
- *
- * @param claims the verified ID token claims (OIDC), user-info response (OAuth2) or assertion
- *     attributes (SAML), as parsed JSON
- * @param lookups the parsed results of the connector's {@link IdentityConnector#lookups()}, by
- *     name; a lookup that failed is absent, which only ever means fewer groups
  */
-public record IdpResponse(Map<String, ?> claims, Map<String, ?> lookups) {
+@Value
+public final class IdpResponse {
 
-    public IdpResponse {
+    /**
+     * The verified ID token claims (OIDC), user-info response (OAuth2) or assertion attributes (SAML), as parsed JSON.
+     */
+    private final Map<String, ?> claims;
+
+    /**
+     * The parsed results of the connector's {@link IdentityConnector#lookups()}, by name; a lookup
+     * that failed is absent, which only ever means fewer groups.
+     */
+    private final Map<String, ?> lookups;
+
+    public IdpResponse(Map<String, ?> claims, Map<String, ?> lookups) {
         // JSON can hold nulls, which Map.copyOf refuses.
-        claims = Collections.unmodifiableMap(new LinkedHashMap<>(claims));
-        lookups = Collections.unmodifiableMap(new LinkedHashMap<>(lookups));
+        this.claims = Collections.unmodifiableMap(new LinkedHashMap<>(claims));
+        this.lookups = Collections.unmodifiableMap(new LinkedHashMap<>(lookups));
     }
 
     public static IdpResponse of(Map<String, ?> claims) {

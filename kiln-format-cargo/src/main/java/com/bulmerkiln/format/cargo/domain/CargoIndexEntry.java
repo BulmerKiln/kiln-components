@@ -4,8 +4,10 @@
  */
 package com.bulmerkiln.format.cargo.domain;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.format.cargo.CargoException;
 import com.bulmerkiln.format.constant.Reason;
+import lombok.Value;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -17,10 +19,18 @@ import tools.jackson.databind.node.ObjectNode;
  * (FMT-CARGO-9). Dependencies are rewritten as the index has them: {@code version_req} becomes
  * {@code req}, and a renamed dependency keeps its real name in {@code package}.
  */
-public record CargoIndexEntry(String name, String version, ObjectNode json) {
+@Value
+public final class CargoIndexEntry {
+
+    private final String name;
+
+    private final String version;
+
+    private final ObjectNode json;
 
     public static final JsonMapper JSON = JsonMapper.builder().build();
 
+    @UntrustedInput
     public static CargoIndexEntry fromPublish(byte[] metadata, String checksum) {
         JsonNode sent;
         try {

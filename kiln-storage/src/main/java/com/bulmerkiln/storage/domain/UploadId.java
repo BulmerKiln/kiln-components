@@ -8,16 +8,21 @@ import com.bulmerkiln.storage.UploadNotFoundException;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /** An upload session. It appears in client-visible URLs, so parsing is strict. */
-public record UploadId(UUID value) {
+@Value
+public final class UploadId {
+
+    private final UUID value;
 
     /** The canonical lowercase form only; {@link UUID#fromString} accepts much more. */
     private static final Pattern CANONICAL =
             Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
-    public UploadId {
+    public UploadId(UUID value) {
         Objects.requireNonNull(value, "value");
+        this.value = value;
     }
 
     /** A new random (version 4) session ID. */

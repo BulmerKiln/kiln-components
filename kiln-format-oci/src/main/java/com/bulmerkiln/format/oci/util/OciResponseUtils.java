@@ -27,17 +27,17 @@ public final class OciResponseUtils {
     /** A finished upload or mount: {@code 201} with where the blob is. */
     @SuppressFBWarnings(value = "UNVALIDATED_REDIRECT", justification = LOCATION)
     public static void stored(HttpServletResponse response, OciUploadResponse stored) {
-        response.setHeader("Location", stored.location());
-        response.setHeader(DIGEST, stored.digest().toString());
+        response.setHeader("Location", stored.getLocation());
+        response.setHeader(DIGEST, stored.getDigest().toString());
         empty(response, 201);
     }
 
     /** An upload in progress, with the range received so far. */
     @SuppressFBWarnings(value = "UNVALIDATED_REDIRECT", justification = LOCATION)
     public static void progress(HttpServletResponse response, OciUploadProgressResponse progress, int status) {
-        response.setHeader("Location", progress.location());
-        response.setHeader("Docker-Upload-UUID", progress.session().toString());
-        response.setHeader("Range", "0-" + Math.max(0, progress.size() - 1));
+        response.setHeader("Location", progress.getLocation());
+        response.setHeader("Docker-Upload-UUID", progress.getSession().toString());
+        response.setHeader("Range", "0-" + Math.max(0, progress.getSize() - 1));
         empty(response, status);
     }
 

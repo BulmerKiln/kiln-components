@@ -10,6 +10,8 @@ import com.bulmerkiln.core.organization.Organization;
 import com.bulmerkiln.core.organization.OrganizationDirectory;
 import com.bulmerkiln.core.organization.OrganizationId;
 import com.bulmerkiln.core.organization.OrganizationResolver.Resolution;
+import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,12 +25,12 @@ class PathOrganizationResolverTest {
     private static final OrganizationDirectory ONE = new OrganizationDirectory() {
         @Override
         public Optional<Organization> byId(OrganizationId id) {
-            return ACME.id().equals(id) ? Optional.of(ACME) : Optional.empty();
+            return ACME.getId().equals(id) ? Optional.of(ACME) : Optional.empty();
         }
 
         @Override
         public Optional<Organization> bySlug(String slug) {
-            return ACME.slug().equals(slug) ? Optional.of(ACME) : Optional.empty();
+            return ACME.getSlug().equals(slug) ? Optional.of(ACME) : Optional.empty();
         }
 
         @Override
@@ -54,5 +56,11 @@ class PathOrganizationResolverTest {
         assertThat(resolver.resolve("ACME/app")).isEmpty();
         assertThat(resolver.resolve("/acme/app")).isEmpty();
         assertThat(resolver.resolve("")).isEmpty();
+    }
+
+    /** Whatever path a request carries, resolution never throws. */
+    @FuzzTest
+    void resolutionNeverThrows(FuzzedDataProvider data) {
+        resolver.resolve(data.consumeString(512));
     }
 }

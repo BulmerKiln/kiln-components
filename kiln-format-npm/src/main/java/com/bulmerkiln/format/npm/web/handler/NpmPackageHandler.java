@@ -90,7 +90,7 @@ public final class NpmPackageHandler {
         try (BlobRead read = reads.tarball(npm, file)) {
             response.setStatus(200);
             response.setContentType("application/octet-stream");
-            response.setContentLengthLong(read.length());
+            response.setContentLengthLong(read.getLength());
             if ("GET".equals(request.getMethod())) {
                 read.transferTo(Channels.newChannel(response.getOutputStream()));
             }

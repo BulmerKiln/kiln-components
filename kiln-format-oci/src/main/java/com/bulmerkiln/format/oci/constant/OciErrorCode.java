@@ -49,15 +49,15 @@ public enum OciErrorCode {
      * so a block can never go out as, say, {@code BLOB_UNKNOWN}.
      */
     public static OciErrorCode forRefusal(Refusal refusal) {
-        String hint = refusal.code();
+        String hint = refusal.getCode();
         if (hint != null) {
             for (OciErrorCode code : values()) {
-                if (code.name().equals(hint) && code.reason == refusal.reason()) {
+                if (code.name().equals(hint) && code.reason == refusal.getReason()) {
                     return code;
                 }
             }
         }
-        return switch (refusal.reason()) {
+        return switch (refusal.getReason()) {
             case INVALID -> MANIFEST_INVALID;
             case UNAUTHORIZED -> UNAUTHORIZED;
             case DENIED, BLOCKED, OVER_QUOTA, CONFLICT -> DENIED;

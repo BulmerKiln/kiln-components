@@ -29,7 +29,7 @@ class StaticConnectorRegistryTest {
     static IdentityConnector connector(String id, String type, Set<String> domains, Map<String, URI> lookups) {
         return new IdentityConnector() {
             @Override
-            public ConnectorId id() {
+            public ConnectorId getId() {
                 return new ConnectorId(id);
             }
 
@@ -39,12 +39,12 @@ class StaticConnectorRegistryTest {
             }
 
             @Override
-            public String displayName() {
+            public String getDisplayName() {
                 return id;
             }
 
             @Override
-            public Set<String> domains() {
+            public Set<String> getDomains() {
                 return domains;
             }
 
@@ -61,11 +61,11 @@ class StaticConnectorRegistryTest {
             @Override
             public ExternalIdentity identify(IdpResponse response) {
                 return new ExternalIdentity(
-                        id(),
+                        getId(),
                         "https://idp",
                         "1",
                         null,
-                        IdentityUtils.groups(response.claims().get("groups")));
+                        IdentityUtils.groups(response.getClaims().get("groups")));
             }
         };
     }
@@ -90,10 +90,10 @@ class StaticConnectorRegistryTest {
         assertThat(registry.get(new ConnectorId("okta"))).isPresent();
         assertThat(registry.get(new ConnectorId("nope"))).isEmpty();
         assertThat(registry.forDomain("ACME.com"))
-                .extracting(c -> c.id().value())
+                .extracting(c -> c.getId().getValue())
                 .containsExactly("okta", "github");
         assertThat(registry.forDomain("acme.io"))
-                .extracting(c -> c.id().value())
+                .extracting(c -> c.getId().getValue())
                 .containsExactly("github");
         assertThat(registry.forDomain("evil.com")).isEmpty();
         assertThat(registry.forDomain("sub.acme.com")).isEmpty();

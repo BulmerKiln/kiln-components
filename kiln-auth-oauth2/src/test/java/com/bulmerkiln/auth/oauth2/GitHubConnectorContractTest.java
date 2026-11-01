@@ -76,7 +76,7 @@ class GitHubConnectorContractTest extends IdentityConnectorContract {
 
     @Test
     void namesGroupsByOrganizationAndTeam() {
-        assertThat(github.identify(response(583231, null, List.of("Platform"))).groups())
+        assertThat(github.identify(response(583231, null, List.of("Platform"))).getGroups())
                 .containsExactlyInAnyOrder("acme", "acme/platform");
     }
 
@@ -88,11 +88,11 @@ class GitHubConnectorContractTest extends IdentityConnectorContract {
 
     @Test
     void aFailedTeamsLookupOnlyMeansFewerGroups() {
-        assertThat(github.identify(IdpResponse.of(Map.of("id", 583231))).groups())
+        assertThat(github.identify(IdpResponse.of(Map.of("id", 583231))).getGroups())
                 .isEmpty();
         assertThat(github.identify(new IdpResponse(
                                 Map.of("id", 583231), Map.of("teams", Map.of("message", "Bad credentials"))))
-                        .groups())
+                        .getGroups())
                 .isEmpty();
     }
 }

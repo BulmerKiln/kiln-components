@@ -47,11 +47,11 @@ public final class MavenMetadataService {
     }
 
     public byte[] read(MavenPath.Metadata metadata) {
-        if (metadata.version() == null) {
+        if (metadata.getVersion() == null) {
             return artifact(metadata).getBytes(StandardCharsets.UTF_8);
         }
         Optional<Namespace> namespace = access.require(metadata, Operation.PULL);
-        access.checkRead(metadata, namespace, metadata.version());
+        access.checkRead(metadata, namespace, metadata.getVersion());
         return snapshot(metadata).getBytes(StandardCharsets.UTF_8);
     }
 
@@ -61,15 +61,15 @@ public final class MavenMetadataService {
      * both artifact {@code g:a} and group {@code g.a}.
      */
     public void upload(MavenPath.Metadata metadata, byte[] xml) {
-        if (metadata.version() != null || metadata.checksum() != null) {
+        if (metadata.getVersion() != null || metadata.getChecksum() != null) {
             return;
         }
         String group = group(metadata);
         for (MavenPlugin plugin : MavenPluginMetadata.parse(xml)) {
-            MavenPath.Metadata artifact = new MavenPath.Metadata(group, plugin.artifactId(), null, null);
+            MavenPath.Metadata artifact = new MavenPath.Metadata(group, plugin.getArtifactId(), null, null);
             access.requireToWrite(artifact);
             database.run(tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(artifact))
-                    .ifPresent(entry -> MavenPluginStore.save(tx, entry.id(), group, plugin)));
+                    .ifPresent(entry -> MavenPluginStore.save(tx, entry.getId(), group, plugin)));
         }
     }
 
@@ -81,17 +81,17 @@ public final class MavenMetadataService {
         List<PackageVersionEntity> readable = access.mayRead(metadata) ? readable(metadata) : List.of();
         String group = group(metadata);
         List<MavenPlugin> plugins = database.transaction(tx -> MavenPluginStore.inGroup(tx, group)).stream()
-                .filter(plugin -> access.mayRead(new MavenPath.Metadata(group, plugin.artifactId(), null, null)))
+                .filter(plugin -> access.mayRead(new MavenPath.Metadata(group, plugin.getArtifactId(), null, null)))
                 .toList();
         if (readable.isEmpty() && plugins.isEmpty()) {
             access.require(metadata, Operation.PULL);
             throw notFound();
         }
         return MavenMetadata.artifact(
-                metadata.groupId(),
-                metadata.artifactId(),
-                readable.stream().map(PackageVersionEntity::version).toList(),
-                readable.isEmpty() ? null : readable.getLast().publishedAt(),
+                metadata.getGroupId(),
+                metadata.getArtifactId(),
+                readable.stream().map(PackageVersionEntity::getVersion).toList(),
+                readable.isEmpty() ? null : readable.getLast().getPublishedAt(),
                 plugins);
     }
 
@@ -99,7 +99,7 @@ public final class MavenMetadataService {
         Optional<Namespace> namespace = access.require(metadata, Operation.PULL);
         return versions(metadata).stream()
                 .filter(v ->
-                        access.readRefusal(metadata, namespace, v.version()).isEmpty())
+                        access.readRefusal(metadata, namespace, v.getVersion()).isEmpty())
                 .toList();
     }
 
@@ -113,10 +113,10 @@ public final class MavenMetadataService {
             }
             PackageEntity entry = found.get();
             List<PackageVersionEntity> withPom = new ArrayList<>();
-            for (PackageVersionEntity version : PackageStore.versions(tx, entry.id())) {
-                String pom = metadata.artifactId() + "-" + version.version() + ".pom";
-                boolean hasPom = PackageStore.files(tx, version.id()).stream()
-                        .anyMatch(f -> f.name().equals(pom) || isSnapshotPom(version.version(), f.name()));
+            for (PackageVersionEntity version : PackageStore.versions(tx, entry.getId())) {
+                String pom = metadata.getArtifactId() + "-" + version.getVersion() + ".pom";
+                boolean hasPom = PackageStore.files(tx, version.getId()).stream()
+                        .anyMatch(f -> f.getName().equals(pom) || isSnapshotPom(version.getVersion(), f.getName()));
                 if (hasPom) {
                     withPom.add(version);
                 }
@@ -127,19 +127,19 @@ public final class MavenMetadataService {
 
     /** The group whose metadata shares this path: {@code org/acme/plugins/} is group {@code org.acme.plugins}. */
     private static String group(MavenPath.Metadata metadata) {
-        return metadata.groupId() + "." + metadata.artifactId();
+        return metadata.getGroupId() + "." + metadata.getArtifactId();
     }
 
     /** The latest build of each classifier and extension of a snapshot version. */
     private String snapshot(MavenPath.Metadata metadata) {
-        String version = Objects.requireNonNull(metadata.version());
+        String version = Objects.requireNonNull(metadata.getVersion());
         List<MavenSnapshots.Build> builds = database.transaction(tx -> PackageStore.find(
                         tx, MavenFormatModule.FORMAT, MavenAccessService.name(metadata))
-                .flatMap(entry -> PackageStore.version(tx, entry.id(), version))
+                .flatMap(entry -> PackageStore.version(tx, entry.getId(), version))
                 .map(v -> MavenSnapshots.builds(
                         new MavenPath.ArtifactFile(
-                                metadata.groupId(), metadata.artifactId(), version, null, null, "pom", null),
-                        PackageStore.files(tx, v.id())))
+                                metadata.getGroupId(), metadata.getArtifactId(), version, null, null, "pom", null),
+                        PackageStore.files(tx, v.getId())))
                 .orElseThrow(MavenMetadataService::notFound));
         if (builds.isEmpty()) {
             throw notFound();
@@ -148,13 +148,13 @@ public final class MavenMetadataService {
                 .thenComparingInt(MavenSnapshots.Build::buildNumber);
         Map<String, MavenSnapshots.Build> latest = builds.stream()
                 .collect(Collectors.toMap(
-                        b -> b.classifier() + "." + b.extension(),
+                        b -> b.getClassifier() + "." + b.getExtension(),
                         b -> b,
                         (a, b) -> newest.compare(a, b) >= 0 ? a : b,
                         LinkedHashMap::new));
         Collection<MavenSnapshots.Build> values = latest.values();
         return MavenMetadata.snapshot(
-                metadata.groupId(), metadata.artifactId(), version, List.copyOf(values), Instant.now());
+                metadata.getGroupId(), metadata.getArtifactId(), version, List.copyOf(values), Instant.now());
     }
 
     private static boolean isSnapshotPom(String version, String fileName) {

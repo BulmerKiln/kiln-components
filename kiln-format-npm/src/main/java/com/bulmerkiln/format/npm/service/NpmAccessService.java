@@ -40,14 +40,14 @@ public final class NpmAccessService {
     }
 
     Optional<Namespace> require(NpmPackageRequest request, Operation operation) {
-        String scope = request.name().scope();
+        String scope = request.getName().getScope();
         Optional<Namespace> namespace = database.transaction(tx -> scope == null
-                ? NamespaceStore.forNpmName(tx, request.name().toString())
+                ? NamespaceStore.forNpmName(tx, request.getName().toString())
                 : NamespaceStore.forNpm(tx, "@" + scope));
         Optional<Refusal> refusal = access.check(artifact(request, namespace, null), operation)
                 .toRefusal(
-                        "You may not " + operation.name().toLowerCase(Locale.ROOT) + " " + request.name(),
-                        () -> "Bearer realm=\"" + request.registryUrl() + "\"");
+                        "You may not " + operation.name().toLowerCase(Locale.ROOT) + " " + request.getName(),
+                        () -> "Bearer realm=\"" + request.getRegistryUrl() + "\"");
         if (refusal.isPresent()) {
             throw new RefusedException(refusal.get());
         }
@@ -59,7 +59,7 @@ public final class NpmAccessService {
         return require(request, operation)
                 .orElseThrow(() -> new NpmException(
                         Reason.DENIED,
-                        "No namespace owns " + request.name()
+                        "No namespace owns " + request.getName()
                                 + "; publish under a scope or name prefix an admin has created"));
     }
 
@@ -69,8 +69,8 @@ public final class NpmAccessService {
     }
 
     static ArtifactRef artifact(NpmPackageRequest request, Optional<Namespace> namespace, @Nullable String version) {
-        String name = request.name().toString();
+        String name = request.getName().toString();
         return new ArtifactRef(
-                NpmFormatModule.FORMAT, namespace.map(Namespace::name).orElse(name), name, version);
+                NpmFormatModule.FORMAT, namespace.map(Namespace::getName).orElse(name), name, version);
     }
 }

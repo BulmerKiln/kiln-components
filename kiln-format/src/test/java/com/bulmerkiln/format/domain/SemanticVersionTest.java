@@ -6,6 +6,8 @@ package com.bulmerkiln.format.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.code_intelligence.jazzer.junit.FuzzTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -43,5 +45,11 @@ class SemanticVersionTest {
     void refusesOverlongVersions() {
         assertThat(SemanticVersion.isValid("1.0.0-" + "a".repeat(251))).isFalse();
         assertThat(SemanticVersion.isValid("1.0.0-" + "a".repeat(250))).isTrue();
+    }
+
+    /** Whatever string a URL or manifest carries, validation never throws. */
+    @FuzzTest
+    void versionValidationNeverThrows(FuzzedDataProvider data) {
+        SemanticVersion.isValid(data.consumeString(512));
     }
 }

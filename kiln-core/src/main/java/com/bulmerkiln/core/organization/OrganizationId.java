@@ -4,16 +4,23 @@
  */
 package com.bulmerkiln.core.organization;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Value;
 
 /** The immutable identifier of an organization, the {@code organization_id} on every organization table. */
-public record OrganizationId(UUID value) {
+@Value
+public final class OrganizationId {
 
-    public OrganizationId {
+    private final UUID value;
+
+    public OrganizationId(UUID value) {
         Objects.requireNonNull(value, "value");
+        this.value = value;
     }
 
+    @UntrustedInput
     public static OrganizationId of(String value) {
         return new OrganizationId(UUID.fromString(value));
     }

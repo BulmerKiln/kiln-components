@@ -84,18 +84,18 @@ public abstract class ScannerAdapterContract {
     @Test
     void parsesARealReportCompletely() {
         ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sampleOutput()));
-        assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
-        assertThat(result.scanner()).isEqualTo(adapter().scanner());
-        assertThat(result.jobId()).isEqualTo(JOB.jobId());
-        assertThat(result.findings()).isNotEmpty();
+        assertThat(result.getStatus()).isEqualTo(ScanResult.Status.COMPLETE);
+        assertThat(result.getScanner()).isEqualTo(adapter().scanner());
+        assertThat(result.getJobId()).isEqualTo(JOB.getJobId());
+        assertThat(result.getFindings()).isNotEmpty();
     }
 
     @Test
     void recognisesACleanScan() {
         ScanResult result = ScannerAdapterRunner.run(
                 adapter(), JOB, new ToolRun(sampleToolVersion(), "db", 0, emptyOutput(), false, null));
-        assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
-        assertThat(result.findings()).isEmpty();
+        assertThat(result.getStatus()).isEqualTo(ScanResult.Status.COMPLETE);
+        assertThat(result.getFindings()).isEmpty();
     }
 
     @Test
@@ -135,7 +135,7 @@ public abstract class ScannerAdapterContract {
                 "x".repeat(10_000_000));
         for (String output : broken) {
             ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(output));
-            assertThat(result.status())
+            assertThat(result.getStatus())
                     .as(output.length() > 40 ? output.substring(0, 40) : output)
                     .isNotEqualTo(ScanResult.Status.COMPLETE);
         }
@@ -145,26 +145,26 @@ public abstract class ScannerAdapterContract {
     void aTruncatedReportIsNeverClean() {
         String sample = sampleOutput();
         ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(sample.substring(0, sample.length() / 2)));
-        assertThat(result.status()).isNotEqualTo(ScanResult.Status.COMPLETE);
+        assertThat(result.getStatus()).isNotEqualTo(ScanResult.Status.COMPLETE);
     }
 
     @Test
     void aToolThatDidNotCompleteFails() {
         ToolRun crashed = new ToolRun(sampleToolVersion(), "db", 137, sampleOutput(), false, null);
         ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, crashed);
-        assertThat(result.status()).isEqualTo(ScanResult.Status.FAILED);
-        assertThat(result.findings()).isEmpty();
+        assertThat(result.getStatus()).isEqualTo(ScanResult.Status.FAILED);
+        assertThat(result.getFindings()).isEmpty();
     }
 
     @Test
     void limitsAndTimeoutsAreIncompleteNotClean() {
         ScanResult limited = ScannerAdapterRunner.run(
                 adapter(), JOB, new ToolRun(sampleToolVersion(), "db", 2, sampleOutput(), false, "max files"));
-        assertThat(limited.status()).isEqualTo(ScanResult.Status.INCOMPLETE);
-        assertThat(limited.incompleteReason()).isEqualTo("max files");
+        assertThat(limited.getStatus()).isEqualTo(ScanResult.Status.INCOMPLETE);
+        assertThat(limited.getIncompleteReason()).isEqualTo("max files");
         ScanResult timedOut = ScannerAdapterRunner.run(
                 adapter(), JOB, new ToolRun(sampleToolVersion(), "db", 143, sampleOutput(), true, null));
-        assertThat(timedOut.status()).isEqualTo(ScanResult.Status.INCOMPLETE);
+        assertThat(timedOut.getStatus()).isEqualTo(ScanResult.Status.INCOMPLETE);
     }
 
     @Test
@@ -177,8 +177,8 @@ public abstract class ScannerAdapterContract {
                 false,
                 null);
         ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run);
-        assertThat(result.scannerVersion()).doesNotContain("\n").hasSizeLessThanOrEqualTo(128);
-        assertThat(result.databaseVersion()).isEqualTo("unknown");
+        assertThat(result.getScannerVersion()).doesNotContain("\n").hasSizeLessThanOrEqualTo(128);
+        assertThat(result.getDatabaseVersion()).isEqualTo("unknown");
     }
 
     @Test
@@ -188,8 +188,8 @@ public abstract class ScannerAdapterContract {
             return;
         }
         ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(output));
-        assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
-        assertThat(result.findings()).isNotEmpty();
+        assertThat(result.getStatus()).isEqualTo(ScanResult.Status.COMPLETE);
+        assertThat(result.getFindings()).isNotEmpty();
         assertThat(new String(ScanProtocol.write(result), StandardCharsets.UTF_8))
                 .doesNotContain(PLANTED_SECRET);
     }
@@ -203,7 +203,7 @@ public abstract class ScannerAdapterContract {
         assertThat(command).doesNotContain("-c").anyMatch(arg -> arg.contains(input.toString()));
         assertThat(String.join(" ", command))
                 .doesNotContain("PRESIGNED-SECRET")
-                .doesNotContain(JOB.blobUrl().toString());
+                .doesNotContain(JOB.getBlobUrl().toString());
         assertThat(command).noneMatch(arg -> arg.indexOf('\0') >= 0);
     }
 }

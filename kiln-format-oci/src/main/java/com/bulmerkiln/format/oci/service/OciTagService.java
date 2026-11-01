@@ -41,13 +41,13 @@ public final class OciTagService {
         access.require(request, Operation.PULL);
         int size = n == null ? maxPageSize : Math.clamp(n, 0, maxPageSize);
         List<String> tags = database.transaction(tx -> {
-            UUID repository = OciRepositoryStore.find(tx, request.repository())
+            UUID repository = OciRepositoryStore.find(tx, request.getRepository())
                     .orElseThrow(() -> new OciException(OciErrorCode.NAME_UNKNOWN, "Repository unknown"));
             return OciManifestStore.tags(tx, repository, last, size + 1);
         });
         boolean more = tags.size() > size;
         List<String> page = more ? tags.subList(0, size) : tags;
-        String body = FormatJsonUtils.write(new OciTagListResponse(request.addressed(), page));
+        String body = FormatJsonUtils.write(new OciTagListResponse(request.getAddressed(), page));
         String next = more ? request.path("tags/list?n=" + size + "&last=" + page.getLast()) : null;
         return new OciTagPageResponse(body, next);
     }
@@ -55,12 +55,13 @@ public final class OciTagService {
     /** An index of the manifests whose subject is {@code digest}; an unknown digest has none. */
     public OciReferrersResponse referrers(OciRepositoryRequest request, Digest digest, @Nullable String artifactType) {
         access.require(request, Operation.PULL);
-        List<OciManifestEntity> referrers = database.transaction(tx -> OciRepositoryStore.find(tx, request.repository())
-                .map(repository -> OciManifestStore.referrers(tx, repository, digest, artifactType))
-                .orElse(List.of()));
+        List<OciManifestEntity> referrers =
+                database.transaction(tx -> OciRepositoryStore.find(tx, request.getRepository())
+                        .map(repository -> OciManifestStore.referrers(tx, repository, digest, artifactType))
+                        .orElse(List.of()));
         List<OciIndexResponse.Entry> entries = referrers.stream()
                 .map(m -> new OciIndexResponse.Entry(
-                        m.mediaType(), m.digest().toString(), m.content().length, m.artifactType()))
+                        m.getMediaType(), m.getDigest().toString(), m.getContent().length, m.getArtifactType()))
                 .toList();
         return new OciReferrersResponse(
                 FormatJsonUtils.write(new OciIndexResponse(2, OciMediaTypes.OCI_INDEX, entries)), artifactType != null);

@@ -6,6 +6,7 @@ package com.bulmerkiln.auth.connector.util;
 
 import com.bulmerkiln.auth.connector.InvalidIdentityException;
 import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,6 +24,7 @@ public final class IdentityUtils {
     private IdentityUtils() {}
 
     /** The subject, which must be 1 to 255 printable characters. */
+    @UntrustedInput
     public static String subject(@Nullable String subject) {
         if (subject == null
                 || subject.isBlank()
@@ -37,6 +39,7 @@ public final class IdentityUtils {
      * The email, only when the IdP marks it verified with a JSON {@code true}. Otherwise none: an
      * attacker who can set an unverified address at the IdP must not be matched to its owner.
      */
+    @UntrustedInput
     public static @Nullable String verifiedEmail(@Nullable Object email, @Nullable Object verified) {
         if (!Boolean.TRUE.equals(verified) || !(email instanceof String address)) {
             return null;
@@ -53,6 +56,7 @@ public final class IdentityUtils {
      *
      * @throws InvalidIdentityException for more groups, or longer names, than an identity may hold
      */
+    @UntrustedInput
     public static Set<String> groups(@Nullable Object claim) {
         Set<String> groups = new LinkedHashSet<>();
         if (claim instanceof String single) {

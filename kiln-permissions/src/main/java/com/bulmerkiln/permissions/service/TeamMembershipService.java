@@ -24,8 +24,8 @@ public final class TeamMembershipService {
             String connector, Set<String> groups, Collection<TeamGroupMapping> mappings, Set<TeamId> explicitTeams) {
         Set<TeamId> teams = new HashSet<>(explicitTeams);
         for (TeamGroupMapping mapping : mappings) {
-            if (mapping.connector().equals(connector) && groups.contains(mapping.group())) {
-                teams.add(mapping.team());
+            if (mapping.getConnector().equals(connector) && groups.contains(mapping.getGroup())) {
+                teams.add(mapping.getTeam());
             }
         }
         return Set.copyOf(teams);

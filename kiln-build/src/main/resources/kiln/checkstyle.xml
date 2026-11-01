@@ -39,6 +39,13 @@
         <module name="ParameterNumber">
             <property name="max" value="7"/>
             <property name="ignoreOverriddenMethods" value="true"/>
+            <property name="tokens" value="METHOD_DEF"/>
+        </module>
+        <!-- Constructors keep the limit records had: a value class's constructor is the one its
+             record's components declared. -->
+        <module name="ParameterNumber">
+            <property name="max" value="10"/>
+            <property name="tokens" value="CTOR_DEF"/>
         </module>
         <module name="RecordComponentNumber">
             <property name="max" value="10"/>

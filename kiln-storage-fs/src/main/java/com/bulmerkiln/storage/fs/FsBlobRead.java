@@ -14,10 +14,20 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Optional;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /** An open blob file, sent with zero-copy transfer so the bytes never pass through the heap. */
-record FsBlobRead(FileChannel channel, long blobSize, long offset, long length) implements BlobRead {
+@Value
+final class FsBlobRead implements BlobRead {
+
+    private final FileChannel channel;
+
+    private final long blobSize;
+
+    private final long offset;
+
+    private final long length;
 
     /** Opens the blob at {@code path}, or empty if it doesn't exist. */
     static Optional<BlobRead> open(Path path, @Nullable ByteRange range) throws IOException {
@@ -41,10 +51,10 @@ record FsBlobRead(FileChannel channel, long blobSize, long offset, long length) 
         if (range == null) {
             return new FsBlobRead(channel, size, 0, size);
         }
-        if (range.last() >= size) {
+        if (range.getLast() >= size) {
             throw new RangeNotSatisfiableException(size);
         }
-        return new FsBlobRead(channel, size, range.first(), range.length());
+        return new FsBlobRead(channel, size, range.getFirst(), range.length());
     }
 
     @Override

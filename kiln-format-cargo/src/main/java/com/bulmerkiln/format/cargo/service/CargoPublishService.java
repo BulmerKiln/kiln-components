@@ -67,29 +67,30 @@ public final class CargoPublishService {
                 CargoPublishRequest.parse(bytes, CargoPublishRequest.DEFAULT_MAX_METADATA, maxCrateSize);
         byte[] crate = parsed.crate();
         Digest digest = Digest.sha256(crate);
-        CargoIndexEntry entry = CargoIndexEntry.fromPublish(parsed.metadataJson(), digest.encoded());
-        CargoCrateName name = new CargoCrateName(entry.name());
+        CargoIndexEntry entry = CargoIndexEntry.fromPublish(parsed.metadataJson(), digest.getEncoded());
+        CargoCrateName name = new CargoCrateName(entry.getName());
         Namespace namespace = access.requireToWrite(name, Operation.PUSH);
         BlobInfo blob = store(crate, digest);
         database.run(tx -> {
-            BlockStore.checkWrite(tx, CargoAccessService.artifact(name, Optional.of(namespace), entry.version()))
+            BlockStore.checkWrite(tx, CargoAccessService.artifact(name, Optional.of(namespace), entry.getVersion()))
                     .ifPresent(refusal -> {
                         throw new RefusedException(refusal);
                     });
             Optional<PackageEntity> existing = PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical());
-            if (existing.isPresent() && !existing.get().name().equals(name.toString())) {
+            if (existing.isPresent() && !existing.get().getName().equals(name.toString())) {
                 throw new CargoException(
                         Reason.CONFLICT,
-                        "The name is taken as " + existing.get().name());
+                        "The name is taken as " + existing.get().getName());
             }
             PackageEntity pkg = PackageStore.create(
-                    tx, CargoFormatModule.FORMAT, namespace.id(), name.toString(), name.canonical());
+                    tx, CargoFormatModule.FORMAT, namespace.getId(), name.toString(), name.canonical());
             PackageVersionEntity version = PackageStore.addVersion(
-                    tx, pkg.id(), entry.version(), CargoIndexEntry.JSON.writeValueAsString(entry.json()));
-            BlobRecordStore.record(tx, blob.digest(), blob.size());
-            PackageStore.addFile(tx, version.id(), name + "-" + entry.version() + ".crate", blob.digest(), blob.size());
+                    tx, pkg.getId(), entry.getVersion(), CargoIndexEntry.JSON.writeValueAsString(entry.getJson()));
+            BlobRecordStore.record(tx, blob.getDigest(), blob.getSize());
+            PackageStore.addFile(
+                    tx, version.getId(), name + "-" + entry.getVersion() + ".crate", blob.getDigest(), blob.getSize());
         });
-        events.pushed(CargoAccessService.artifact(name, Optional.of(namespace), entry.version()), blob.size());
+        events.pushed(CargoAccessService.artifact(name, Optional.of(namespace), entry.getVersion()), blob.getSize());
     }
 
     private BlobInfo store(byte[] crate, Digest digest) throws IOException {

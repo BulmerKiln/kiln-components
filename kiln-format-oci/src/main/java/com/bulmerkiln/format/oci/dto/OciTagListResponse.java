@@ -5,6 +5,13 @@
 package com.bulmerkiln.format.oci.dto;
 
 import java.util.List;
+import lombok.Value;
 
 /** The spec's tag list; records keep the field order. */
-public record OciTagListResponse(String name, List<String> tags) {}
+@Value
+public final class OciTagListResponse {
+
+    private final String name;
+
+    private final List<String> tags;
+}

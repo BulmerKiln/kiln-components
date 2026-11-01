@@ -22,20 +22,20 @@ public final class OidcClaimsMapper {
     public static ExternalIdentity map(OidcConnector connector, Map<String, ?> claims) {
         // OIDC Core, section 3.1.3.7: the issuer must match exactly, with no normalization.
         if (!(claims.get("iss") instanceof String issuer)
-                || !issuer.equals(connector.issuer().toString())) {
-            throw new InvalidIdentityException("The token's issuer does not match connector " + connector.id());
+                || !issuer.equals(connector.getIssuer().toString())) {
+            throw new InvalidIdentityException("The token's issuer does not match connector " + connector.getId());
         }
         // OIDC Core, section 2: sub is a string.
         String subject = IdentityUtils.subject(claims.get("sub") instanceof String s ? s : null);
-        if (connector.preset().requiresHostedDomain()
+        if (connector.getPreset().requiresHostedDomain()
                 && !(claims.get("hd") instanceof String hostedDomain
-                        && connector.domains().contains(hostedDomain))) {
+                        && connector.getDomains().contains(hostedDomain))) {
             throw new InvalidIdentityException(
-                    "The account is not in a domain connector " + connector.id() + " serves");
+                    "The account is not in a domain connector " + connector.getId() + " serves");
         }
-        String claim = connector.groupsClaim();
+        String claim = connector.getGroupsClaim();
         return new ExternalIdentity(
-                connector.id(),
+                connector.getId(),
                 issuer,
                 subject,
                 IdentityUtils.verifiedEmail(claims.get("email"), claims.get("email_verified")),

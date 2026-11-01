@@ -29,7 +29,7 @@ garbage-collect, and to show in the web app, and one place that decides immutabi
 - Record the blobs an organization holds (`BlobRecordStore`)
 - Keep packages, versions and files, immutable once written (`PackageStore`)
 - Keep blocks and tombstones, and answer the formats' `ArtifactPolicy` port from them
-- Answer the permissions' `VisibilityLookup` port from namespaces
+- Answer the permissions' visibility port, a `Lookup<Scope, Visibility>`, from namespaces
 
 **Does not**
 
@@ -46,7 +46,7 @@ garbage-collect, and to show in the web app, and one place that decides immutabi
 | REG-4 | A blocked artifact must be refused with `BLOCKED` (403, never 404) on read and write, for one version or every version; a tombstoned version must be refused as a conflict on write, forever. Formats check both inside the transaction that writes | `RegistryTest` |
 | REG-5 | Visibility must come from the namespace; the organization itself and an unknown namespace are private | `RegistryTest` |
 | REG-6 | Every registry table must pass the schema linter, and every query filters on the organization as well as relying on row-level security | `RegistryTest` |
-| REG-7 | The registry must answer `ArtifactPolicy` and `VisibilityLookup` unless the assembly provides its own | `RegistryAutoConfigurationTest` |
+| REG-7 | The registry must answer `ArtifactPolicy` and the visibility `Lookup<Scope, Visibility>` unless the assembly provides its own | `RegistryAutoConfigurationTest` |
 | REG-8 | Deleting a version must remove it and its files, and a package can be removed once it has no versions. Callers tombstone a version before deleting it, so it can't be published again | `RegistryTest` |
 
 ## Contract *(subsystem only)*

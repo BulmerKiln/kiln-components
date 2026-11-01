@@ -40,7 +40,7 @@ final class UploadLocks {
      * @throws UploadNotFoundException if the session doesn't exist
      */
     <T> T withUpload(UploadId upload, Path path, Work<T> work) throws IOException {
-        ReentrantLock lock = locks[Math.floorMod(upload.value().hashCode(), locks.length)];
+        ReentrantLock lock = locks[Math.floorMod(upload.getValue().hashCode(), locks.length)];
         lock.lock();
         try (FileChannel channel = open(path);
                 FileLock _ = channel.lock()) {

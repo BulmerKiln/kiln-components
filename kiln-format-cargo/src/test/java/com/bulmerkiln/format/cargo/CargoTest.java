@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.format.cargo.domain.CargoCrateName;
+import com.bulmerkiln.format.cargo.domain.CargoIndexEntry;
 import com.bulmerkiln.format.cargo.dto.CargoPublishRequest;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
@@ -162,6 +163,16 @@ class CargoTest {
             new CargoCrateName(data.consumeRemainingAsString());
         } catch (CargoException expected) {
             // Same for names.
+        }
+    }
+
+    /** Whatever metadata cargo publish sends, parsing fails only with CargoException. */
+    @FuzzTest
+    void indexEntryParsingFailsOnlyWithCargoException(FuzzedDataProvider data) {
+        try {
+            CargoIndexEntry.fromPublish(data.consumeRemainingAsBytes(), data.consumeString(64));
+        } catch (CargoException expected) {
+            // The only failure a crafted metadata body may cause.
         }
     }
 

@@ -62,7 +62,7 @@ public final class CargoAccessService {
     static ArtifactRef artifact(CargoCrateName name, Optional<Namespace> namespace, @Nullable String version) {
         return new ArtifactRef(
                 CargoFormatModule.FORMAT,
-                namespace.map(Namespace::name).orElse(name.canonical()),
+                namespace.map(Namespace::getName).orElse(name.canonical()),
                 name.canonical(),
                 version);
     }

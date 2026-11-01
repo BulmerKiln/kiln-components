@@ -13,6 +13,7 @@ import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /**
  * A distribution-spec route below {@code /v2/}. Repository names may contain {@code /}, and their
@@ -21,21 +22,53 @@ import java.util.regex.Pattern;
  */
 public sealed interface OciRoute {
 
-    OciRepositoryName repository();
+    OciRepositoryName getRepository();
 
-    record Manifest(OciRepositoryName repository, OciReference reference) implements OciRoute {}
+    @Value
+    static final class Manifest implements OciRoute {
 
-    record Blob(OciRepositoryName repository, Digest digest) implements OciRoute {}
+        private final OciRepositoryName repository;
+
+        private final OciReference reference;
+    }
+
+    @Value
+    static final class Blob implements OciRoute {
+
+        private final OciRepositoryName repository;
+
+        private final Digest digest;
+    }
 
     /** {@code blobs/uploads/}: starting an upload or a mount. */
-    record Uploads(OciRepositoryName repository) implements OciRoute {}
+    @Value
+    static final class Uploads implements OciRoute {
+
+        private final OciRepositoryName repository;
+    }
 
     /** {@code blobs/uploads/<session>}: the session ID as given, checked when it's looked up. */
-    record Upload(OciRepositoryName repository, String session) implements OciRoute {}
+    @Value
+    static final class Upload implements OciRoute {
 
-    record Tags(OciRepositoryName repository) implements OciRoute {}
+        private final OciRepositoryName repository;
 
-    record Referrers(OciRepositoryName repository, Digest digest) implements OciRoute {}
+        private final String session;
+    }
+
+    @Value
+    static final class Tags implements OciRoute {
+
+        private final OciRepositoryName repository;
+    }
+
+    @Value
+    static final class Referrers implements OciRoute {
+
+        private final OciRepositoryName repository;
+
+        private final Digest digest;
+    }
 
     /** Longer than any valid name plus a route; refused before matching. */
     int MAX_LENGTH = OciRepositoryName.MAX_LENGTH + 256;

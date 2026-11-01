@@ -51,8 +51,9 @@ public final class NpmReadService {
         Optional<Namespace> namespace = access.require(request, Operation.PULL);
         refuseIfBlocked(request, namespace, null);
         NpmPackageEntity snapshot = load(request);
-        List<PackageVersionEntity> readable = snapshot.versions().stream()
-                .filter(v -> access.readRefusal(request, namespace, v.version()).isEmpty())
+        List<PackageVersionEntity> readable = snapshot.getVersions().stream()
+                .filter(v ->
+                        access.readRefusal(request, namespace, v.getVersion()).isEmpty())
                 .toList();
         Map<String, String> tags = snapshot.readableTags(readable);
         return abbreviated
@@ -62,8 +63,8 @@ public final class NpmReadService {
 
     public String version(NpmPackageRequest request, NpmVersion version) {
         Optional<Namespace> namespace = access.require(request, Operation.PULL);
-        PackageVersionEntity found = load(request).version(version.value());
-        refuseIfBlocked(request, namespace, found.version());
+        PackageVersionEntity found = load(request).version(version.getValue());
+        refuseIfBlocked(request, namespace, found.getVersion());
         return NpmPackumentBuilder.JSON.writeValueAsString(NpmPackumentBuilder.manifest(request, found));
     }
 
@@ -71,28 +72,28 @@ public final class NpmReadService {
     public BlobRead tarball(NpmPackageRequest request, String file) throws IOException {
         Optional<Namespace> namespace = access.require(request, Operation.PULL);
         NpmPackageEntity snapshot = load(request);
-        PackageVersionEntity version = snapshot.versions().stream()
-                .filter(v -> request.tarballFile(v.version()).equals(file))
+        PackageVersionEntity version = snapshot.getVersions().stream()
+                .filter(v -> request.tarballFile(v.getVersion()).equals(file))
                 .findFirst()
                 .orElseThrow(NpmException::notFound);
-        refuseIfBlocked(request, namespace, version.version());
-        PackageFileEntity tarball = database.transaction(tx -> PackageStore.file(tx, version.id(), file))
+        refuseIfBlocked(request, namespace, version.getVersion());
+        PackageFileEntity tarball = database.transaction(tx -> PackageStore.file(tx, version.getId(), file))
                 .orElseThrow(NpmException::notFound);
         BlobRead read = storage.store(OrganizationContext.current())
-                .read(tarball.digest(), null)
+                .read(tarball.getDigest(), null)
                 .orElseThrow(NpmException::notFound);
-        events.pulled(NpmAccessService.artifact(request, namespace, version.version()), read.length());
+        events.pulled(NpmAccessService.artifact(request, namespace, version.getVersion()), read.getLength());
         return read;
     }
 
     public Map<String, String> distTags(NpmPackageRequest request) {
         Optional<Namespace> namespace = access.require(request, Operation.PULL);
         refuseIfBlocked(request, namespace, null);
-        return load(request).distTags();
+        return load(request).getDistTags();
     }
 
     private NpmPackageEntity load(NpmPackageRequest request) {
-        return database.transaction(tx -> NpmPackageStore.load(tx, request.name()))
+        return database.transaction(tx -> NpmPackageStore.load(tx, request.getName()))
                 .orElseThrow(NpmException::notFound);
     }
 

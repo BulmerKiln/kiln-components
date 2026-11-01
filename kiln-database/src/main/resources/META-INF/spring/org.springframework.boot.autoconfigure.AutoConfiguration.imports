@@ -1,1 +1,2 @@
 com.bulmerkiln.database.autoconfigure.DatabaseAutoConfiguration
+com.bulmerkiln.database.autoconfigure.DataJdbcAutoConfiguration

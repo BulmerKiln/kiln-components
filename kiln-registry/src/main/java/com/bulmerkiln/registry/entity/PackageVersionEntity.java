@@ -6,5 +6,18 @@ package com.bulmerkiln.registry.entity;
 
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Value;
 
-public record PackageVersionEntity(UUID id, String version, String metadata, boolean yanked, Instant publishedAt) {}
+@Value
+public final class PackageVersionEntity {
+
+    private final UUID id;
+
+    private final String version;
+
+    private final String metadata;
+
+    private final boolean yanked;
+
+    private final Instant publishedAt;
+}

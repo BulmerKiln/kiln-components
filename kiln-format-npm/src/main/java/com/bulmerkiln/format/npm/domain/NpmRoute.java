@@ -6,6 +6,7 @@ package com.bulmerkiln.format.npm.domain;
 
 import com.bulmerkiln.format.npm.NpmException;
 import java.util.Locale;
+import lombok.Value;
 
 /**
  * A registry route below {@code /npm/}. Scoped names arrive as {@code @scope/name} or {@code
@@ -13,28 +14,70 @@ import java.util.Locale;
  */
 public sealed interface NpmRoute {
 
-    record Ping() implements NpmRoute {}
+    @Value
+    static final class Ping implements NpmRoute {}
 
-    record Whoami() implements NpmRoute {}
+    @Value
+    static final class Whoami implements NpmRoute {}
 
-    record Packument(NpmPackageName name) implements NpmRoute {}
+    @Value
+    static final class Packument implements NpmRoute {
 
-    record Version(NpmPackageName name, NpmVersion version) implements NpmRoute {}
+        private final NpmPackageName name;
+    }
 
-    record Tarball(NpmPackageName name, String file) implements NpmRoute {}
+    @Value
+    static final class Version implements NpmRoute {
 
-    record DistTags(NpmPackageName name) implements NpmRoute {}
+        private final NpmPackageName name;
 
-    record DistTag(NpmPackageName name, String tag) implements NpmRoute {}
+        private final NpmVersion version;
+    }
+
+    @Value
+    static final class Tarball implements NpmRoute {
+
+        private final NpmPackageName name;
+
+        private final String file;
+    }
+
+    @Value
+    static final class DistTags implements NpmRoute {
+
+        private final NpmPackageName name;
+    }
+
+    @Value
+    static final class DistTag implements NpmRoute {
+
+        private final NpmPackageName name;
+
+        private final String tag;
+    }
 
     /** {@code <name>/-rev/<rev>}, where {@code npm unpublish} rewrites or deletes a package (FMT-NPM-17). */
-    record Revision(NpmPackageName name) implements NpmRoute {}
+    @Value
+    static final class Revision implements NpmRoute {
+
+        private final NpmPackageName name;
+    }
 
     /** {@code <name>/-/<file>/-rev/<rev>}, the tarball {@code npm unpublish} deletes after its version. */
-    record TarballRevision(NpmPackageName name, String file) implements NpmRoute {}
+    @Value
+    static final class TarballRevision implements NpmRoute {
+
+        private final NpmPackageName name;
+
+        private final String file;
+    }
 
     /** An npm endpoint Kiln answers with guidance instead, such as {@code owner} or {@code search}. */
-    record Unsupported(String endpoint) implements NpmRoute {}
+    @Value
+    static final class Unsupported implements NpmRoute {
+
+        private final String endpoint;
+    }
 
     /** Longer than any package name plus a route; refused before reading. */
     int MAX_LENGTH = NpmPackageName.MAX_LENGTH + 512;

@@ -150,8 +150,8 @@ class ByteRangeTest {
     private static void assertWithin(Supplier<Optional<ByteRange>> parse, long size) {
         try {
             parse.get().ifPresent(range -> {
-                assertThat(range.first()).isBetween(0L, size - 1);
-                assertThat(range.last()).isBetween(range.first(), size - 1);
+                assertThat(range.getFirst()).isBetween(0L, size - 1);
+                assertThat(range.getLast()).isBetween(range.getFirst(), size - 1);
             });
         } catch (RangeNotSatisfiableException expected) {
             // Refusing is always allowed; serving outside the representation never is.

@@ -8,6 +8,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.format.npm.NpmException;
+import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -86,6 +88,18 @@ class NpmDistVerifierTest {
         String extended = "sha512-" + Base64.getEncoder().encodeToString(Arrays.copyOf(digest, 65));
         assertThatThrownBy(() -> verifier(TARBALL).verify(truncated, null)).isInstanceOf(NpmException.class);
         assertThatThrownBy(() -> verifier(TARBALL).verify(extended, null)).isInstanceOf(NpmException.class);
+    }
+
+    /** Whatever the client declares, verification fails only with NpmException. */
+    @FuzzTest
+    void verifyFailsOnlyWithNpmException(FuzzedDataProvider data) {
+        NpmDistVerifier verifier = new NpmDistVerifier();
+        verifier.update(TARBALL, 0, TARBALL.length);
+        try {
+            verifier.verify(data.consumeString(256), data.consumeString(64));
+        } catch (NpmException expected) {
+            // The only failure a crafted integrity or shasum may cause.
+        }
     }
 
     private static NpmDistVerifier verifier(byte[] content) {

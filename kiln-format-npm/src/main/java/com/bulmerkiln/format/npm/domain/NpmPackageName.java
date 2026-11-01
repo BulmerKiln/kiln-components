@@ -8,6 +8,7 @@ import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.npm.NpmException;
 import java.util.Set;
 import java.util.regex.Pattern;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -15,14 +16,19 @@ import org.jspecify.annotations.Nullable;
  * packages (validate-npm-package-name): at most 214 characters, lowercase, URL-safe, not starting
  * with {@code .} or {@code _}, and none of {@code ~'!()*}.
  */
-public record NpmPackageName(@Nullable String scope, String name) {
+@Value
+public final class NpmPackageName {
+
+    private final @Nullable String scope;
+
+    private final String name;
 
     public static final int MAX_LENGTH = 214;
 
     private static final Pattern PART = Pattern.compile("[a-z0-9-][a-z0-9._-]*");
     private static final Set<String> BLOCKED = Set.of("node_modules", "favicon.ico");
 
-    public NpmPackageName {
+    public NpmPackageName(@Nullable String scope, String name) {
         if ((scope != null && !PART.matcher(scope).matches())
                 || !PART.matcher(name).matches()
                 || BLOCKED.contains(name)) {
@@ -31,6 +37,8 @@ public record NpmPackageName(@Nullable String scope, String name) {
         if ((scope == null ? 0 : scope.length() + 2) + name.length() > MAX_LENGTH) {
             throw invalid();
         }
+        this.scope = scope;
+        this.name = name;
     }
 
     /** Parses {@code name} or {@code @scope/name}. */

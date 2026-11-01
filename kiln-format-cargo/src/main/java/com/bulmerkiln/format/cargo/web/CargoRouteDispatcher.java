@@ -52,7 +52,7 @@ public final class CargoRouteDispatcher {
             String method = request.getMethod();
             switch (CargoRoute.parse(path)) {
                 case CargoRoute.Config _ -> config(method, response, registry);
-                case CargoRoute.Index i -> index(request, response, i.name());
+                case CargoRoute.Index i -> index(request, response, i.getName());
                 case CargoRoute.Publish _ -> {
                     requireMethod(method, "PUT");
                     publisher.publish(request.getInputStream());
@@ -60,14 +60,15 @@ public final class CargoRouteDispatcher {
                 }
                 case CargoRoute.Download d -> download(method, response, d);
                 case CargoRoute.Yank y -> {
-                    requireMethod(method, y.yanked() ? "DELETE" : "PUT");
-                    reads.yank(y.name(), y.version(), y.yanked());
+                    requireMethod(method, y.isYanked() ? "DELETE" : "PUT");
+                    reads.yank(y.getName(), y.getVersion(), y.isYanked());
                     json(response, OK);
                 }
                 case CargoRoute.Unsupported u ->
                     throw new CargoException(
                             Reason.NOT_FOUND,
-                            "cargo " + u.command() + " isn't supported by Kiln; use the Kiln web app or the kiln CLI");
+                            "cargo " + u.getCommand()
+                                    + " isn't supported by Kiln; use the Kiln web app or the kiln CLI");
             }
         });
     }
@@ -91,9 +92,9 @@ public final class CargoRouteDispatcher {
         requireRead(request.getMethod());
         CargoIndexFileResponse file = reads.index(name);
         String etag = "\""
-                + Digest.sha256(file.body().getBytes(StandardCharsets.UTF_8)).encoded() + "\"";
+                + Digest.sha256(file.getBody().getBytes(StandardCharsets.UTF_8)).getEncoded() + "\"";
         String modified =
-                DateTimeFormatter.RFC_1123_DATE_TIME.format(file.modified().atOffset(ZoneOffset.UTC));
+                DateTimeFormatter.RFC_1123_DATE_TIME.format(file.getModified().atOffset(ZoneOffset.UTC));
         if (etag.equals(request.getHeader("If-None-Match"))) {
             response.setStatus(304);
             response.setHeader("ETag", etag);
@@ -104,16 +105,16 @@ public final class CargoRouteDispatcher {
                 new FormatResponse(
                         200,
                         "text/plain; charset=utf-8",
-                        file.body(),
+                        file.getBody(),
                         Map.of("ETag", etag, "Last-Modified", modified)));
     }
 
     private void download(String method, HttpServletResponse response, CargoRoute.Download route) throws IOException {
         requireRead(method);
-        try (BlobRead read = reads.download(route.name(), route.version())) {
+        try (BlobRead read = reads.download(route.getName(), route.getVersion())) {
             response.setStatus(200);
             response.setContentType("application/gzip");
-            response.setContentLengthLong(read.length());
+            response.setContentLengthLong(read.getLength());
             if ("GET".equals(method)) {
                 read.transferTo(Channels.newChannel(response.getOutputStream()));
             }

@@ -4,13 +4,16 @@
  */
 package com.bulmerkiln.observability.autoconfigure;
 
+import lombok.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Metrics settings.
- *
- * @param organizationLabel adds an {@code organization} label to per-organization metrics, for
- *     installations with several organizations
  */
 @ConfigurationProperties("kiln.observability")
-public record ObservabilityProperties(boolean organizationLabel) {}
+@Value
+public final class ObservabilityProperties {
+
+    /** Adds an {@code organization} label to per-organization metrics, for installations with several organizations. */
+    private final boolean organizationLabel;
+}

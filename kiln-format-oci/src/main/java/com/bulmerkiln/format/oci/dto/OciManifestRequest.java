@@ -5,14 +5,24 @@
 package com.bulmerkiln.format.oci.dto;
 
 import java.util.List;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /** The fields of a pushed manifest or index that validation needs; everything else is kept only in the raw bytes. */
-public record OciManifestRequest(
-        @Nullable Integer schemaVersion,
-        @Nullable String mediaType,
-        @Nullable String artifactType,
-        @Nullable OciDescriptorRequest config,
-        @Nullable List<OciDescriptorRequest> layers,
-        @Nullable List<OciDescriptorRequest> manifests,
-        @Nullable OciDescriptorRequest subject) {}
+@Value
+public final class OciManifestRequest {
+
+    private final @Nullable Integer schemaVersion;
+
+    private final @Nullable String mediaType;
+
+    private final @Nullable String artifactType;
+
+    private final @Nullable OciDescriptorRequest config;
+
+    private final @Nullable List<OciDescriptorRequest> layers;
+
+    private final @Nullable List<OciDescriptorRequest> manifests;
+
+    private final @Nullable OciDescriptorRequest subject;
+}

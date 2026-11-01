@@ -52,15 +52,16 @@ public final class OciBlobHandler {
             throw OciResponseUtils.unsupported();
         }
         try (BlobRead read = blobs.pull(oci, digest, request.getHeader("Range"))) {
-            boolean partial = read.length() != read.blobSize();
+            boolean partial = read.getLength() != read.getBlobSize();
             response.setStatus(partial ? 206 : 200);
             response.setContentType("application/octet-stream");
-            response.setContentLengthLong(read.length());
+            response.setContentLengthLong(read.getLength());
             response.setHeader(OciResponseUtils.DIGEST, digest.toString());
             response.setHeader("Accept-Ranges", "bytes");
             if (partial) {
-                long last = read.offset() + read.length() - 1;
-                response.setHeader("Content-Range", "bytes " + read.offset() + "-" + last + "/" + read.blobSize());
+                long last = read.getOffset() + read.getLength() - 1;
+                response.setHeader(
+                        "Content-Range", "bytes " + read.getOffset() + "-" + last + "/" + read.getBlobSize());
             }
             if (!head) {
                 read.transferTo(Channels.newChannel(response.getOutputStream()));
@@ -129,7 +130,7 @@ public final class OciBlobHandler {
         }
         try {
             OciRepositoryName name = new OciRepositoryName(from.substring(organization.length()));
-            return Optional.of(new OciRepositoryRequest(name, from, oci.baseUrl()));
+            return Optional.of(new OciRepositoryRequest(name, from, oci.getBaseUrl()));
         } catch (OciException e) {
             return Optional.empty();
         }

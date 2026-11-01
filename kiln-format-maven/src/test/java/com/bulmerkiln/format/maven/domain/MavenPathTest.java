@@ -43,12 +43,12 @@ class MavenPathTest {
         MavenPath.ArtifactFile timestamped = (MavenPath.ArtifactFile)
                 MavenPath.parse("com/acme/lib/1.0-SNAPSHOT/lib-1.0-20261025.101500-3-tests.jar");
         assertThat(timestamped.isSnapshot()).isTrue();
-        assertThat(timestamped.buildVersion()).isEqualTo("1.0-20261025.101500-3");
-        assertThat(timestamped.classifier()).isEqualTo("tests");
+        assertThat(timestamped.getBuildVersion()).isEqualTo("1.0-20261025.101500-3");
+        assertThat(timestamped.getClassifier()).isEqualTo("tests");
 
         MavenPath.ArtifactFile plain =
                 (MavenPath.ArtifactFile) MavenPath.parse("com/acme/lib/1.0-SNAPSHOT/lib-1.0-SNAPSHOT.jar");
-        assertThat(plain.buildVersion()).isNull();
+        assertThat(plain.getBuildVersion()).isNull();
     }
 
     @Test
@@ -121,7 +121,7 @@ class MavenPathTest {
     void parsingOnlyFailsWithInvalidPath(FuzzedDataProvider data) {
         try {
             MavenPath parsed = MavenPath.parse(data.consumeRemainingAsString());
-            assertThat(parsed.groupId()).doesNotContain("..", "/");
+            assertThat(parsed.getGroupId()).doesNotContain("..", "/");
         } catch (InvalidMavenPathException expected) {
             // The only failure a path may cause.
         }

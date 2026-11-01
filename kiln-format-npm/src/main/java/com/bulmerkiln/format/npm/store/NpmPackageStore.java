@@ -27,8 +27,8 @@ public final class NpmPackageStore {
 
     public static Optional<NpmPackageEntity> load(DSLContext tx, NpmPackageName name) {
         return PackageStore.find(tx, NpmFormatModule.FORMAT, name.toString())
-                .map(entry ->
-                        new NpmPackageEntity(entry, PackageStore.versions(tx, entry.id()), distTags(entry.metadata())));
+                .map(entry -> new NpmPackageEntity(
+                        entry, PackageStore.versions(tx, entry.getId()), distTags(entry.getMetadata())));
     }
 
     public static Map<String, String> distTags(String metadata) {

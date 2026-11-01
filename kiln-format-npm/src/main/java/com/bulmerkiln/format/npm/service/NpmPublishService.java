@@ -70,7 +70,7 @@ public final class NpmPublishService {
             NpmTarballSink tarball = sink.get();
             if (tarball == null) {
                 store.abortUpload(upload);
-                NpmPublication.deprecate(database, request, parsed.versions());
+                NpmPublication.deprecate(database, request, parsed.getVersions());
                 return;
             }
             NpmPublication publication = NpmPublication.of(request, parsed);
@@ -78,7 +78,8 @@ public final class NpmPublishService {
             BlobInfo blob = store.commit(upload, tarball.digest());
             database.run(tx -> publication.store(tx, request, namespace, blob));
             events.pushed(
-                    NpmAccessService.artifact(request, Optional.of(namespace), publication.version()), blob.size());
+                    NpmAccessService.artifact(request, Optional.of(namespace), publication.getVersion()),
+                    blob.getSize());
         } catch (RuntimeException | IOException e) {
             store.abortUpload(upload);
             throw e;
@@ -86,7 +87,7 @@ public final class NpmPublishService {
     }
 
     private static void requireName(NpmPackageRequest request, NpmPublishRequest parsed) {
-        if (!request.name().toString().equals(parsed.name())) {
+        if (!request.getName().toString().equals(parsed.getName())) {
             throw new NpmException(Reason.INVALID, "The package name doesn't match the URL");
         }
     }

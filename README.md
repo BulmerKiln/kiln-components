@@ -51,18 +51,23 @@ stay flat.
 
 | Package | Holds | Named |
 |---|---|---|
-| the module's own | Its contracts, and the implementation that makes it what it is (`OciFormatModule`, `FsBlobStore`), and its exceptions | `*FormatModule`, `*Exception`, … |
+| the module's own | The implementation that makes it what it is (`OciFormatModule`, `FsBlobStore`) and its exceptions; no interfaces | `*FormatModule`, `*Exception`, … |
 | `autoconfigure` | Spring wiring | `*AutoConfiguration`, `*Properties` |
 | `constant` | Enums and fixed values | `OciErrorCode`, `OciMediaTypes` |
 | `domain` | The format's own types and the rules that validate them | `OciManifest`, `OciManifestParser` |
 | `dto` | What crosses into and out of the operations: request bodies and results | `*Request`, `*Response` |
-| `entity` | Rows as the store reads them | `*Entity` |
-| `service` | Operations, and the access checks they make | `*Service` |
-| `store` | Database access, inside the caller's transaction | `*Store` |
+| `entity` | Rows as the repository reads them | `*Entity` |
+| `mapper` | MapStruct mappers between DTOs, entities and domain types | `*Mapper` |
+| `service` | Operations, and the access checks they make; nothing else | `*Service` |
+| `policy` | Decisions: a policy contract (`PermissionPolicy`, `ArtifactPolicy`) and its implementations | `*Policy` |
+| a package per contract kind | Every other contract with its implementations, which keep the contract's suffix: `access`, `lookup`, `resolver`, `directory`, `router`, … (never another module's package name) | `*Access`, `*Lookup`, `*Resolver`, … |
+| `repository` | Database access: Spring Data JDBC interfaces extending `KilnRepository`, run inside the caller's transaction | `*Repository` |
 | `util` | Static helpers | `*Utils` |
 | `web`, `web.handler` | The controller and route dispatch; a handler per kind of route | `*Controller`, `*Dispatcher`, `*Handler` |
 
-Calls go one way: `web` uses `service`, which uses `store`. A class with no layer of its own,
+Value types are immutable Lombok classes (`@Value`) with JavaBeans getters, not records. Calls go
+one way: `web` uses `service`, which uses `repository` and `mapper`; contract implementations
+sit beside `service` at the same level. A class with no layer of its own,
 such as a format's route parser, lives in `domain`. Tests sit in the package of the class they
 test; tests of the whole module stay in its own package.
 

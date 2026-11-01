@@ -129,7 +129,7 @@ public final class FsBlobStore implements BlobStore {
 
     /** Verifies the upload (STO-5), then renames it into place (STO-6). */
     private BlobInfo moveIntoPlace(FileChannel channel, Path source, Digest expected) throws IOException {
-        Digester digester = Digester.of(expected.algorithm());
+        Digester digester = Digester.of(expected.getAlgorithm());
         digester.update(Channels.newInputStream(channel.position(0)));
         Digest actual = digester.digest();
         if (!actual.equals(expected)) {
@@ -141,7 +141,7 @@ public final class FsBlobStore implements BlobStore {
         Path directory = Files.createDirectories(layout.blobDirectory(expected));
         try {
             // Replaces an existing blob on POSIX, which is safe: it's the same content.
-            Files.move(source, directory.resolve(expected.encoded()), StandardCopyOption.ATOMIC_MOVE);
+            Files.move(source, directory.resolve(expected.getEncoded()), StandardCopyOption.ATOMIC_MOVE);
         } catch (FileAlreadyExistsException e) {
             Files.deleteIfExists(source);
         }

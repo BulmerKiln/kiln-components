@@ -9,14 +9,24 @@ import com.bulmerkiln.format.domain.Refusal;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /** A complete response to send, with every header value checked for injection. */
-public record FormatResponse(int status, String contentType, String body, Map<String, String> headers) {
+@Value
+public final class FormatResponse {
+
+    private final int status;
+
+    private final String contentType;
+
+    private final String body;
+
+    private final Map<String, String> headers;
 
     /** RFC 9110 field names. */
     private static final Pattern HEADER_NAME = Pattern.compile("[A-Za-z0-9!#$%&'*+.^_`|~-]+");
 
-    public FormatResponse {
+    public FormatResponse(int status, String contentType, String body, Map<String, String> headers) {
         requireHeaderValue(contentType);
         for (Map.Entry<String, String> header : headers.entrySet()) {
             if (!HEADER_NAME.matcher(header.getKey()).matches()) {
@@ -24,7 +34,10 @@ public record FormatResponse(int status, String contentType, String body, Map<St
             }
             requireHeaderValue(header.getValue());
         }
-        headers = Map.copyOf(headers);
+        this.headers = Map.copyOf(headers);
+        this.status = status;
+        this.contentType = contentType;
+        this.body = body;
     }
 
     /**
@@ -35,15 +48,15 @@ public record FormatResponse(int status, String contentType, String body, Map<St
     public static FormatResponse refusal(FormatModule format, Refusal refusal) {
         RefusalResponse rendered = format.render(refusal);
         Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        headers.putAll(rendered.headers());
+        headers.putAll(rendered.getHeaders());
         // Removed before setting, so the canonical name replaces a format's spelling of it too.
         headers.remove("X-Content-Type-Options");
         headers.remove("WWW-Authenticate");
         headers.put("X-Content-Type-Options", "nosniff");
-        if (refusal.challenge() != null) {
-            headers.put("WWW-Authenticate", refusal.challenge());
+        if (refusal.getChallenge() != null) {
+            headers.put("WWW-Authenticate", refusal.getChallenge());
         }
-        return new FormatResponse(refusal.reason().status(), rendered.contentType(), rendered.body(), headers);
+        return new FormatResponse(refusal.getReason().status(), rendered.getContentType(), rendered.getBody(), headers);
     }
 
     /** Refuses CR, LF and other control characters, which would split or inject headers. */

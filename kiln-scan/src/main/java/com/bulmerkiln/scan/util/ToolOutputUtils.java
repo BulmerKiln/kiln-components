@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.scan.util;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -18,6 +19,7 @@ public final class ToolOutputUtils {
     private ToolOutputUtils() {}
 
     /** The report, or an exception for anything that isn't one JSON value, which fails the scan. */
+    @UntrustedInput
     public static JsonNode json(String output) {
         JsonNode node = MAPPER.readTree(output);
         if (node == null || node.isMissingNode()) {

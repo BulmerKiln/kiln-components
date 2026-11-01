@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.scan;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.scan.domain.ScanJob;
 import com.bulmerkiln.scan.domain.ScanResult;
 import tools.jackson.core.JacksonException;
@@ -37,10 +38,12 @@ public final class ScanProtocol {
         return MAPPER.writeValueAsBytes(message);
     }
 
+    @UntrustedInput
     public static ScanJob readJob(byte[] json) {
         return read(json, ScanJob.class);
     }
 
+    @UntrustedInput
     public static ScanResult readResult(byte[] json) {
         return read(json, ScanResult.class);
     }

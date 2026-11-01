@@ -1,7 +1,7 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
-# To regenerate this file, run: ./gradlew :kiln-permissions:dependencies --write-locks
+# To regenerate this file, run: ./gradlew :kiln-components:kiln-permissions:dependencies --write-locks
 antlr:antlr:2.7.7=pitest
 com.code-intelligence:jazzer-api:0.30.0=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 com.code-intelligence:jazzer-junit:0.30.0=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
@@ -105,6 +105,8 @@ org.junit.platform:junit-platform-commons:6.0.3=testCompileClasspath,testFixture
 org.junit.platform:junit-platform-engine:6.0.3=testCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.junit.platform:junit-platform-launcher:6.0.3=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.junit:junit-bom:6.0.3=annotationProcessor,checkstyle,compileClasspath,dependencyAnalysisKotlinMetadataClasspath,jacocoAgent,jacocoAnt,mainPmdAuxClasspath,pitest,pmd,runtimeClasspath,spotbugs,spotbugsSlf4j,testAnnotationProcessor,testCompileClasspath,testFixturesAnnotationProcessor,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.mapstruct:mapstruct-processor:1.6.3=annotationProcessor,testAnnotationProcessor,testFixturesAnnotationProcessor
+org.mapstruct:mapstruct:1.6.3=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.opentest4j:opentest4j:1.3.0=testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.ow2.asm:asm-analysis:9.11=pitest,spotbugs
 org.ow2.asm:asm-commons:9.11=pitest,spotbugs
@@ -123,25 +125,34 @@ org.pitest:pitest-html-report:1.30.1=pitest
 org.pitest:pitest-junit5-plugin:1.2.3=pitest
 org.pitest:pitest:1.30.1=pitest
 org.postgresql:postgresql:42.7.14=mainPmdAuxClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.projectlombok:lombok-mapstruct-binding:0.2.0=annotationProcessor,testAnnotationProcessor,testFixturesAnnotationProcessor
+org.projectlombok:lombok:1.18.48=annotationProcessor,compileClasspath,mainPmdAuxClasspath,testAnnotationProcessor,testCompileClasspath,testFixturesAnnotationProcessor,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testPmdAuxClasspath
 org.reactivestreams:reactive-streams:1.0.4=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.reflections:reflections:0.10.2=checkstyle
 org.rnorth.duct-tape:duct-tape:1.0.8=testPmdAuxClasspath,testRuntimeClasspath
 org.safere:safere:1.0.0=annotationProcessor,testAnnotationProcessor,testFixturesAnnotationProcessor
 org.slf4j:jul-to-slf4j:1.7.36=pmd
-org.slf4j:slf4j-api:2.0.17=mainPmdAuxClasspath,spotbugsSlf4j,testPmdAuxClasspath,testRuntimeClasspath
-org.slf4j:slf4j-api:2.0.20=spotbugs
+org.slf4j:slf4j-api:2.0.17=spotbugsSlf4j
+org.slf4j:slf4j-api:2.0.20=compileClasspath,mainPmdAuxClasspath,spotbugs,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.slf4j:slf4j-simple:2.0.17=spotbugsSlf4j
 org.slf4j:slf4j-simple:2.0.20=checkstyle
 org.springframework.boot:spring-boot-autoconfigure:4.1.2=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework.boot:spring-boot-test:4.1.2=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework.boot:spring-boot:4.1.2=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework.data:spring-data-bom:2026.0.2=annotationProcessor,checkstyle,compileClasspath,dependencyAnalysisKotlinMetadataClasspath,jacocoAgent,jacocoAnt,mainPmdAuxClasspath,pmd,runtimeClasspath,spotbugs,spotbugsSlf4j,testAnnotationProcessor,testCompileClasspath,testFixturesAnnotationProcessor,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework.data:spring-data-commons:4.1.2=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework.data:spring-data-jdbc:4.1.2=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework.data:spring-data-relational:4.1.2=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework.security:spring-security-bom:7.1.0=annotationProcessor,checkstyle,compileClasspath,dependencyAnalysisKotlinMetadataClasspath,jacocoAgent,jacocoAnt,mainPmdAuxClasspath,pitest,pmd,runtimeClasspath,spotbugs,spotbugsSlf4j,testAnnotationProcessor,testCompileClasspath,testFixturesAnnotationProcessor,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-aop:7.0.10=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-beans:7.0.10=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-context:7.0.10=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-core:7.0.10=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-expression:7.0.10=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-framework-bom:7.0.10=annotationProcessor,checkstyle,compileClasspath,dependencyAnalysisKotlinMetadataClasspath,jacocoAgent,jacocoAnt,mainPmdAuxClasspath,pitest,pmd,runtimeClasspath,spotbugs,spotbugsSlf4j,testAnnotationProcessor,testCompileClasspath,testFixturesAnnotationProcessor,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework:spring-jdbc:7.0.10=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.springframework:spring-test:7.0.10=testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.springframework:spring-tx:7.0.10=compileClasspath,mainPmdAuxClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.testcontainers:testcontainers-bom:2.0.5=annotationProcessor,checkstyle,compileClasspath,dependencyAnalysisKotlinMetadataClasspath,jacocoAgent,jacocoAnt,mainPmdAuxClasspath,pitest,pmd,runtimeClasspath,spotbugs,spotbugsSlf4j,testAnnotationProcessor,testCompileClasspath,testFixturesAnnotationProcessor,testFixturesCompileClasspath,testFixturesPmdAuxClasspath,testFixturesRuntimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 org.testcontainers:testcontainers-database-commons:2.0.5=testPmdAuxClasspath,testRuntimeClasspath
 org.testcontainers:testcontainers-jdbc:2.0.5=testPmdAuxClasspath,testRuntimeClasspath

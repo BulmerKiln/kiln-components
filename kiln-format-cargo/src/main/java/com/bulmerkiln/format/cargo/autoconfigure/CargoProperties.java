@@ -4,18 +4,22 @@
  */
 package com.bulmerkiln.format.cargo.autoconfigure;
 
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * The Cargo format's settings, under {@code kiln.format.cargo}.
- *
- * @param enabled whether the {@code /cargo/} routes exist; on unless set to {@code false}
- * @param maxCrateSize the largest {@code .crate} in bytes; 10 MiB unless set, as on crates.io
  */
 @ConfigurationProperties("kiln.format.cargo")
-public record CargoProperties(
-        @Nullable Boolean enabled, @Nullable Long maxCrateSize) {
+@Value
+public final class CargoProperties {
+
+    /** Whether the {@code /cargo/} routes exist; on unless set to {@code false}. */
+    private final @Nullable Boolean enabled;
+
+    /** The largest {@code .crate} in bytes; 10 MiB unless set, as on crates.io. */
+    private final @Nullable Long maxCrateSize;
 
     public long maxCrateSizeOrDefault() {
         return maxCrateSize == null ? 10L * 1024 * 1024 : maxCrateSize;

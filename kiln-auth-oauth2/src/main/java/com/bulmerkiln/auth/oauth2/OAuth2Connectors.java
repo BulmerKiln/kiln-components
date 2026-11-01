@@ -9,16 +9,20 @@ import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Value;
 
 /** Every OAuth2 connector from boot configuration, validated at startup. */
-public record OAuth2Connectors(List<OAuth2Connector> connectors) implements ConnectorSource {
+@Value
+public final class OAuth2Connectors implements ConnectorSource {
 
-    public OAuth2Connectors {
-        connectors = List.copyOf(connectors);
+    private final List<OAuth2Connector> connectors;
+
+    public OAuth2Connectors(List<OAuth2Connector> connectors) {
+        this.connectors = List.copyOf(connectors);
         Set<String> ids = new HashSet<>();
-        for (OAuth2Connector connector : connectors) {
-            if (!ids.add(connector.id().value())) {
-                throw new IllegalArgumentException("Duplicate connector ID: " + connector.id());
+        for (OAuth2Connector connector : this.connectors) {
+            if (!ids.add(connector.getId().getValue())) {
+                throw new IllegalArgumentException("Duplicate connector ID: " + connector.getId());
             }
         }
     }

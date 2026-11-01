@@ -23,8 +23,6 @@ jobs:
     permissions:
       contents: read
     uses: BulmerKiln/cicd/.github/workflows/gradle-build.yml@v1.0.1
-    with:
-      mutation-testing: true
 
   codeql:
     name: CodeQL

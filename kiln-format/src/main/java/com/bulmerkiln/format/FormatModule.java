@@ -25,6 +25,6 @@ public interface FormatModule {
      */
     String pathSegment();
 
-    /** Renders a refusal in this format's error body. Must escape {@link Refusal#message()}. */
+    /** Renders a refusal in this format's error body. Must escape {@code Refusal.message()}. */
     RefusalResponse render(Refusal refusal);
 }

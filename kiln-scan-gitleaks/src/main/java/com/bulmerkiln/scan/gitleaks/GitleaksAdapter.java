@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.scan.gitleaks;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.constant.Severity;
 import com.bulmerkiln.scan.domain.Finding;
@@ -61,8 +62,9 @@ public final class GitleaksAdapter implements ScannerAdapter {
     }
 
     @Override
+    @UntrustedInput
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutputUtils.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.getOutput());
         if (!root.isArray()) {
             throw new IllegalArgumentException("Not a Gitleaks report");
         }

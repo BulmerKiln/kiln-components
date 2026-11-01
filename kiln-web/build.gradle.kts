@@ -15,6 +15,8 @@ dependencies {
     compileOnlyApi("jakarta.servlet:jakarta.servlet-api")
     compileOnly("org.springframework.boot:spring-boot-tomcat")
     compileOnly("org.apache.tomcat.embed:tomcat-embed-core")
+    compileOnly("com.github.spotbugs:spotbugs-annotations")
+    testCompileOnly("com.github.spotbugs:spotbugs-annotations")
 
     testImplementation("org.springframework:spring-test")
     testImplementation("org.springframework.boot:spring-boot-test")

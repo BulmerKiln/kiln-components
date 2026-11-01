@@ -5,21 +5,29 @@
 package com.bulmerkiln.permissions.domain;
 
 import java.util.Objects;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Where a role applies: the whole organization, one namespace, or one repository or package in a
  * namespace. A scope covers itself and everything inside it.
  */
-public record Scope(@Nullable String namespace, @Nullable String repository) {
+@Value
+public final class Scope {
 
-    public Scope {
+    private final @Nullable String namespace;
+
+    private final @Nullable String repository;
+
+    public Scope(@Nullable String namespace, @Nullable String repository) {
         if (namespace != null && namespace.isBlank()) {
             throw new IllegalArgumentException("A namespace must not be blank");
         }
         if (repository != null && (repository.isBlank() || namespace == null)) {
             throw new IllegalArgumentException("A repository is named within a namespace");
         }
+        this.namespace = namespace;
+        this.repository = repository;
     }
 
     public static Scope organization() {

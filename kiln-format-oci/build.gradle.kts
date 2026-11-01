@@ -12,7 +12,7 @@ dependencies {
     api(project(":kiln-storage"))
     api("org.jooq:jooq")
     implementation("tools.jackson.core:jackson-databind")
-    api("com.fasterxml.jackson.core:jackson-annotations")
+    implementation("com.fasterxml.jackson.core:jackson-annotations")
     // Public auto-configuration classes carry its annotations, so it is part of this module's API.
     api("org.springframework.boot:spring-boot-autoconfigure")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

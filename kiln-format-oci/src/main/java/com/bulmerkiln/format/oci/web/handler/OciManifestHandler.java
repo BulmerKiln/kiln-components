@@ -54,11 +54,11 @@ public final class OciManifestHandler {
             throws IOException {
         OciManifestEntity manifest = manifests.pull(oci, reference, head);
         response.setStatus(200);
-        response.setContentType(manifest.mediaType());
-        response.setHeader(OciResponseUtils.DIGEST, manifest.digest().toString());
-        response.setContentLength(manifest.content().length);
+        response.setContentType(manifest.getMediaType());
+        response.setHeader(OciResponseUtils.DIGEST, manifest.getDigest().toString());
+        response.setContentLength(manifest.getContent().length);
         if (!head) {
-            response.getOutputStream().write(manifest.content());
+            response.getOutputStream().write(manifest.getContent());
         }
     }
 
@@ -69,9 +69,9 @@ public final class OciManifestHandler {
         // One byte past the limit, so the parser can tell an oversized manifest from one at the limit.
         byte[] content = request.getInputStream().readNBytes(maxManifestSize + 1);
         OciManifestPushResponse pushed = manifests.push(oci, reference, request.getContentType(), content);
-        response.setHeader("Location", oci.path("manifests/" + pushed.digest()));
-        response.setHeader(OciResponseUtils.DIGEST, pushed.digest().toString());
-        Digest subject = pushed.subject();
+        response.setHeader("Location", oci.path("manifests/" + pushed.getDigest()));
+        response.setHeader(OciResponseUtils.DIGEST, pushed.getDigest().toString());
+        Digest subject = pushed.getSubject();
         if (subject != null) {
             response.setHeader("OCI-Subject", subject.toString());
         }

@@ -7,23 +7,30 @@ package com.bulmerkiln.storage.domain;
 import com.bulmerkiln.storage.RangeNotSatisfiableException;
 import java.util.Locale;
 import java.util.Optional;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
  * An inclusive byte range within a representation of known size (RFC 9110, section 14.1.2).
- *
- * @param first the first byte, from 0
- * @param last the last byte, inclusive
  */
-public record ByteRange(long first, long last) {
+@Value
+public final class ByteRange {
+
+    /** The first byte, from 0. */
+    private final long first;
+
+    /** The last byte, inclusive. */
+    private final long last;
 
     /** Enough digits for any {@code long}; longer values can't be satisfiable anyway. */
     private static final int MAX_DIGITS = 18;
 
-    public ByteRange {
+    public ByteRange(long first, long last) {
         if (first < 0 || last < first) {
             throw new IllegalArgumentException("Invalid range " + first + "-" + last);
         }
+        this.first = first;
+        this.last = last;
     }
 
     public long length() {

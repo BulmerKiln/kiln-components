@@ -4,5 +4,13 @@
  */
 package com.bulmerkiln.format.oci.dto;
 
+import lombok.Value;
+
 /** The referrers index, and whether it was filtered by artifact type. */
-public record OciReferrersResponse(String body, boolean filtered) {}
+@Value
+public final class OciReferrersResponse {
+
+    private final String body;
+
+    private final boolean filtered;
+}

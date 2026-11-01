@@ -63,12 +63,12 @@ public final class MavenMetadata {
         xml.append("  <plugins>\n");
         for (MavenPlugin plugin : plugins) {
             xml.append("    <plugin>\n");
-            String name = plugin.name();
+            String name = plugin.getName();
             if (name != null) {
                 element(xml, "      ", "name", name);
             }
-            element(xml, "      ", "prefix", plugin.prefix());
-            element(xml, "      ", "artifactId", plugin.artifactId());
+            element(xml, "      ", "prefix", plugin.getPrefix());
+            element(xml, "      ", "artifactId", plugin.getArtifactId());
             xml.append("    </plugin>\n");
         }
         return xml.append("  </plugins>\n");
@@ -93,9 +93,9 @@ public final class MavenMetadata {
         xml.append("    <snapshotVersions>\n");
         for (MavenSnapshots.Build build : latest) {
             xml.append("      <snapshotVersion>\n");
-            optionalElement(xml, "classifier", build.classifier());
-            element(xml, "        ", "extension", build.extension());
-            element(xml, "        ", "value", build.value());
+            optionalElement(xml, "classifier", build.getClassifier());
+            element(xml, "        ", "extension", build.getExtension());
+            element(xml, "        ", "value", build.getValue());
             element(xml, "        ", "updated", build.timestamp().replace(".", ""));
             xml.append("      </snapshotVersion>\n");
         }

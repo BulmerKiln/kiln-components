@@ -28,7 +28,7 @@ class BlobTypesTest {
 
     @Test
     void blobInfoRefusesNegativeSizesAndMissingDigests() {
-        assertThat(new BlobInfo(EMPTY, 0).size()).isZero();
+        assertThat(new BlobInfo(EMPTY, 0).getSize()).isZero();
         assertThatIllegalArgumentException().isThrownBy(() -> new BlobInfo(EMPTY, -1));
         assertThatNullPointerException().isThrownBy(() -> new BlobInfo(null, 0));
     }
@@ -38,7 +38,7 @@ class BlobTypesTest {
         Set<UploadId> seen = new HashSet<>();
         for (int i = 0; i < 1000; i++) {
             UploadId id = UploadId.random();
-            assertThat(id.value().version()).isEqualTo(4);
+            assertThat(id.getValue().version()).isEqualTo(4);
             assertThat(seen.add(id)).isTrue();
         }
     }

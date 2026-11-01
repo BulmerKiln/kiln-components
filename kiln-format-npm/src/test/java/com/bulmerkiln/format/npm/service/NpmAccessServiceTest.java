@@ -78,8 +78,8 @@ class NpmAccessServiceTest {
                 .perform(NpmHarness.at(HttpMethod.GET, "/npm/-/whoami"))
                 .andExpect(jsonPath("$.username")
                         .value(((Principal.Member) NpmHarness.WRITER)
-                                .id()
-                                .value()
+                                .getId()
+                                .getValue()
                                 .toString()));
         npm.callAs(NpmHarness.ANONYMOUS);
         npm.mvc().perform(NpmHarness.at(HttpMethod.GET, "/npm/-/whoami")).andExpect(status().isUnauthorized());

@@ -64,7 +64,7 @@ class MavenPluginMetadataTest {
         assertThatThrownBy(() -> MavenPluginMetadata.parse(bytes(xml)))
                 .isInstanceOfSatisfying(
                         RefusedException.class,
-                        e -> assertThat(e.refusal().reason()).isEqualTo(Reason.INVALID));
+                        e -> assertThat(e.refusal().getReason()).isEqualTo(Reason.INVALID));
     }
 
     /** FMT-MVN-17: names are bounded and carry no control characters; plugins are bounded too. */
@@ -86,7 +86,7 @@ class MavenPluginMetadataTest {
         try {
             MavenPluginMetadata.parse(data.consumeRemainingAsBytes());
         } catch (RefusedException expected) {
-            assertThat(expected.refusal().reason()).isEqualTo(Reason.INVALID);
+            assertThat(expected.refusal().getReason()).isEqualTo(Reason.INVALID);
         }
     }
 

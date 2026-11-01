@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.scan.osv;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.constant.Severity;
 import com.bulmerkiln.scan.domain.Finding;
@@ -64,8 +65,9 @@ public final class OsvScannerAdapter implements ScannerAdapter {
     }
 
     @Override
+    @UntrustedInput
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutputUtils.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.getOutput());
         JsonNode results = root.path("results");
         if (!root.isObject() || !results.isArray()) {
             throw new IllegalArgumentException("Not an OSV-Scanner report");

@@ -25,8 +25,8 @@ class NpmPackageNameTest {
     @Test
     void splitsScopes() {
         NpmPackageName name = NpmPackageName.parse("@acme/ui");
-        assertThat(name.scope()).isEqualTo("acme");
-        assertThat(name.name()).isEqualTo("ui");
+        assertThat(name.getScope()).isEqualTo("acme");
+        assertThat(name.getName()).isEqualTo("ui");
         assertThat(name.urlEncoded()).isEqualTo("@acme%2fui");
         assertThat(NpmPackageName.parse("lodash").urlEncoded()).isEqualTo("lodash");
     }

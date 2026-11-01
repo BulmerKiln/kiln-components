@@ -40,8 +40,8 @@ public final class S3KeyUtils {
     }
 
     public String blob(OrganizationId organization, Digest digest) {
-        String hex = digest.encoded();
-        return prefix + organization + "/blobs/" + digest.algorithm().id() + "/" + hex.substring(0, 2) + "/" + hex;
+        String hex = digest.getEncoded();
+        return prefix + organization + "/blobs/" + digest.getAlgorithm().id() + "/" + hex.substring(0, 2) + "/" + hex;
     }
 
     public String upload(OrganizationId organization, UploadId upload) {

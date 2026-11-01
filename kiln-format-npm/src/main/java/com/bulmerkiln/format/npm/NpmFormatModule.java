@@ -28,6 +28,6 @@ public final class NpmFormatModule implements FormatModule {
 
     @Override
     public RefusalResponse render(Refusal refusal) {
-        return RefusalResponse.of("application/json", FormatJsonUtils.write(Map.of("error", refusal.message())));
+        return RefusalResponse.of("application/json", FormatJsonUtils.write(Map.of("error", refusal.getMessage())));
     }
 }

@@ -5,5 +5,14 @@
 package com.bulmerkiln.registry.entity;
 
 import com.bulmerkiln.core.digest.Digest;
+import lombok.Value;
 
-public record PackageFileEntity(String name, Digest digest, long size) {}
+@Value
+public final class PackageFileEntity {
+
+    private final String name;
+
+    private final Digest digest;
+
+    private final long size;
+}

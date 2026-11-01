@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -21,28 +22,34 @@ public sealed interface MavenPath {
 
     int MAX_LENGTH = 1024;
 
-    String groupId();
+    String getGroupId();
 
-    String artifactId();
+    String getArtifactId();
 
     /** Set when the path is a checksum sidecar, such as {@code lib-1.0.jar.sha1}. */
     @Nullable
-    MavenChecksumAlgorithm checksum();
+    MavenChecksumAlgorithm getChecksum();
 
     /**
      * A file of a version: a jar, POM, {@code .module}, signature or other attachment.
-     *
-     * @param buildVersion the timestamped build of a SNAPSHOT, such as {@code 1.0-20261025.101500-3}
      */
-    record ArtifactFile(
-            String groupId,
-            String artifactId,
-            String version,
-            @Nullable String buildVersion,
-            @Nullable String classifier,
-            String extension,
-            @Nullable MavenChecksumAlgorithm checksum)
-            implements MavenPath {
+    @Value
+    static final class ArtifactFile implements MavenPath {
+
+        private final String groupId;
+
+        private final String artifactId;
+
+        private final String version;
+
+        /** The timestamped build of a SNAPSHOT, such as {@code 1.0-20261025.101500-3}. */
+        private final @Nullable String buildVersion;
+
+        private final @Nullable String classifier;
+
+        private final String extension;
+
+        private final @Nullable MavenChecksumAlgorithm checksum;
 
         public boolean isSnapshot() {
             return version.endsWith(SNAPSHOT);
@@ -50,11 +57,17 @@ public sealed interface MavenPath {
     }
 
     /** A {@code maven-metadata.xml}: per artifact, or per SNAPSHOT version when {@code version} is set. */
-    record Metadata(
-            String groupId,
-            String artifactId,
-            @Nullable String version,
-            @Nullable MavenChecksumAlgorithm checksum) implements MavenPath {}
+    @Value
+    static final class Metadata implements MavenPath {
+
+        private final String groupId;
+
+        private final String artifactId;
+
+        private final @Nullable String version;
+
+        private final @Nullable MavenChecksumAlgorithm checksum;
+    }
 
     String SNAPSHOT = "-SNAPSHOT";
     String METADATA = "maven-metadata.xml";

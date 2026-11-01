@@ -4,10 +4,12 @@
  */
 package com.bulmerkiln.registry.autoconfigure;
 
+import com.bulmerkiln.core.lookup.Lookup;
 import com.bulmerkiln.database.Database;
 import com.bulmerkiln.database.autoconfigure.DatabaseAutoConfiguration;
 import com.bulmerkiln.format.ArtifactPolicy;
-import com.bulmerkiln.permissions.VisibilityLookup;
+import com.bulmerkiln.permissions.constant.Visibility;
+import com.bulmerkiln.permissions.domain.Scope;
 import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
 import com.bulmerkiln.registry.service.RegistryPolicy;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -24,9 +26,10 @@ public class RegistryAutoConfiguration {
         return new RegistryPolicy(database);
     }
 
+    /** Declared as the generic lookup, so an assembly's own visibility lookup replaces it. */
     @Bean
-    @ConditionalOnMissingBean(VisibilityLookup.class)
-    VisibilityLookup namespaceVisibility(Database database) {
+    @ConditionalOnMissingBean
+    Lookup<Scope, Visibility> namespaceVisibility(Database database) {
         return new NamespaceVisibilityLookup(database);
     }
 }

@@ -98,7 +98,10 @@ class SchemaLinterTest {
                 CREATE POLICY organization ON parts %s
                     WITH CHECK (organization_id = current_setting('app.organization_id')::uuid)
                 """.formatted(ORGANIZATION_POLICY),
-                "CREATE TABLE leases (job text PRIMARY KEY, holder text UNIQUE)");
+                "CREATE TABLE leases (job text PRIMARY KEY, holder text UNIQUE)",
+                // A key to an instance table other than organizations names no organization's row.
+                "CREATE TABLE leases (job text PRIMARY KEY); "
+                        + "ALTER TABLE gadgets ADD COLUMN job text REFERENCES leases (job)");
     }
 
     @ParameterizedTest

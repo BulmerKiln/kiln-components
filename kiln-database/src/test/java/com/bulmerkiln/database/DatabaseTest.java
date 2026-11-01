@@ -39,7 +39,7 @@ class DatabaseTest {
         database.instanceTransaction(db -> {
             for (Organization organization : List.of(ACME, GLOBEX)) {
                 db.insertInto(table("organizations"), field("id"), field("slug"), field("display_name"))
-                        .values(organization.id().value(), organization.slug(), organization.slug())
+                        .values(organization.getId().getValue(), organization.getSlug(), organization.getSlug())
                         .execute();
             }
             return null;
@@ -68,7 +68,7 @@ class DatabaseTest {
                         ACME,
                         () -> database.transaction(db -> db.insertInto(
                                         table("widgets"), field("organization_id"), field("id"), field("name"))
-                                .values(GLOBEX.id().value(), UUID.randomUUID(), "planted")
+                                .values(GLOBEX.getId().getValue(), UUID.randomUUID(), "planted")
                                 .execute())))
                 .isInstanceOf(DataAccessException.class)
                 .hasMessageContaining("row-level security");
@@ -143,7 +143,7 @@ class DatabaseTest {
 
     private static int insertWidget(DSLContext db, Organization organization, String name) {
         return db.insertInto(table("widgets"), field("organization_id"), field("id"), field("name"))
-                .values(organization.id().value(), UUID.randomUUID(), name)
+                .values(organization.getId().getValue(), UUID.randomUUID(), name)
                 .execute();
     }
 

@@ -8,14 +8,21 @@ import com.bulmerkiln.format.RefusedException;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.domain.Refusal;
 import java.util.regex.Pattern;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
  * A Maven plugin in its group's metadata: the goal prefix that lets {@code mvn <prefix>:<goal>}
  * find {@code artifactId} (Maven "Repository Metadata", group level).
  */
-public record MavenPlugin(
-        String artifactId, String prefix, @Nullable String name) {
+@Value
+public final class MavenPlugin {
+
+    private final String artifactId;
+
+    private final String prefix;
+
+    private final @Nullable String name;
 
     private static final Pattern PREFIX = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,63}");
 
@@ -25,7 +32,7 @@ public record MavenPlugin(
     /** Longer than any plugin's display name; it's shown, never interpreted. */
     static final int MAX_NAME = 256;
 
-    public MavenPlugin {
+    public MavenPlugin(String artifactId, String prefix, @Nullable String name) {
         if (artifactId.length() > MAX_ARTIFACT_ID
                 || !MavenPath.SEGMENT.matcher(artifactId).matches()) {
             throw invalid("Invalid plugin artifactId");
@@ -36,6 +43,9 @@ public record MavenPlugin(
         if (name != null && (name.length() > MAX_NAME || name.chars().anyMatch(Character::isISOControl))) {
             throw invalid("Invalid plugin name");
         }
+        this.artifactId = artifactId;
+        this.prefix = prefix;
+        this.name = name;
     }
 
     private static RefusedException invalid(String message) {

@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.web.service;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.core.organization.OrganizationDirectory;
 import com.bulmerkiln.core.organization.OrganizationResolver;
 import java.util.Optional;
@@ -22,6 +23,7 @@ public final class PathOrganizationResolver implements OrganizationResolver {
     }
 
     @Override
+    @UntrustedInput
     public Optional<Resolution> resolve(String path) {
         int slash = path.indexOf('/');
         String slug = slash < 0 ? path : path.substring(0, slash);

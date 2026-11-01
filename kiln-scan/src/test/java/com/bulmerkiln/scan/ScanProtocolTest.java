@@ -73,7 +73,7 @@ class ScanProtocolTest {
         String json = new String(ScanProtocol.write(result(TRIVY)), StandardCharsets.UTF_8)
                 .replaceFirst("\\{", "{\"futureField\":1,");
         assertThat(ScanProtocol.readResult(json.getBytes(StandardCharsets.UTF_8))
-                        .scanner())
+                        .getScanner())
                 .isEqualTo(TRIVY);
     }
 
@@ -122,7 +122,7 @@ class ScanProtocolTest {
                                 ScanResult.Status.INCOMPLETE,
                                 "max unpacked size",
                                 List.of())
-                        .incompleteReason())
+                        .getIncompleteReason())
                 .isEqualTo("max unpacked size");
     }
 
@@ -217,6 +217,11 @@ class ScanProtocolTest {
         } catch (IllegalArgumentException expected) {
             // Invalid and unsupported messages are both IllegalArgumentExceptions.
         }
+        try {
+            ScanProtocol.readJob(data.consumeRemainingAsBytes());
+        } catch (IllegalArgumentException expected) {
+            // Same for jobs.
+        }
     }
 
     @Test
@@ -224,7 +229,7 @@ class ScanProtocolTest {
         String json = new String(ScanProtocol.write(result(new ScannerId("guarddog"))), StandardCharsets.UTF_8);
         assertThat(json).contains("\"scanner\":\"guarddog\"");
         assertThat(ScanProtocol.readResult(json.getBytes(StandardCharsets.UTF_8))
-                        .scanner())
+                        .getScanner())
                 .isEqualTo(new ScannerId("guarddog"));
     }
 

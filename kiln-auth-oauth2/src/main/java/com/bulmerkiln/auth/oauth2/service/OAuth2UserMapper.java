@@ -30,16 +30,17 @@ public final class OAuth2UserMapper {
      */
     public static ExternalIdentity map(
             OAuth2Connector connector, Map<String, ?> userInfo, Collection<String> extraGroups) {
-        OAuth2Connector.UserPaths paths = connector.paths();
-        String subject = IdentityUtils.subject(subject(paths.userId().read(userInfo)));
+        OAuth2Connector.UserPaths paths = connector.getPaths();
+        String subject = IdentityUtils.subject(subject(paths.getUserId().read(userInfo)));
         Set<String> groups = new LinkedHashSet<>();
-        OAuth2JsonPath groupsPath = paths.groups();
+        OAuth2JsonPath groupsPath = paths.getGroups();
         if (groupsPath != null) {
             groups.addAll(IdentityUtils.groups(groupsPath.read(userInfo)));
         }
         groups.addAll(IdentityUtils.groups(List.copyOf(extraGroups)));
         try {
-            return new ExternalIdentity(connector.id(), connector.issuer(), subject, email(paths, userInfo), groups);
+            return new ExternalIdentity(
+                    connector.getId(), connector.getIssuer(), subject, email(paths, userInfo), groups);
         } catch (IllegalArgumentException e) {
             throw new InvalidIdentityException("The user-info response has unusable groups");
         }
@@ -47,8 +48,8 @@ public final class OAuth2UserMapper {
 
     /** Trusted only when the connector also says where the IdP marks it verified (AUTH-OAUTH2-2). */
     private static @Nullable String email(OAuth2Connector.UserPaths paths, Map<String, ?> userInfo) {
-        OAuth2JsonPath email = paths.email();
-        OAuth2JsonPath verified = paths.emailVerified();
+        OAuth2JsonPath email = paths.getEmail();
+        OAuth2JsonPath verified = paths.getEmailVerified();
         if (email == null || verified == null) {
             return null;
         }

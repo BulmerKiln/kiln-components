@@ -23,7 +23,7 @@ public class ConnectorAutoConfiguration {
     @ConditionalOnMissingBean(ConnectorRegistry.class)
     ConnectorRegistry connectorRegistry(ObjectProvider<ConnectorSource> sources) {
         StaticConnectorRegistry registry = new StaticConnectorRegistry(sources.orderedStream()
-                .flatMap(source -> source.connectors().stream())
+                .flatMap(source -> source.getConnectors().stream())
                 .toList());
         if (registry.connectors().isEmpty()) {
             throw new IllegalStateException("Kiln needs at least one sign-in connector; "

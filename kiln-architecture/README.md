@@ -37,16 +37,18 @@ against the compiled classes of every module at once.
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| ARCH-1 | `kiln-core` must depend on nothing but the JDK and JSpecify | `ArchitectureTest` |
+| ARCH-1 | `kiln-core` must depend on nothing but the JDK and JSpecify, and Lombok's `@Generated` marker on the code Lombok writes | `ArchitectureTest` |
 | ARCH-2 | Every production class must belong to a module listed in `ArchitectureTest.ALLOWED`, and depend only on its own module and the modules listed for it. That table is the module dependency graph: a subsystem never depends on its implementations, an implementation never on a sibling, and a new module or dependency is added to it in the same pull request. Today: `storage.fs`, `storage.s3` on `storage`; each `format.*` on `format`; `auth.oidc`, `auth.oauth2` on `auth`; `scan.orchestration` and each adapter on `scan`; `permissions` and `observability` on `format`; everything may use `core` except `auth`, which needs nothing | `ArchitectureTest` |
 | ARCH-3 | There must be no dependency cycle between modules (not top-level packages: a format module may use `kiln-web`, which uses `kiln-format`) | `ArchitectureTest` |
 | ARCH-4 | The modules the scan worker loads (`kiln-scan` and the `kiln-scan-*` adapters) must not depend on Spring or Micrometer | `ArchitectureTest` |
-| ARCH-5 | Spring may appear only in classes named `*AutoConfiguration`, `*Properties` or `*Controller`, so wiring lives in auto-configurations and HTTP in thin controllers that each module registers only when it's enabled; parsing, policy and storage stay free of Spring | `ArchitectureTest` |
+| ARCH-5 | Spring may appear only in classes named `*AutoConfiguration`, `*Properties` or `*Controller`, so wiring lives in auto-configurations and HTTP in thin controllers that each module registers only when it's enabled; parsing, policy and storage stay free of Spring. The data layer is the one exception: `*Repository` interfaces, `*Entity` rows (for Spring Data's mapping annotations) and `kiln-database`'s own package (Kiln's transactions) may use Spring's data access (`org.springframework.data`, `jdbc`, `transaction`, `dao`) and no other part of Spring | `ArchitectureTest` |
 | ARCH-6 | A class annotated `@AutoConfiguration` must be named `*AutoConfiguration`, and the other way round; a class annotated `@ConfigurationProperties` must be named `*Properties` | `ArchitectureTest` |
 | ARCH-7 | Every `Throwable` must be named `*Exception` | `ArchitectureTest` |
 | ARCH-8 | No production class may write to standard output or error, throw `Throwable`, `Exception` or `RuntimeException` directly, use `java.util.logging` or Joda-Time, or use field injection | `ArchitectureTest` |
-| ARCH-10 | Implementations must be named for their contract: `*FormatModule`, `*Access`, `*Listener`, `*BlobStore`, `*Router`, `*Connector`, `*Connectors` (a connector source), `*Registry`, `*Policy`, `*Adapter`, `*Directory`, `*Resolver` | `ArchitectureTest` |
+| ARCH-10 | Implementations must be named for their contract: `*FormatModule`, `*Access`, `*Listener`, `*BlobStore`, `*Router`, `*Connector`, `*Connectors` (a connector source), `*Registry`, `*Policy`, `*Adapter`, `*Directory`, `*Resolver`, `*KeyProvider`, `*Lookup` | `ArchitectureTest` |
 | ARCH-11 | A module must reach an optional dependency (`permissions` on `format` and `database`, `observability` on `format`) only through an auto-configuration annotated with `@ConditionalOnClass`: a class that uses the optional module is used only by such auto-configurations, or by other classes that use it | `ArchitectureTest` |
+| ARCH-12 | Only `kiln-database` and auto-configurations may depend on `DataSource` or Spring's JDBC templates and connection utilities: every other class reaches the database through a repository, inside `Database`'s transactions. `*Repository` interfaces are exempt, since `@Query` names Spring's row-mapper types and an interface holds no connection | `ArchitectureTest` |
+| ARCH-13 | A module's root package must hold no interfaces: each contract lives in the package of its kind, beside its implementations. A `service` package must hold only classes named `*Service`, and `PermissionPolicy` and `ArtifactPolicy` implementations must live in a `policy` package. Other contracts and their implementations, which keep the contract's suffix (ARCH-10), live in a package named for their kind (`access`, `lookup`, `resolver`, `directory`, `router`, …). Modules not yet converted are listed in `ArchitectureTest` until the data access phase reaches them | `ArchitectureTest` |
 | ARCH-9 | The rules must check every module's production classes and no test classes, so none passes by checking nothing | `ArchitectureTest` |
 
 ## Configuration
@@ -91,4 +93,4 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: ARCH-1 to ARCH-11.
+Implemented: ARCH-1 to ARCH-13.

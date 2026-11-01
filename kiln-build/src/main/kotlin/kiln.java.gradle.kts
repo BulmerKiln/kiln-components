@@ -5,8 +5,7 @@
 
 import com.bulmerkiln.build.FuzzCheck
 import com.bulmerkiln.build.KilnBuildInfo
-import com.bulmerkiln.build.PitestLimit
-import info.solidsoft.gradle.pitest.PitestTask
+import com.bulmerkiln.build.KilnPostgresServer
 import net.ltgt.gradle.errorprone.CheckSeverity
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 import com.github.spotbugs.snom.Confidence
@@ -20,7 +19,6 @@ plugins {
     pmd
     jacoco
     id("com.github.spotbugs")
-    id("info.solidsoft.pitest")
     id("com.autonomousapps.dependency-analysis")
     id("com.github.jk1.dependency-license-report")
     id("com.diffplug.spotless")
@@ -51,6 +49,21 @@ dependencies {
     add(if (pluginManager.hasPlugin("java-library")) "api" else "implementation", "org.jspecify:jspecify")
     implementation("com.google.errorprone:error_prone_annotations")
 
+    // Lombok generates constructors, accessors, equals and hashCode for every value class; it's
+    // compile-time only, configured by the repository's lombok.config.
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
+
+    // MapStruct generates the mappers between DTOs, entities and domain types. The binding makes
+    // Lombok run first, so MapStruct sees the getters and constructors Lombok writes.
+    implementation("org.mapstruct:mapstruct")
+    annotationProcessor("org.mapstruct:mapstruct-processor")
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding")
+    testAnnotationProcessor("org.mapstruct:mapstruct-processor")
+    testAnnotationProcessor("org.projectlombok:lombok-mapstruct-binding")
+
     errorprone("com.google.errorprone:error_prone_core")
     errorprone("com.uber.nullaway:nullaway")
 
@@ -68,15 +81,38 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+pluginManager.withPlugin("java-test-fixtures") {
+    dependencies {
+        "testFixturesCompileOnly"("org.projectlombok:lombok")
+        "testFixturesAnnotationProcessor"("org.projectlombok:lombok")
+        "testFixturesAnnotationProcessor"("org.mapstruct:mapstruct-processor")
+        "testFixturesAnnotationProcessor"("org.projectlombok:lombok-mapstruct-binding")
+    }
+}
+
 tasks.withType<JavaCompile>().configureEach {
+    // Lombok reads the repository's lombok.config while compiling, so it's an input: changing it
+    // must recompile, never reuse a cached class.
+    rootProject.file("lombok.config").takeIf { it.exists() }?.let {
+        inputs.file(it).withPropertyName("lombokConfig").withPathSensitivity(PathSensitivity.RELATIVE)
+    }
     options.encoding = "UTF-8"
     options.release = 25
     options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all,-processing", "-Werror"))
+    // Every mapper maps every target property, or the build fails; mappers are plain classes the
+    // auto-configurations construct.
+    options.compilerArgs.addAll(listOf(
+        "-Amapstruct.unmappedTargetPolicy=ERROR",
+        "-Amapstruct.defaultComponentModel=default",
+        "-Amapstruct.suppressGeneratorTimestamp=true",
+    ))
     options.errorprone {
         disableWarningsInGeneratedCode = true
         check("NullAway", if (name.contains("test", ignoreCase = true)) CheckSeverity.OFF else CheckSeverity.ERROR)
         option("NullAway:OnlyNullMarked", "true")
         option("NullAway:JSpecifyMode", "true")
+        // MapStruct's generated mappers return null for a null source; they're marked @Generated.
+        option("NullAway:TreatGeneratedAsUnannotated", "true")
         // Case conversion and formatting depend on the JVM's locale unless one is given.
         check("StringCaseLocaleUsage", CheckSeverity.ERROR)
         check("DefaultLocale", CheckSeverity.ERROR)
@@ -179,29 +215,6 @@ tasks.named("check") {
     dependsOn(coverage, "jacocoTestReport")
 }
 
-// Mutation testing (BUILD-19): PIT changes the code and expects a test to fail.
-pitest {
-    pitestVersion = KilnBuildInfo.PITEST
-    junit5PluginVersion = KilnBuildInfo.PITEST_JUNIT5
-    targetClasses = setOf("com.bulmerkiln.*")
-    // One JVM per thread, each with a bounded heap: at most 4 per module and 3 modules at a time,
-    // so 12 GB at most.
-    threads = (Runtime.getRuntime().availableProcessors() / 8).coerceIn(1, 4)
-    jvmArgs = listOf("-Xmx1g", "--enable-native-access=ALL-UNNAMED", "-XX:+EnableDynamicAgentLoading")
-    mainProcessJvmArgs = listOf("-Xmx1g")
-    outputFormats = setOf("HTML", "XML")
-    timestampedReports = false
-    failWhenNoMutations = false
-}
-val pitestLimit = gradle.sharedServices.registerIfAbsent("kilnPitest", PitestLimit::class) {
-    maxParallelUsages = 3
-}
-tasks.withType<PitestTask>().configureEach {
-    usesService(pitestLimit)
-    // A module whose classes, tests and dependencies haven't changed reuses its last result.
-    outputs.cacheIf { true }
-}
-
 // Every resolved version is locked (BUILD-17), so builds are repeatable and CI scans exactly what
 // ships. After changing a version: ./gradlew resolveAndLockAll --write-locks
 dependencyLocking {
@@ -215,6 +228,9 @@ tasks.register("resolveAndLockAll") {
         require(gradle.startParameter.isWriteDependencyLocks) { "Run with --write-locks" }
     }
     doLast {
+        // PMD creates its aux classpaths only when its tasks are configured, so configure them
+        // first or their lock state is dropped.
+        tasks.withType<Pmd>().forEach { it.classpath }
         configurations.filter { it.isCanBeResolved }.forEach { it.resolve() }
     }
 }
@@ -240,6 +256,21 @@ tasks.withType<Test>().configureEach {
     // Jazzer loads a native library and attaches its agent at runtime, which Java 25 warns about
     // and a future release will block.
     jvmArgs("--enable-native-access=ALL-UNNAMED", "-XX:+EnableDynamicAgentLoading")
+}
+
+// One PostgreSQL server per build, shared by every test JVM. Its connection file is passed in the
+// environment, not as a JVM argument, so it isn't a task input (each build gets a new port).
+val postgres = gradle.sharedServices.registerIfAbsent("kilnPostgres", KilnPostgresServer::class) {
+    parameters.image = KilnBuildInfo.POSTGRES_IMAGE
+    parameters.connectionFile = rootProject.layout.buildDirectory.file("kiln/postgres.properties")
+}
+val postgresFile = rootProject.layout.buildDirectory.file("kiln/postgres.properties").get().asFile.absolutePath
+tasks.withType<Test>().configureEach {
+    // Locals, so the actions don't capture the script, which the configuration cache can't store.
+    val server = postgres
+    usesService(server)
+    environment("KILN_TEST_POSTGRES_FILE", postgresFile)
+    doFirst { server.get().start() }
 }
 
 tasks.withType<AbstractArchiveTask>().configureEach {

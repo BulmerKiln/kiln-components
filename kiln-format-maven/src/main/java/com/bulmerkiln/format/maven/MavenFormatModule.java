@@ -27,6 +27,6 @@ public final class MavenFormatModule implements FormatModule {
     @Override
     public RefusalResponse render(Refusal refusal) {
         // Maven over HTTP/2 has no reason phrase, so the reason is always in the body too.
-        return RefusalResponse.of("text/plain; charset=utf-8", refusal.message());
+        return RefusalResponse.of("text/plain; charset=utf-8", refusal.getMessage());
     }
 }

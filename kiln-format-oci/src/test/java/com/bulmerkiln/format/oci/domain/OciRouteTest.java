@@ -40,7 +40,7 @@ class OciRouteTest {
         "a/blobs/uploads/b/blobs/uploads/, a/blobs/uploads/b"
     })
     void takesTheLastRouteKeyword(String path, String name) {
-        assertThat(OciRoute.parse(path).repository().value()).isEqualTo(name);
+        assertThat(OciRoute.parse(path).getRepository().getValue()).isEqualTo(name);
     }
 
     @ParameterizedTest

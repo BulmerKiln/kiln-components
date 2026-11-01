@@ -26,7 +26,7 @@ public class FormatAutoConfiguration {
     FormatRegistry formatRegistry(ObjectProvider<FormatModule> modules, Environment environment) {
         return new FormatRegistry(modules.orderedStream()
                 .filter(module -> environment.getProperty(
-                        "kiln.format." + module.format().id() + ".enabled", Boolean.class, true))
+                        "kiln.format." + module.format().getId() + ".enabled", Boolean.class, true))
                 .toList());
     }
 

@@ -5,6 +5,13 @@
 package com.bulmerkiln.format.oci.dto;
 
 import com.bulmerkiln.core.digest.Digest;
+import lombok.Value;
 
 /** A finished upload, or a mount: the blob's URL and digest. */
-public record OciUploadResponse(String location, Digest digest) {}
+@Value
+public final class OciUploadResponse {
+
+    private final String location;
+
+    private final Digest digest;
+}

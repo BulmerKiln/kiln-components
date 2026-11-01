@@ -6,27 +6,43 @@ package com.bulmerkiln.permissions.domain;
 
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Value;
 
 /** Typed IDs, so a team can never be passed where a member is meant. */
 public final class Ids {
 
     private Ids() {}
 
-    public record MemberId(UUID value) {
-        public MemberId {
+    @Value
+    public static final class MemberId {
+
+        private final UUID value;
+
+        public MemberId(UUID value) {
             Objects.requireNonNull(value, "value");
+            this.value = value;
         }
     }
 
-    public record TeamId(UUID value) {
-        public TeamId {
+    @Value
+    public static final class TeamId {
+
+        private final UUID value;
+
+        public TeamId(UUID value) {
             Objects.requireNonNull(value, "value");
+            this.value = value;
         }
     }
 
-    public record ServiceAccountId(UUID value) {
-        public ServiceAccountId {
+    @Value
+    public static final class ServiceAccountId {
+
+        private final UUID value;
+
+        public ServiceAccountId(UUID value) {
             Objects.requireNonNull(value, "value");
+            this.value = value;
         }
     }
 }

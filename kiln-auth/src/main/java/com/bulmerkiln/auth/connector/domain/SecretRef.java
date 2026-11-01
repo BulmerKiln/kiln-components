@@ -6,6 +6,7 @@ package com.bulmerkiln.auth.connector.domain;
 
 import java.nio.file.Path;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /**
  * Where a secret, such as a client secret, is read from. Secrets are never written inline in
@@ -21,12 +22,16 @@ public sealed interface SecretRef {
     /** Conventional environment variable names only. */
     Pattern ENV_NAME = Pattern.compile("[A-Z_][A-Z0-9_]{0,127}");
 
-    record Env(String name) implements SecretRef {
+    @Value
+    static final class Env implements SecretRef {
 
-        public Env {
+        private final String name;
+
+        public Env(String name) {
             if (!ENV_NAME.matcher(name).matches()) {
                 throw new IllegalArgumentException("Invalid environment variable name");
             }
+            this.name = name;
         }
 
         @Override
@@ -35,12 +40,16 @@ public sealed interface SecretRef {
         }
     }
 
-    record File(Path path) implements SecretRef {
+    @Value
+    static final class File implements SecretRef {
 
-        public File {
+        private final Path path;
+
+        public File(Path path) {
             if (!path.isAbsolute() || !path.normalize().equals(path)) {
                 throw new IllegalArgumentException("A secret file must be an absolute, normalized path");
             }
+            this.path = path;
         }
 
         @Override

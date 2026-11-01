@@ -11,7 +11,7 @@ The generic OpenID Connect connector, with presets for common IdPs.
 | Runs in | Kiln's server |
 | Depends on | [`kiln-auth`](../kiln-auth) |
 | Used by | `kiln-oss-service` |
-| Status | M1, Experimental: settings, presets and claim mapping; no Spring Security wiring yet |
+| Status | M1, Experimental: settings, presets, claim mapping and Spring Security client registration |
 
 ## Purpose
 
@@ -44,7 +44,8 @@ Inherits every requirement of [`kiln-auth`](../kiln-auth#requirements), and adds
 | AUTH-OIDC-3 | The Google Workspace preset must require domains, and accept only tokens whose `hd` claim is exactly one of them, since Google otherwise signs in any Google account. Other presets ignore `hd` | `OidcConnectorTest`, `OidcClaimsMapperTest` |
 | AUTH-OIDC-4 | Groups must come only from the connector's groups claim, so a token can't inject groups through another claim | `OidcClaimsMapperTest` |
 | AUTH-OIDC-5 | Scopes must include `openid`, and the issuer must have no query | `OidcConnectorTest` |
-| AUTH-OIDC-6 | A bad connector must stop the boot with an error naming the connector and the setting | `OidcConnectorTest`, `OidcAutoConfigurationTest` |
+| AUTH-OIDC-6 | A bad connector, including a client secret that can't be read, must stop the boot with an error naming the connector and the setting | `OidcConnectorTest`, `OidcAutoConfigurationTest`, `OidcSignInClientDirectoryTest` |
+| AUTH-OIDC-7 | Endpoints must come from the issuer's OpenID Connect discovery document, fetched on the first sign-in with the connector rather than at boot, so an IdP that's down doesn't stop Kiln starting. A fetched document must be kept, and a failed fetch tried again on the next sign-in | `OidcSignInClientDirectoryTest`, `OidcAutoConfigurationTest` |
 
 ## How it plugs in *(implementation only)*
 
@@ -71,7 +72,7 @@ Under `kiln.auth.oidc.connectors[n]`:
 | `id` | none, required | The connector ID (AUTH-12) |
 | `display-name` | the ID | Shown on the sign-in page |
 | `preset` | `generic` | One of the presets above |
-| `issuer` | none, required | The issuer URL, matched exactly |
+| `issuer` | none, required | The issuer URL, matched exactly; its endpoints come from `<issuer>/.well-known/openid-configuration` |
 | `client-id` | none, required | The client ID |
 | `client-secret` | none, required | A secret reference, `env:` or `file:` |
 | `scopes` | the preset's | Must include `openid` |
@@ -98,8 +99,10 @@ kiln:
 
 - **Threats**: a token from another IdP or realm; any Google account signing in to a Workspace
   connector; groups injected through an unexpected claim; inline client secrets
-- **Untrusted input**: ID token claims (already signature-checked), connector settings
-- **Defaults**: `https` issuers only; a bad connector stops the boot
+- **Untrusted input**: ID token claims (already signature-checked), connector settings, the issuer's
+  discovery document (checked by Spring Security: its `issuer` must match exactly)
+- **Defaults**: `https` issuers only; a bad connector or unreadable secret stops the boot; discovery
+  waits for the first sign-in
 - **Protections**: AUTH-OIDC-1, AUTH-OIDC-3, AUTH-OIDC-4, and the inherited AUTH-7 to AUTH-10, AUTH-14
 
 ## Testing
@@ -122,9 +125,8 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: AUTH-OIDC-1 to AUTH-OIDC-6.
+Implemented: AUTH-OIDC-1 to AUTH-OIDC-7.
 
-Planned (M1): Spring Security wiring (discovery, authorization code with PKCE, ID token
-validation), `login_hint` from IdP discovery, and refresh checks for deprovisioning. Each
+Planned (M1): `login_hint` from IdP discovery, and refresh checks for deprovisioning. Each
 preset's groups claim follows its IdP's documentation, and must be confirmed against the real IdP
 when the connector is first used.

@@ -23,15 +23,17 @@ import com.bulmerkiln.format.npm.web.NpmRouteDispatcher;
 import com.bulmerkiln.format.npm.web.handler.NpmPackageHandler;
 import com.bulmerkiln.format.npm.web.handler.NpmUnpublishHandler;
 import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.permissions.access.FormatAccess;
 import com.bulmerkiln.permissions.constant.Role;
 import com.bulmerkiln.permissions.constant.Visibility;
 import com.bulmerkiln.permissions.domain.Ids.MemberId;
 import com.bulmerkiln.permissions.domain.Principal;
 import com.bulmerkiln.permissions.domain.RoleBinding;
 import com.bulmerkiln.permissions.domain.Scope;
-import com.bulmerkiln.permissions.service.FormatAccess;
-import com.bulmerkiln.permissions.service.RoleBasedPolicy;
-import com.bulmerkiln.permissions.store.RoleBindingStore;
+import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
+import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
+import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
+import com.bulmerkiln.permissions.repository.RoleBindingRepository;
 import com.bulmerkiln.registry.domain.Namespace;
 import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
 import com.bulmerkiln.registry.service.RegistryPolicy;
@@ -81,7 +83,8 @@ public final class NpmHarness implements AutoCloseable {
     public NpmHarness(Path blobs, String prefix) throws IOException {
         database = KilnPostgres.database();
         acme = KilnPostgres.organization(database, "acme");
-        RoleBindingStore bindings = new RoleBindingStore(database);
+        StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
+                database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
         OrganizationContext.run(acme, () -> {
             database.run(tx -> {
                 NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "@acme", List.of("acme-")));
@@ -101,12 +104,12 @@ public final class NpmHarness implements AutoCloseable {
         ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
             @Override
             public void pushed(ArtifactRef artifact, long bytes) {
-                events.add("pushed " + artifact.name() + " " + artifact.version());
+                events.add("pushed " + artifact.getName() + " " + artifact.getVersion());
             }
 
             @Override
             public void pulled(ArtifactRef artifact, long bytes) {
-                events.add("pulled " + artifact.name() + " " + artifact.version());
+                events.add("pulled " + artifact.getName() + " " + artifact.getVersion());
             }
         }));
         StorageRouter storage = new SingleStoreRouter(new FsBlobStore(blobs));
@@ -194,6 +197,6 @@ public final class NpmHarness implements AutoCloseable {
     }
 
     private static RoleBinding.Subject member(Principal principal) {
-        return new RoleBinding.Subject.Member(((Principal.Member) principal).id());
+        return new RoleBinding.Subject.Member(((Principal.Member) principal).getId());
     }
 }

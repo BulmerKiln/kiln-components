@@ -51,18 +51,18 @@ class RecordedScansTest {
 
         // Trivy names each by CVE with a GHSA alias; Grype and OSV-Scanner the other way round.
         assertThat(merged).hasSize(5).allSatisfy(f -> {
-            assertThat(f.id()).startsWith("CVE-");
-            assertThat(f.aliases()).anyMatch(a -> a.startsWith("GHSA-"));
-            assertThat(f.reportedBy())
+            assertThat(f.getId()).startsWith("CVE-");
+            assertThat(f.getAliases()).anyMatch(a -> a.startsWith("GHSA-"));
+            assertThat(f.getReportedBy())
                     .containsExactlyInAnyOrder(TrivyAdapter.ID, GrypeAdapter.ID, OsvScannerAdapter.ID);
             assertThat(f.reportedByAll()).isTrue();
-            assertThat(f.fixedVersion()).isNotNull();
+            assertThat(f.getFixedVersion()).isNotNull();
         });
         assertThat(merged.stream()
-                        .filter(f -> f.id().equals("CVE-2021-23337"))
+                        .filter(f -> f.getId().equals("CVE-2021-23337"))
                         .findFirst()
                         .orElseThrow()
-                        .severity())
+                        .getSeverity())
                 .isEqualTo(Severity.HIGH);
         assertThat(SeverityCounts.of(merged).get(Severity.HIGH)).isEqualTo(2);
         assertThat(SeverityCounts.of(merged).get(Severity.MEDIUM)).isEqualTo(3);
@@ -73,7 +73,7 @@ class RecordedScansTest {
             String output = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             ScanResult result =
                     ScannerAdapterRunner.run(adapter, JOB, new ToolRun(version, "db", exitCode, output, false, null));
-            assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
+            assertThat(result.getStatus()).isEqualTo(ScanResult.Status.COMPLETE);
             return result;
         }
     }

@@ -176,8 +176,8 @@ public abstract class BlobStoreContract {
     @Test
     void storesAnEmptyBlob() throws Exception {
         BlobInfo info = in(acme, () -> push(new byte[0]));
-        assertThat(info.size()).isZero();
-        assertThat(in(acme, () -> readAll(info.digest(), null))).isEmpty();
+        assertThat(info.getSize()).isZero();
+        assertThat(in(acme, () -> readAll(info.getDigest(), null))).isEmpty();
     }
 
     @Test
@@ -264,9 +264,9 @@ public abstract class BlobStoreContract {
             return store.commit(upload, Digest.sha256(content));
         });
 
-        assertThat(info.size()).isEqualTo(content.length);
-        assertThat(in(acme, () -> readAll(info.digest(), null))).isEqualTo(content);
-        assertThat(in(acme, () -> readAll(info.digest(), new ByteRange(1000, 70_000))))
+        assertThat(info.getSize()).isEqualTo(content.length);
+        assertThat(in(acme, () -> readAll(info.getDigest(), null))).isEqualTo(content);
+        assertThat(in(acme, () -> readAll(info.getDigest(), new ByteRange(1000, 70_000))))
                 .isEqualTo(Arrays.copyOfRange(content, 1000, 70_001));
     }
 
@@ -282,7 +282,7 @@ public abstract class BlobStoreContract {
             return store.commit(upload, sha512);
         });
 
-        assertThat(info.digest()).isEqualTo(sha512);
+        assertThat(info.getDigest()).isEqualTo(sha512);
         assertThat(in(acme, () -> readAll(sha512, null))).isEqualTo(HELLO);
         assertThat(in(acme, () -> store.stat(HELLO_DIGEST))).isEmpty();
     }
@@ -348,9 +348,9 @@ public abstract class BlobStoreContract {
         in(acme, () -> push(HELLO));
         in(acme, () -> {
             try (BlobRead read = store.read(HELLO_DIGEST, new ByteRange(2, 5)).orElseThrow()) {
-                assertThat(read.blobSize()).isEqualTo(HELLO.length);
-                assertThat(read.offset()).isEqualTo(2);
-                assertThat(read.length()).isEqualTo(4);
+                assertThat(read.getBlobSize()).isEqualTo(HELLO.length);
+                assertThat(read.getOffset()).isEqualTo(2);
+                assertThat(read.getLength()).isEqualTo(4);
             }
             return null;
         });
@@ -362,7 +362,7 @@ public abstract class BlobStoreContract {
         // Seeded on purpose, so the content is the same on every run; nothing here is a secret.
         // nosemgrep: java.lang.security.audit.crypto.weak-random.weak-random
         new Random(3).nextBytes(content);
-        Digest digest = in(acme, () -> push(content)).digest();
+        Digest digest = in(acme, () -> push(content)).getDigest();
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         WritableByteChannel trickle = new WritableByteChannel() {
@@ -436,7 +436,7 @@ public abstract class BlobStoreContract {
             }
             assertThat(applied).isEqualTo(1);
         }
-        assertThat(in(acme, () -> store.commit(upload, HELLO_DIGEST)).size()).isEqualTo(HELLO.length);
+        assertThat(in(acme, () -> store.commit(upload, HELLO_DIGEST)).getSize()).isEqualTo(HELLO.length);
     }
 
     @Test
@@ -523,7 +523,7 @@ public abstract class BlobStoreContract {
         try (BlobRead read = store.read(digest, range).orElseThrow()) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             read.transferTo(Channels.newChannel(out));
-            assertThat(out.size()).isEqualTo(read.length());
+            assertThat(out.size()).isEqualTo(read.getLength());
             return out.toByteArray();
         }
     }

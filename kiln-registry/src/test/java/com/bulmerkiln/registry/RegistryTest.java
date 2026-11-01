@@ -114,12 +114,12 @@ class RegistryTest {
     void readsANamespaceBackWhole() {
         Namespace team = in(acme, tx -> NamespaceStore.byName(tx, "team")).orElseThrow();
 
-        assertThat(team.visibility()).isEqualTo(Visibility.PRIVATE);
-        assertThat(team.ociPrefix()).isEqualTo("acme/team");
-        assertThat(team.npmScope()).isNull();
-        assertThat(team.npmPrefixes()).containsExactly("acme-team-");
-        assertThat(team.mavenGroupPrefixes()).containsExactly("org.acme.team");
-        assertThat(in(acme, (DSLContext tx) -> NamespaceStore.byId(tx, team.id())))
+        assertThat(team.getVisibility()).isEqualTo(Visibility.PRIVATE);
+        assertThat(team.getOciPrefix()).isEqualTo("acme/team");
+        assertThat(team.getNpmScope()).isNull();
+        assertThat(team.getNpmPrefixes()).containsExactly("acme-team-");
+        assertThat(team.getMavenGroupPrefixes()).containsExactly("org.acme.team");
+        assertThat(in(acme, (DSLContext tx) -> NamespaceStore.byId(tx, team.getId())))
                 .contains(team);
     }
 
@@ -134,10 +134,10 @@ class RegistryTest {
             return null;
         });
         assertThat(in(globex, (DSLContext tx) -> NamespaceStore.forNpm(tx, "@acme"))
-                        .map(Namespace::visibility))
+                        .map(Namespace::getVisibility))
                 .contains(Visibility.PRIVATE);
         assertThat(in(acme, (DSLContext tx) -> NamespaceStore.forNpm(tx, "@acme"))
-                        .map(Namespace::visibility))
+                        .map(Namespace::getVisibility))
                 .contains(Visibility.PUBLIC);
     }
 
@@ -177,7 +177,7 @@ class RegistryTest {
     @Test
     void keepsVersionsAndFilesImmutable() {
         UUID namespace =
-                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().id();
+                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().getId();
         PackageEntity pkg = in(acme, tx -> PackageStore.create(tx, NPM, namespace, "@acme/util", "@acme/util"));
         assertThat(in(acme, (DSLContext tx) -> PackageStore.create(tx, NPM, namespace, "@acme/util", "@acme/util")))
                 .isEqualTo(pkg);
@@ -185,22 +185,22 @@ class RegistryTest {
         PackageVersionEntity version = in(acme, tx -> {
             BlobRecordStore.record(tx, TARBALL, 7);
             BlobRecordStore.record(tx, OTHER, 5);
-            PackageVersionEntity added = PackageStore.addVersion(tx, pkg.id(), "1.0.0", "{\"v\":1}");
-            PackageStore.addFile(tx, added.id(), "util-1.0.0.tgz", TARBALL, 7);
-            PackageStore.addFile(tx, added.id(), "util-1.0.0.tgz", TARBALL, 7);
+            PackageVersionEntity added = PackageStore.addVersion(tx, pkg.getId(), "1.0.0", "{\"v\":1}");
+            PackageStore.addFile(tx, added.getId(), "util-1.0.0.tgz", TARBALL, 7);
+            PackageStore.addFile(tx, added.getId(), "util-1.0.0.tgz", TARBALL, 7);
             return added;
         });
 
-        assertThat(refusal(() -> in(acme, tx -> PackageStore.addVersion(tx, pkg.id(), "1.0.0", "{}"))))
-                .extracting(Refusal::reason)
+        assertThat(refusal(() -> in(acme, tx -> PackageStore.addVersion(tx, pkg.getId(), "1.0.0", "{}"))))
+                .extracting(Refusal::getReason)
                 .isEqualTo(Reason.CONFLICT);
         assertThat(refusal(() -> in(acme, tx -> {
-                    PackageStore.addFile(tx, version.id(), "util-1.0.0.tgz", OTHER, 5);
+                    PackageStore.addFile(tx, version.getId(), "util-1.0.0.tgz", OTHER, 5);
                     return null;
                 })))
-                .extracting(Refusal::reason)
+                .extracting(Refusal::getReason)
                 .isEqualTo(Reason.CONFLICT);
-        assertThat(in(acme, (DSLContext tx) -> PackageStore.files(tx, version.id())))
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.files(tx, version.getId())))
                 .containsExactly(new PackageFileEntity("util-1.0.0.tgz", TARBALL, 7));
     }
 
@@ -208,26 +208,26 @@ class RegistryTest {
     @Test
     void deletesVersionsAndPackages() {
         UUID namespace =
-                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().id();
+                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().getId();
         PackageEntity pkg = in(acme, tx -> PackageStore.create(tx, NPM, namespace, "@acme/gone", "@acme/gone"));
         PackageVersionEntity version = in(acme, tx -> {
             BlobRecordStore.record(tx, TARBALL, 7);
-            PackageVersionEntity added = PackageStore.addVersion(tx, pkg.id(), "1.0.0", "{}");
-            PackageStore.addFile(tx, added.id(), "gone-1.0.0.tgz", TARBALL, 7);
+            PackageVersionEntity added = PackageStore.addVersion(tx, pkg.getId(), "1.0.0", "{}");
+            PackageStore.addFile(tx, added.getId(), "gone-1.0.0.tgz", TARBALL, 7);
             return added;
         });
 
         in(acme, tx -> {
-            PackageStore.deleteVersion(tx, version.id());
+            PackageStore.deleteVersion(tx, version.getId());
             return null;
         });
-        assertThat(in(acme, (DSLContext tx) -> PackageStore.versions(tx, pkg.id())))
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.versions(tx, pkg.getId())))
                 .isEmpty();
-        assertThat(in(acme, (DSLContext tx) -> PackageStore.files(tx, version.id())))
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.files(tx, version.getId())))
                 .isEmpty();
 
         in(acme, tx -> {
-            PackageStore.delete(tx, pkg.id());
+            PackageStore.delete(tx, pkg.getId());
             return null;
         });
         assertThat(in(acme, (DSLContext tx) -> PackageStore.find(tx, NPM, "@acme/gone")))
@@ -239,46 +239,46 @@ class RegistryTest {
     void ensuresVersionsPublishedFileByFile() {
         UUID namespace = in(acme, (DSLContext tx) -> NamespaceStore.byName(tx, "acme"))
                 .orElseThrow()
-                .id();
+                .getId();
         ArtifactFormat maven = new ArtifactFormat("maven");
         PackageVersionEntity first = in(acme, (DSLContext tx) -> {
             PackageEntity pkg = PackageStore.create(tx, maven, namespace, "org.acme:core", "org.acme:core");
-            return PackageStore.ensureVersion(tx, pkg.id(), "1.0");
+            return PackageStore.ensureVersion(tx, pkg.getId(), "1.0");
         });
         PackageVersionEntity again = in(acme, (DSLContext tx) -> {
             PackageEntity pkg = PackageStore.find(tx, maven, "org.acme:core").orElseThrow();
-            return PackageStore.ensureVersion(tx, pkg.id(), "1.0");
+            return PackageStore.ensureVersion(tx, pkg.getId(), "1.0");
         });
 
-        assertThat(again.id()).isEqualTo(first.id());
+        assertThat(again.getId()).isEqualTo(first.getId());
     }
 
     @Test
     void updatesWhatFormatsMayChange() {
         UUID namespace =
-                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().id();
+                in(acme, tx -> NamespaceStore.byName(tx, "acme")).orElseThrow().getId();
         PackageVersionEntity version = in(acme, tx -> {
             PackageEntity pkg = PackageStore.create(tx, NPM, namespace, "@acme/tags", "@acme/tags");
-            PackageStore.updateMetadata(tx, pkg.id(), "{\"dist-tags\":{}}");
-            PackageStore.addVersion(tx, pkg.id(), "1.0.0", "{}");
-            PackageVersionEntity second = PackageStore.addVersion(tx, pkg.id(), "2.0.0", "{}");
-            PackageStore.updateVersionMetadata(tx, second.id(), "{\"deprecated\":\"no\"}");
-            PackageStore.setYanked(tx, second.id(), true);
+            PackageStore.updateMetadata(tx, pkg.getId(), "{\"dist-tags\":{}}");
+            PackageStore.addVersion(tx, pkg.getId(), "1.0.0", "{}");
+            PackageVersionEntity second = PackageStore.addVersion(tx, pkg.getId(), "2.0.0", "{}");
+            PackageStore.updateVersionMetadata(tx, second.getId(), "{\"deprecated\":\"no\"}");
+            PackageStore.setYanked(tx, second.getId(), true);
             return second;
         });
 
         PackageEntity pkg =
                 in(acme, tx -> PackageStore.find(tx, NPM, "@acme/tags")).orElseThrow();
-        assertThat(pkg.metadata()).isEqualTo("{\"dist-tags\":{}}");
-        assertThat(in(acme, (DSLContext tx) -> PackageStore.versions(tx, pkg.id())))
-                .extracting(PackageVersionEntity::version)
+        assertThat(pkg.getMetadata()).isEqualTo("{\"dist-tags\":{}}");
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.versions(tx, pkg.getId())))
+                .extracting(PackageVersionEntity::getVersion)
                 .containsExactly("1.0.0", "2.0.0");
         PackageVersionEntity read =
-                in(acme, tx -> PackageStore.version(tx, pkg.id(), "2.0.0")).orElseThrow();
-        assertThat(read.id()).isEqualTo(version.id());
-        assertThat(read.yanked()).isTrue();
-        assertThat(read.metadata()).isEqualTo("{\"deprecated\":\"no\"}");
-        assertThat(in(acme, (DSLContext tx) -> PackageStore.file(tx, read.id(), "missing.tgz")))
+                in(acme, tx -> PackageStore.version(tx, pkg.getId(), "2.0.0")).orElseThrow();
+        assertThat(read.getId()).isEqualTo(version.getId());
+        assertThat(read.isYanked()).isTrue();
+        assertThat(read.getMetadata()).isEqualTo("{\"deprecated\":\"no\"}");
+        assertThat(in(acme, (DSLContext tx) -> PackageStore.file(tx, read.getId(), "missing.tgz")))
                 .isEmpty();
         assertThat(in(globex, (DSLContext tx) -> PackageStore.find(tx, NPM, "@acme/tags")))
                 .isEmpty();
@@ -301,15 +301,15 @@ class RegistryTest {
 
         Refusal blocked =
                 OrganizationContext.call(acme, () -> policy.checkRead(bad)).orElseThrow();
-        assertThat(blocked.reason()).isEqualTo(Reason.BLOCKED);
-        assertThat(blocked.message()).isEqualTo("@acme/bad 1.0.0 is blocked: malware");
-        assertThat(OrganizationContext.call(acme, () -> policy.checkRead(evil)).map(Refusal::message))
+        assertThat(blocked.getReason()).isEqualTo(Reason.BLOCKED);
+        assertThat(blocked.getMessage()).isEqualTo("@acme/bad 1.0.0 is blocked: malware");
+        assertThat(OrganizationContext.call(acme, () -> policy.checkRead(evil)).map(Refusal::getMessage))
                 .contains("@acme/evil 9.9.9 is blocked: typosquat");
         assertThat(OrganizationContext.call(acme, () -> policy.checkWrite(bad, 1))
-                        .map(Refusal::reason))
+                        .map(Refusal::getReason))
                 .contains(Reason.BLOCKED);
         assertThat(OrganizationContext.call(acme, () -> policy.checkWrite(gone, 1))
-                        .map(Refusal::reason))
+                        .map(Refusal::getReason))
                 .contains(Reason.CONFLICT);
         assertThat(OrganizationContext.call(acme, () -> policy.checkRead(gone))).isEmpty();
         assertThat(OrganizationContext.call(acme, () -> policy.checkRead(good))).isEmpty();
@@ -319,7 +319,7 @@ class RegistryTest {
                 .isEmpty();
         ArtifactRef unversioned = new ArtifactRef(NPM, "acme", "@acme/evil", null);
         assertThat(OrganizationContext.call(acme, () -> policy.checkWrite(unversioned, 1))
-                        .map(Refusal::message))
+                        .map(Refusal::getMessage))
                 .contains("@acme/evil is blocked: typosquat");
         ArtifactRef fine = new ArtifactRef(NPM, "acme", "@acme/fine", null);
         assertThat(OrganizationContext.call(acme, () -> policy.checkWrite(fine, 1)))
@@ -343,7 +343,7 @@ class RegistryTest {
     }
 
     private static Optional<String> name(Optional<Namespace> namespace) {
-        return namespace.map(Namespace::name);
+        return namespace.map(Namespace::getName);
     }
 
     private static <T> T in(Organization organization, Function<DSLContext, T> work) {

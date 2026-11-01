@@ -102,7 +102,7 @@ class OciManifestParserAttackTest {
         }
         json.append("]}");
         OciManifest manifest = parser.parse(json.toString().getBytes(StandardCharsets.UTF_8), OciMediaTypes.OCI_INDEX);
-        assertThat(manifest.manifests()).hasSize(20_000);
+        assertThat(manifest.getManifests()).hasSize(20_000);
     }
 
     @ParameterizedTest
@@ -170,7 +170,7 @@ class OciManifestParserAttackTest {
         OciManifestParser small = new OciManifestParser(64);
         byte[] atLimit = bytes(("{\"schemaVersion\":2,\"manifests\":[]" + " ".repeat(64) + "}").substring(0, 63) + "}");
         assertThat(atLimit).hasSize(64);
-        assertThat(small.parse(atLimit, OciMediaTypes.OCI_INDEX).manifests()).isEmpty();
+        assertThat(small.parse(atLimit, OciMediaTypes.OCI_INDEX).getManifests()).isEmpty();
 
         byte[] garbageOverLimit = new byte[65];
         assertThatThrownBy(() -> small.parse(garbageOverLimit, OciMediaTypes.OCI_INDEX))

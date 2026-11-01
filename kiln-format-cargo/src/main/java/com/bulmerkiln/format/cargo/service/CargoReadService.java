@@ -53,18 +53,18 @@ public final class CargoReadService {
         refuseIfBlocked(name, namespace, null);
         List<PackageVersionEntity> versions =
                 database.transaction(tx -> PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical())
-                        .map(entry -> PackageStore.versions(tx, entry.id()))
+                        .map(entry -> PackageStore.versions(tx, entry.getId()))
                         .orElseThrow(CargoReadService::notFound));
         StringBuilder body = new StringBuilder();
         Instant modified = Instant.EPOCH;
         for (PackageVersionEntity version : versions) {
-            if (access.readRefusal(name, namespace, version.version()).isPresent()) {
+            if (access.readRefusal(name, namespace, version.getVersion()).isPresent()) {
                 continue;
             }
-            ObjectNode line = (ObjectNode) CargoIndexEntry.JSON.readTree(version.metadata());
-            line.put("yanked", version.yanked());
+            ObjectNode line = (ObjectNode) CargoIndexEntry.JSON.readTree(version.getMetadata());
+            line.put("yanked", version.isYanked());
             body.append(CargoIndexEntry.JSON.writeValueAsString(line)).append('\n');
-            modified = version.publishedAt().isAfter(modified) ? version.publishedAt() : modified;
+            modified = version.getPublishedAt().isAfter(modified) ? version.getPublishedAt() : modified;
         }
         if (body.isEmpty()) {
             throw notFound();
@@ -77,13 +77,13 @@ public final class CargoReadService {
         refuseIfBlocked(name, namespace, version);
         PackageFileEntity crate = database.transaction(
                         tx -> PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical())
-                                .flatMap(entry -> PackageStore.version(tx, entry.id(), version))
-                                .flatMap(v -> PackageStore.file(tx, v.id(), name + "-" + version + ".crate")))
+                                .flatMap(entry -> PackageStore.version(tx, entry.getId(), version))
+                                .flatMap(v -> PackageStore.file(tx, v.getId(), name + "-" + version + ".crate")))
                 .orElseThrow(CargoReadService::notFound);
         BlobRead read = storage.store(OrganizationContext.current())
-                .read(crate.digest(), null)
+                .read(crate.getDigest(), null)
                 .orElseThrow(CargoReadService::notFound);
-        events.pulled(CargoAccessService.artifact(name, namespace, version), read.length());
+        events.pulled(CargoAccessService.artifact(name, namespace, version), read.getLength());
         return read;
     }
 
@@ -92,9 +92,9 @@ public final class CargoReadService {
         access.requireToWrite(name, Operation.PUSH);
         database.run(tx -> {
             PackageVersionEntity found = PackageStore.find(tx, CargoFormatModule.FORMAT, name.canonical())
-                    .flatMap(entry -> PackageStore.version(tx, entry.id(), version))
+                    .flatMap(entry -> PackageStore.version(tx, entry.getId(), version))
                     .orElseThrow(CargoReadService::notFound);
-            PackageStore.setYanked(tx, found.id(), yanked);
+            PackageStore.setYanked(tx, found.getId(), yanked);
         });
     }
 

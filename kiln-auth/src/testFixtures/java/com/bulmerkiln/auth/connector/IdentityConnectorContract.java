@@ -52,8 +52,8 @@ public abstract class IdentityConnectorContract {
     void describesItself() {
         IdentityConnector connector = connector();
         assertThat(connector.type()).isNotBlank().isEqualTo(connector.type().toLowerCase(Locale.ROOT));
-        assertThat(connector.displayName()).isNotBlank();
-        assertThat(connector.domains()).allSatisfy(d -> assertThat(d).isEqualTo(d.toLowerCase(Locale.ROOT)));
+        assertThat(connector.getDisplayName()).isNotBlank();
+        assertThat(connector.getDomains()).allSatisfy(d -> assertThat(d).isEqualTo(d.toLowerCase(Locale.ROOT)));
         assertThat(connector.providesGroups()).isTrue();
         assertThatCode(() -> new StaticConnectorRegistry(List.of(connector))).doesNotThrowAnyException();
     }
@@ -63,11 +63,11 @@ public abstract class IdentityConnectorContract {
         ExternalIdentity identity =
                 connector().identify(response("user-1", "ada@acme.com", List.of("platform", "admins")));
 
-        assertThat(identity.connector()).isEqualTo(connector().id());
-        assertThat(identity.issuer()).isNotBlank();
-        assertThat(identity.subject()).isEqualTo("user-1");
-        assertThat(identity.email()).isEqualTo("ada@acme.com");
-        assertThat(identity.groups()).containsAll(expectedGroups(List.of("platform", "admins")));
+        assertThat(identity.getConnector()).isEqualTo(connector().getId());
+        assertThat(identity.getIssuer()).isNotBlank();
+        assertThat(identity.getSubject()).isEqualTo("user-1");
+        assertThat(identity.getEmail()).isEqualTo("ada@acme.com");
+        assertThat(identity.getGroups()).containsAll(expectedGroups(List.of("platform", "admins")));
     }
 
     @Test
@@ -79,9 +79,9 @@ public abstract class IdentityConnectorContract {
     /** No groups from the IdP means no groups, and so no roles: least privilege. */
     @Test
     void reportsNoGroupsWhenTheIdpSendsNone() {
-        assertThat(connector().identify(response("user-1", null, null)).groups())
+        assertThat(connector().identify(response("user-1", null, null)).getGroups())
                 .isEmpty();
-        assertThat(connector().identify(response("user-1", null, List.of())).groups())
+        assertThat(connector().identify(response("user-1", null, List.of())).getGroups())
                 .isEmpty();
     }
 
@@ -94,7 +94,7 @@ public abstract class IdentityConnectorContract {
         assertThat(withoutGroups.providesGroups()).isFalse();
         assertThat(withoutGroups
                         .identify(response("user-1", null, List.of("admins")))
-                        .groups())
+                        .getGroups())
                 .isEmpty();
     }
 
@@ -102,7 +102,7 @@ public abstract class IdentityConnectorContract {
     void ignoresAnUnverifiedEmail() {
         assertThat(connector()
                         .identify(responseWithUnverifiedEmail("user-1", "ceo@acme.com"))
-                        .email())
+                        .getEmail())
                 .isNull();
     }
 
@@ -130,7 +130,7 @@ public abstract class IdentityConnectorContract {
     void dropsGroupNamesUnsafeToStoreOrLog() {
         ExternalIdentity identity =
                 connector().identify(response("user-1", null, List.of("ok", "", " ", "bad\nINFO forged", "nul\u0000")));
-        assertThat(identity.groups())
+        assertThat(identity.getGroups())
                 .containsAll(expectedGroups(List.of("ok")))
                 .noneMatch(g -> g.isBlank() || g.chars().anyMatch(Character::isISOControl));
     }

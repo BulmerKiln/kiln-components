@@ -6,6 +6,7 @@ package com.bulmerkiln.storage.s3.domain;
 
 import com.bulmerkiln.storage.s3.constant.S3RedirectMode;
 import java.util.Set;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -13,7 +14,10 @@ import org.jspecify.annotations.Nullable;
  * to the redirect target, which S3 rejects and which would hand Kiln credentials to storage. The
  * allowlist below is the clients the client matrix shows don't (STO-S3-4).
  */
-public record S3RedirectPolicy(S3RedirectMode mode) {
+@Value
+public final class S3RedirectPolicy {
+
+    private final S3RedirectMode mode;
 
     /** The product token each client starts its {@code User-Agent} with, matched exactly. */
     static final Set<String> KNOWN_GOOD = Set.of(

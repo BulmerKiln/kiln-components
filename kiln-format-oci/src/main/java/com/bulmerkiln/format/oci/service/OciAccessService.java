@@ -46,10 +46,10 @@ public final class OciAccessService {
      */
     Optional<Namespace> require(OciRepositoryRequest request, Operation operation) {
         Optional<Namespace> namespace = database.transaction(
-                tx -> NamespaceStore.forOci(tx, request.repository().value()));
+                tx -> NamespaceStore.forOci(tx, request.getRepository().getValue()));
         Access decision = access.check(artifact(request, namespace, null), operation);
         Optional<Refusal> refusal = decision.toRefusal(
-                verb(operation) + " access to " + request.addressed() + " is denied",
+                verb(operation) + " access to " + request.getAddressed() + " is denied",
                 () -> challenge(request, operation));
         if (refusal.isPresent()) {
             throw new RefusedException(refusal.get());
@@ -61,7 +61,7 @@ public final class OciAccessService {
     Namespace requireToWrite(OciRepositoryRequest request, Operation operation) {
         return require(request, operation)
                 .orElseThrow(() -> new OciException(
-                        OciErrorCode.DENIED, "No namespace owns " + request.addressed() + "; an admin creates one"));
+                        OciErrorCode.DENIED, "No namespace owns " + request.getAddressed() + "; an admin creates one"));
     }
 
     /** Refuses reading {@code version} (a tag or digest) when policy blocks it. */
@@ -73,17 +73,17 @@ public final class OciAccessService {
 
     /** The artifact a policy or event is about. */
     static ArtifactRef artifact(OciRepositoryRequest request, Optional<Namespace> namespace, @Nullable String version) {
-        String name = request.repository().value();
+        String name = request.getRepository().getValue();
         // A name no namespace owns is still checked, under its first component, which owns nothing.
-        String owner = namespace.map(Namespace::name).orElse(name.split("/", 2)[0]);
+        String owner = namespace.map(Namespace::getName).orElse(name.split("/", 2)[0]);
         return new ArtifactRef(OciFormatModule.FORMAT, owner, name, version);
     }
 
     /** The token challenge docker follows: a Bearer realm and the scope it needs (FMT-OCI-16). */
     static String challenge(OciRepositoryRequest request, Operation operation) {
-        String host = URI.create(request.baseUrl()).getHost();
-        return "Bearer realm=\"" + request.baseUrl() + "/token\",service=\"" + host + "\",scope=\"repository:"
-                + request.addressed() + ":" + scope(operation) + "\"";
+        String host = URI.create(request.getBaseUrl()).getHost();
+        return "Bearer realm=\"" + request.getBaseUrl() + "/token\",service=\"" + host + "\",scope=\"repository:"
+                + request.getAddressed() + ":" + scope(operation) + "\"";
     }
 
     private static String scope(Operation operation) {

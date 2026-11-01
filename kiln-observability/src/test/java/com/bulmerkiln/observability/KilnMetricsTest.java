@@ -161,7 +161,7 @@ class KilnMetricsTest {
                 .withPropertyValues("kiln.observability.organization-label=true")
                 .run(context -> {
                     assertThat(context).hasSingleBean(KilnMetrics.class);
-                    assertThat(context.getBean(ObservabilityProperties.class).organizationLabel())
+                    assertThat(context.getBean(ObservabilityProperties.class).isOrganizationLabel())
                             .isTrue();
                 });
     }

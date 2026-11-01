@@ -37,11 +37,13 @@ class OciManifestParserTest {
 
         OciManifest manifest = parser.parse(raw, OciMediaTypes.OCI_MANIFEST);
 
-        assertThat(manifest.digest()).isEqualTo(Digest.sha256(raw));
+        assertThat(manifest.getDigest()).isEqualTo(Digest.sha256(raw));
         assertThat(manifest.isIndex()).isFalse();
-        assertThat(manifest.blobs()).extracting(d -> d.digest().toString()).containsExactly(CONFIG, LAYER);
-        assertThat(manifest.manifests()).isEmpty();
-        assertThat(manifest.subject()).isNull();
+        assertThat(manifest.getBlobs())
+                .extracting(d -> d.getDigest().toString())
+                .containsExactly(CONFIG, LAYER);
+        assertThat(manifest.getManifests()).isEmpty();
+        assertThat(manifest.getSubject()).isNull();
     }
 
     @Test
@@ -55,9 +57,9 @@ class OciManifestParserTest {
 
         OciManifest manifest = parser.parse(raw, OciMediaTypes.OCI_MANIFEST);
 
-        assertThat(manifest.mediaType()).isEqualTo(OciMediaTypes.OCI_MANIFEST);
-        assertThat(manifest.artifactType()).isEqualTo("application/vnd.dev.cosign.artifact.sig.v1+json");
-        assertThat(manifest.subject()).isNotNull();
+        assertThat(manifest.getMediaType()).isEqualTo(OciMediaTypes.OCI_MANIFEST);
+        assertThat(manifest.getArtifactType()).isEqualTo("application/vnd.dev.cosign.artifact.sig.v1+json");
+        assertThat(manifest.getSubject()).isNotNull();
     }
 
     @Test
@@ -73,10 +75,10 @@ class OciManifestParserTest {
                 parser.parse(raw, "application/vnd.docker.distribution.manifest.list.v2+json; charset=utf-8");
 
         assertThat(manifest.isIndex()).isTrue();
-        assertThat(manifest.blobs()).isEmpty();
-        assertThat(manifest.manifests())
+        assertThat(manifest.getBlobs()).isEmpty();
+        assertThat(manifest.getManifests())
                 .singleElement()
-                .extracting(d -> d.digest().toString())
+                .extracting(d -> d.getDigest().toString())
                 .isEqualTo(CHILD);
     }
 
@@ -141,8 +143,8 @@ class OciManifestParserTest {
                  "layers":[{"mediaType":"application/vnd.docker.image.rootfs.diff.tar.gzip","digest":"%s","size":32}]}
                 """.formatted(CONFIG, LAYER));
         OciManifest manifest = parser.parse(raw, OciMediaTypes.DOCKER_MANIFEST);
-        assertThat(manifest.mediaType()).isEqualTo(OciMediaTypes.DOCKER_MANIFEST);
-        assertThat(manifest.blobs()).hasSize(2);
+        assertThat(manifest.getMediaType()).isEqualTo(OciMediaTypes.DOCKER_MANIFEST);
+        assertThat(manifest.getBlobs()).hasSize(2);
     }
 
     @Test
@@ -150,9 +152,9 @@ class OciManifestParserTest {
         byte[] raw = bytes("{\"schemaVersion\":2,\"config\":{\"mediaType\":\"x\",\"digest\":\"%s\",\"size\":1}}"
                 .formatted(CONFIG));
         assertThat(parser.parse(raw, OciMediaTypes.OCI_MANIFEST + "; charset=utf-8")
-                        .mediaType())
+                        .getMediaType())
                 .isEqualTo(OciMediaTypes.OCI_MANIFEST);
-        assertThat(parser.parse(raw, OciMediaTypes.OCI_MANIFEST).blobs()).hasSize(1);
+        assertThat(parser.parse(raw, OciMediaTypes.OCI_MANIFEST).getBlobs()).hasSize(1);
     }
 
     @Test
@@ -172,10 +174,10 @@ class OciManifestParserTest {
                  "subject":{"mediaType":"application/vnd.oci.image.manifest.v1+json","digest":"%s","size":3}}
                 """.formatted(CHILD, CONFIG));
         OciManifest manifest = parser.parse(raw, OciMediaTypes.OCI_INDEX);
-        assertThat(manifest.artifactType()).isEqualTo("application/example");
-        assertThat(manifest.manifests().getFirst().artifactType()).isEqualTo("application/sbom");
-        assertThat(manifest.subject()).isNotNull();
-        assertThat(manifest.subject().digest().toString()).isEqualTo(CONFIG);
+        assertThat(manifest.getArtifactType()).isEqualTo("application/example");
+        assertThat(manifest.getManifests().getFirst().getArtifactType()).isEqualTo("application/sbom");
+        assertThat(manifest.getSubject()).isNotNull();
+        assertThat(manifest.getSubject().getDigest().toString()).isEqualTo(CONFIG);
     }
 
     @Test
@@ -184,15 +186,15 @@ class OciManifestParserTest {
         byte[] spaced = bytes("{ \"schemaVersion\": 2, \"manifests\": [] }\n");
         OciManifest a = parser.parse(compact, OciMediaTypes.OCI_INDEX);
         OciManifest b = parser.parse(spaced, OciMediaTypes.OCI_INDEX);
-        assertThat(a.digest()).isEqualTo(Digest.sha256(compact)).isNotEqualTo(b.digest());
-        assertThat(b.digest()).isEqualTo(Digest.sha256(spaced));
+        assertThat(a.getDigest()).isEqualTo(Digest.sha256(compact)).isNotEqualTo(b.getDigest());
+        assertThat(b.getDigest()).isEqualTo(Digest.sha256(spaced));
     }
 
     @Test
     void anImageManifestMayHaveNoLayers() {
         byte[] raw = bytes("{\"schemaVersion\":2,\"config\":{\"mediaType\":\"x\",\"digest\":\"%s\",\"size\":2}}"
                 .formatted(CONFIG));
-        assertThat(parser.parse(raw, OciMediaTypes.OCI_MANIFEST).blobs()).hasSize(1);
+        assertThat(parser.parse(raw, OciMediaTypes.OCI_MANIFEST).getBlobs()).hasSize(1);
     }
 
     @ParameterizedTest

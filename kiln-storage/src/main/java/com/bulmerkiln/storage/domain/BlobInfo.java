@@ -6,13 +6,21 @@ package com.bulmerkiln.storage.domain;
 
 import com.bulmerkiln.core.digest.Digest;
 import java.util.Objects;
+import lombok.Value;
 
-public record BlobInfo(Digest digest, long size) {
+@Value
+public final class BlobInfo {
 
-    public BlobInfo {
+    private final Digest digest;
+
+    private final long size;
+
+    public BlobInfo(Digest digest, long size) {
         Objects.requireNonNull(digest, "digest");
         if (size < 0) {
             throw new IllegalArgumentException("size must not be negative");
         }
+        this.digest = digest;
+        this.size = size;
     }
 }

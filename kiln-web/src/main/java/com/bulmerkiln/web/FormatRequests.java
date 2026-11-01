@@ -66,9 +66,9 @@ public final class FormatRequests {
                     .orElseThrow(() -> new RefusedException(Refusal.of(Reason.NOT_FOUND, "Not found")));
             Principal principal = principals.resolve(request);
             OrganizationContext.call(
-                    resolution.organization(),
+                    resolution.getOrganization(),
                     () -> CurrentPrincipal.call(principal, () -> {
-                        handler.handle(resolution.path());
+                        handler.handle(resolution.getPath());
                         return null;
                     }));
         });
@@ -100,12 +100,12 @@ public final class FormatRequests {
      * their small JSON and text answers as well as refusals.
      */
     public static void write(HttpServletResponse response, FormatResponse answer) throws IOException {
-        response.setStatus(answer.status());
-        response.setContentType(answer.contentType());
-        for (Map.Entry<String, String> header : answer.headers().entrySet()) {
+        response.setStatus(answer.getStatus());
+        response.setContentType(answer.getContentType());
+        for (Map.Entry<String, String> header : answer.getHeaders().entrySet()) {
             response.setHeader(header.getKey(), header.getValue());
         }
-        byte[] body = answer.body().getBytes(StandardCharsets.UTF_8);
+        byte[] body = answer.getBody().getBytes(StandardCharsets.UTF_8);
         response.setContentLength(body.length);
         response.getOutputStream().write(body);
     }

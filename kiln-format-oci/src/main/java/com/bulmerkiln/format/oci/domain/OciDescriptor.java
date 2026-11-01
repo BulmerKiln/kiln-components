@@ -5,11 +5,18 @@
 package com.bulmerkiln.format.oci.domain;
 
 import com.bulmerkiln.core.digest.Digest;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /** A content descriptor (image-spec, descriptor.md): what a manifest points at. */
-public record OciDescriptor(
-        String mediaType,
-        Digest digest,
-        long size,
-        @Nullable String artifactType) {}
+@Value
+public final class OciDescriptor {
+
+    private final String mediaType;
+
+    private final Digest digest;
+
+    private final long size;
+
+    private final @Nullable String artifactType;
+}

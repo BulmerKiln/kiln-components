@@ -56,36 +56,36 @@ public final class MavenFileService {
      */
     public void deploy(MavenPath.ArtifactFile file, String fileName, InputStream body) throws IOException {
         Namespace namespace = access.requireToWrite(file);
-        MavenChecksumAlgorithm checksum = file.checksum();
+        MavenChecksumAlgorithm checksum = file.getChecksum();
         if (checksum != null) {
             verifyUploadedChecksum(file, fileName, checksum, body);
             return;
         }
         BlobInfo blob = blobs.store(body);
         database.run(tx -> {
-            BlockStore.checkWrite(tx, MavenAccessService.artifact(file, Optional.of(namespace), file.version()))
+            BlockStore.checkWrite(tx, MavenAccessService.artifact(file, Optional.of(namespace), file.getVersion()))
                     .ifPresent(refusal -> {
                         throw new RefusedException(refusal);
                     });
             String name = MavenAccessService.name(file);
-            PackageEntity entry = PackageStore.create(tx, MavenFormatModule.FORMAT, namespace.id(), name, name);
-            PackageVersionEntity version = PackageStore.ensureVersion(tx, entry.id(), file.version());
-            BlobRecordStore.record(tx, blob.digest(), blob.size());
-            PackageStore.addFile(tx, version.id(), fileName, blob.digest(), blob.size());
+            PackageEntity entry = PackageStore.create(tx, MavenFormatModule.FORMAT, namespace.getId(), name, name);
+            PackageVersionEntity version = PackageStore.ensureVersion(tx, entry.getId(), file.getVersion());
+            BlobRecordStore.record(tx, blob.getDigest(), blob.getSize());
+            PackageStore.addFile(tx, version.getId(), fileName, blob.getDigest(), blob.getSize());
         });
         if (isPom(file)) {
-            events.pushed(MavenAccessService.artifact(file, Optional.of(namespace), file.version()), blob.size());
+            events.pushed(MavenAccessService.artifact(file, Optional.of(namespace), file.getVersion()), blob.getSize());
         }
     }
 
     /** Opens a stored file; a {@code -SNAPSHOT} name resolves to the latest build of its kind. */
     public BlobRead download(MavenPath.ArtifactFile file, String fileName) throws IOException {
         Optional<Namespace> namespace = access.require(file, Operation.PULL);
-        access.checkRead(file, namespace, file.version());
+        access.checkRead(file, namespace, file.getVersion());
         PackageFileEntity stored = locate(file, fileName);
-        BlobRead read = blobs.open(stored.digest());
+        BlobRead read = blobs.open(stored.getDigest());
         if (isPom(file)) {
-            events.pulled(MavenAccessService.artifact(file, namespace, file.version()), read.length());
+            events.pulled(MavenAccessService.artifact(file, namespace, file.getVersion()), read.getLength());
         }
         return read;
     }
@@ -94,17 +94,17 @@ public final class MavenFileService {
     public String checksum(MavenPath.ArtifactFile file, String fileName, MavenChecksumAlgorithm algorithm)
             throws IOException {
         Optional<Namespace> namespace = access.require(file, Operation.PULL);
-        access.checkRead(file, namespace, file.version());
+        access.checkRead(file, namespace, file.getVersion());
         String target =
                 fileName.substring(0, fileName.length() - algorithm.suffix().length());
-        return blobs.checksum(locate(file, target).digest(), algorithm);
+        return blobs.checksum(locate(file, target).getDigest(), algorithm);
     }
 
     private PackageFileEntity locate(MavenPath.ArtifactFile file, String fileName) {
         return database.transaction(tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(file))
-                        .flatMap(entry -> PackageStore.version(tx, entry.id(), file.version()))
+                        .flatMap(entry -> PackageStore.version(tx, entry.getId(), file.getVersion()))
                         .flatMap(version ->
-                                MavenSnapshots.resolve(file, fileName, PackageStore.files(tx, version.id()))))
+                                MavenSnapshots.resolve(file, fileName, PackageStore.files(tx, version.getId()))))
                 .orElseThrow(() -> new RefusedException(Refusal.of(Reason.NOT_FOUND, "Not found")));
     }
 
@@ -120,12 +120,12 @@ public final class MavenFileService {
                 fileName.substring(0, fileName.length() - algorithm.suffix().length());
         Optional<PackageFileEntity> stored = database.transaction(
                 tx -> PackageStore.find(tx, MavenFormatModule.FORMAT, MavenAccessService.name(file))
-                        .flatMap(entry -> PackageStore.version(tx, entry.id(), file.version()))
-                        .flatMap(version -> PackageStore.file(tx, version.id(), target)));
+                        .flatMap(entry -> PackageStore.version(tx, entry.getId(), file.getVersion()))
+                        .flatMap(version -> PackageStore.file(tx, version.getId(), target)));
         if (stored.isEmpty()) {
             return;
         }
-        String actual = blobs.checksum(stored.get().digest(), algorithm);
+        String actual = blobs.checksum(stored.get().getDigest(), algorithm);
         String first = sent.split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
         if (!actual.equals(first)) {
             throw new RefusedException(Refusal.of(Reason.INVALID, "The checksum doesn't match " + target));
@@ -133,6 +133,6 @@ public final class MavenFileService {
     }
 
     public static boolean isPom(MavenPath.ArtifactFile file) {
-        return "pom".equals(file.extension()) && file.classifier() == null && file.checksum() == null;
+        return "pom".equals(file.getExtension()) && file.getClassifier() == null && file.getChecksum() == null;
     }
 }

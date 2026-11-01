@@ -22,15 +22,17 @@ import com.bulmerkiln.format.oci.web.handler.OciBlobHandler;
 import com.bulmerkiln.format.oci.web.handler.OciManifestHandler;
 import com.bulmerkiln.format.oci.web.handler.OciTagHandler;
 import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.permissions.access.FormatAccess;
 import com.bulmerkiln.permissions.constant.Role;
 import com.bulmerkiln.permissions.constant.Visibility;
 import com.bulmerkiln.permissions.domain.Ids.MemberId;
 import com.bulmerkiln.permissions.domain.Principal;
 import com.bulmerkiln.permissions.domain.RoleBinding;
 import com.bulmerkiln.permissions.domain.Scope;
-import com.bulmerkiln.permissions.service.FormatAccess;
-import com.bulmerkiln.permissions.service.RoleBasedPolicy;
-import com.bulmerkiln.permissions.store.RoleBindingStore;
+import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
+import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
+import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
+import com.bulmerkiln.permissions.repository.RoleBindingRepository;
 import com.bulmerkiln.registry.domain.Namespace;
 import com.bulmerkiln.registry.service.NamespaceVisibilityLookup;
 import com.bulmerkiln.registry.service.RegistryPolicy;
@@ -81,7 +83,8 @@ public final class OciHarness implements AutoCloseable {
     public OciHarness(Path blobs, UnaryOperator<String> addressing) throws IOException {
         database = KilnPostgres.database();
         acme = KilnPostgres.organization(database, "acme");
-        RoleBindingStore bindings = new RoleBindingStore(database);
+        StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
+                database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
         OrganizationContext.run(acme, () -> {
             database.run(tx -> {
                 NamespaceStore.create(tx, namespace("acme", Visibility.PRIVATE, "acme"));
@@ -103,12 +106,12 @@ public final class OciHarness implements AutoCloseable {
         ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
             @Override
             public void pushed(ArtifactRef artifact, long bytes) {
-                events.add("pushed " + artifact.name() + " " + artifact.version() + " " + bytes);
+                events.add("pushed " + artifact.getName() + " " + artifact.getVersion() + " " + bytes);
             }
 
             @Override
             public void pulled(ArtifactRef artifact, long bytes) {
-                events.add("pulled " + artifact.name() + " " + artifact.version() + " " + bytes);
+                events.add("pulled " + artifact.getName() + " " + artifact.getVersion() + " " + bytes);
             }
         }));
         OciController controller = new OciController(new OciRouteDispatcher(
@@ -208,6 +211,6 @@ public final class OciHarness implements AutoCloseable {
     }
 
     private static RoleBinding.Subject subject(Principal principal) {
-        return new RoleBinding.Subject.Member(((Principal.Member) principal).id());
+        return new RoleBinding.Subject.Member(((Principal.Member) principal).getId());
     }
 }

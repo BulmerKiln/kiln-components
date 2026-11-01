@@ -39,7 +39,7 @@ public final class MavenAccessService {
     }
 
     Optional<Namespace> require(MavenPath path, Operation operation) {
-        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.groupId()));
+        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.getGroupId()));
         Optional<Refusal> refusal = access.check(artifact(path, namespace, null), operation)
                 .toRefusal(
                         "You may not " + operation.name().toLowerCase(Locale.ROOT) + " " + name(path),
@@ -52,7 +52,7 @@ public final class MavenAccessService {
 
     /** Whether the caller may read {@code path}, for choosing what to list; never throws. */
     boolean mayRead(MavenPath path) {
-        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.groupId()));
+        Optional<Namespace> namespace = database.transaction(tx -> NamespaceStore.forMaven(tx, path.getGroupId()));
         return allowed(artifact(path, namespace, null), Operation.PULL)
                 && readRefusal(path, namespace, null).isEmpty();
     }
@@ -62,13 +62,13 @@ public final class MavenAccessService {
      * {@code g.a}, whose plugin metadata Maven deploys there, so writing either will do (FMT-MVN-17).
      */
     public void requireToWriteMetadata(MavenPath.Metadata metadata) {
-        if (metadata.version() == null) {
-            String group = metadata.groupId() + "." + metadata.artifactId();
+        if (metadata.getVersion() == null) {
+            String group = metadata.getGroupId() + "." + metadata.getArtifactId();
             Optional<Namespace> owner = database.transaction(tx -> NamespaceStore.forMaven(tx, group));
             if (owner.isPresent()
                     && allowed(
                             new ArtifactRef(
-                                    MavenFormatModule.FORMAT, owner.get().name(), group, null),
+                                    MavenFormatModule.FORMAT, owner.get().getName(), group, null),
                             Operation.PUSH)) {
                 return;
             }
@@ -83,7 +83,7 @@ public final class MavenAccessService {
     public Namespace requireToWrite(MavenPath path) {
         return require(path, Operation.PUSH)
                 .orElseThrow(() -> new RefusedException(Refusal.of(
-                        Reason.DENIED, "No namespace owns group " + path.groupId() + "; an admin creates one")));
+                        Reason.DENIED, "No namespace owns group " + path.getGroupId() + "; an admin creates one")));
     }
 
     void checkRead(MavenPath path, Optional<Namespace> namespace, @Nullable String version) {
@@ -98,11 +98,14 @@ public final class MavenAccessService {
 
     /** The artifact's name in the registry, {@code groupId:artifactId}. */
     static String name(MavenPath path) {
-        return path.groupId() + ":" + path.artifactId();
+        return path.getGroupId() + ":" + path.getArtifactId();
     }
 
     static ArtifactRef artifact(MavenPath path, Optional<Namespace> namespace, @Nullable String version) {
         return new ArtifactRef(
-                MavenFormatModule.FORMAT, namespace.map(Namespace::name).orElse(path.groupId()), name(path), version);
+                MavenFormatModule.FORMAT,
+                namespace.map(Namespace::getName).orElse(path.getGroupId()),
+                name(path),
+                version);
     }
 }

@@ -78,13 +78,13 @@ public final class KilnMetrics {
     }
 
     private Tags artifactTags(ArtifactFormat format, String namespace) {
-        String label = NAMESPACE.matcher(namespace).matches() ? namespace : UNKNOWN;
-        return withOrg(Tags.of("format", format.id(), "namespace", label));
+        String label = namespace != null && NAMESPACE.matcher(namespace).matches() ? namespace : UNKNOWN;
+        return withOrg(Tags.of("format", format.getId(), "namespace", label));
     }
 
     private Tags withOrg(Tags tags) {
         return organizationLabel && OrganizationContext.isBound()
-                ? tags.and("organization", OrganizationContext.current().slug())
+                ? tags.and("organization", OrganizationContext.current().getSlug())
                 : tags;
     }
 

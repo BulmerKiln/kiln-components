@@ -28,7 +28,7 @@ public final class BlockStore {
                         + " ON CONFLICT (organization_id, format, name, version)"
                         + " DO UPDATE SET reason = excluded.reason",
                 NamespaceStore.organization(),
-                format.id(),
+                format.getId(),
                 name,
                 version == null ? "" : version,
                 reason);
@@ -40,7 +40,7 @@ public final class BlockStore {
                 "INSERT INTO tombstones (organization_id, format, name, version) VALUES (?, ?, ?, ?)"
                         + " ON CONFLICT DO NOTHING",
                 NamespaceStore.organization(),
-                format.id(),
+                format.getId(),
                 name,
                 version);
     }
@@ -53,7 +53,7 @@ public final class BlockStore {
     /** Why writing {@code artifact} is refused, if it is: a block, or a tombstone on its version. */
     public static Optional<Refusal> checkWrite(DSLContext tx, ArtifactRef artifact) {
         Optional<Refusal> blocked = blockOn(tx, artifact);
-        String version = artifact.version();
+        String version = artifact.getVersion();
         if (blocked.isPresent() || version == null) {
             return blocked;
         }
@@ -62,27 +62,28 @@ public final class BlockStore {
                 .where(
                         "organization_id = ? AND format = ? AND name = ? AND version = ?",
                         NamespaceStore.organization(),
-                        artifact.format().id(),
-                        artifact.name(),
+                        artifact.getFormat().getId(),
+                        artifact.getName(),
                         version));
         return tombstoned
                 ? Optional.of(Refusal.of(
-                        Reason.CONFLICT, artifact.name() + " " + version + " was deleted and can't be published again"))
+                        Reason.CONFLICT,
+                        artifact.getName() + " " + version + " was deleted and can't be published again"))
                 : Optional.empty();
     }
 
     private static Optional<Refusal> blockOn(DSLContext tx, ArtifactRef artifact) {
-        String version = artifact.version();
+        String version = artifact.getVersion();
         return tx.fetchOptional(
                         "SELECT reason FROM blocks WHERE organization_id = ? AND format = ? AND name = ?"
                                 + " AND version IN ('', ?) ORDER BY version LIMIT 1",
                         NamespaceStore.organization(),
-                        artifact.format().id(),
-                        artifact.name(),
+                        artifact.getFormat().getId(),
+                        artifact.getName(),
                         version == null ? "" : version)
                 .map(row -> Refusal.of(
                         Reason.BLOCKED,
-                        artifact.name() + (version == null ? "" : " " + version) + " is blocked: "
+                        artifact.getName() + (version == null ? "" : " " + version) + " is blocked: "
                                 + row.get(0, String.class)));
     }
 }

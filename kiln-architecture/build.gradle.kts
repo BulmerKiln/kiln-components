@@ -11,6 +11,7 @@ tasks.matching { it.name.startsWith("publish") }.configureEach {
 
 dependencies {
     testImplementation(project(":kiln-core"))
+    testImplementation(project(":kiln-crypto"))
     testImplementation(project(":kiln-database"))
     testImplementation(project(":kiln-auth"))
     testImplementation(project(":kiln-auth-oidc"))

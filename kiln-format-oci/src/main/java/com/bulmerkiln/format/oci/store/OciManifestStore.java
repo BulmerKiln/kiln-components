@@ -22,25 +22,25 @@ public final class OciManifestStore {
 
     /** Stores a manifest and what it references. Storing the same manifest again is harmless. */
     public static void store(DSLContext tx, UUID repository, OciManifest manifest, byte[] content) {
-        OciDescriptor subject = manifest.subject();
+        OciDescriptor subject = manifest.getSubject();
         int stored = tx.execute(
                 "INSERT INTO manifests (organization_id, repository_id, digest, media_type, artifact_type, subject,"
                         + " content) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
                 OciRepositoryStore.organization(),
                 repository,
-                manifest.digest().toString(),
-                manifest.mediaType(),
+                manifest.getDigest().toString(),
+                manifest.getMediaType(),
                 artifactType(manifest),
-                subject == null ? null : subject.digest().toString(),
+                subject == null ? null : subject.getDigest().toString(),
                 content);
         if (stored == 0) {
             return;
         }
-        for (OciDescriptor blob : manifest.blobs()) {
-            reference(tx, repository, manifest.digest(), blob.digest(), "blob");
+        for (OciDescriptor blob : manifest.getBlobs()) {
+            reference(tx, repository, manifest.getDigest(), blob.getDigest(), "blob");
         }
-        for (OciDescriptor child : manifest.manifests()) {
-            reference(tx, repository, manifest.digest(), child.digest(), "manifest");
+        for (OciDescriptor child : manifest.getManifests()) {
+            reference(tx, repository, manifest.getDigest(), child.getDigest(), "manifest");
         }
     }
 
@@ -134,10 +134,10 @@ public final class OciManifestStore {
 
     /** The manifest's artifact type, or for an image without one, its config's media type. */
     static @Nullable String artifactType(OciManifest manifest) {
-        if (manifest.artifactType() != null || manifest.isIndex()) {
-            return manifest.artifactType();
+        if (manifest.getArtifactType() != null || manifest.isIndex()) {
+            return manifest.getArtifactType();
         }
-        return manifest.blobs().getFirst().mediaType();
+        return manifest.getBlobs().getFirst().getMediaType();
     }
 
     private static void reference(DSLContext tx, UUID repository, Digest digest, Digest child, String kind) {

@@ -34,7 +34,7 @@ public final class PackageStore {
                         "SELECT id, namespace_id, name, metadata FROM packages"
                                 + " WHERE organization_id = ? AND format = ? AND normalized_name = ?",
                         NamespaceStore.organization(),
-                        format.id(),
+                        format.getId(),
                         normalizedName)
                 .map(PackageStore::pkg);
     }
@@ -52,7 +52,7 @@ public final class PackageStore {
                 NamespaceStore.organization(),
                 UUID.randomUUID(),
                 namespaceId,
-                format.id(),
+                format.getId(),
                 name,
                 normalizedName);
         return find(tx, format, normalizedName).orElseThrow();
@@ -142,7 +142,7 @@ public final class PackageStore {
     public static void addFile(DSLContext tx, UUID versionId, String name, Digest digest, long size) {
         Optional<PackageFileEntity> existing = file(tx, versionId, name);
         if (existing.isPresent()) {
-            if (!existing.get().digest().equals(digest)) {
+            if (!existing.get().getDigest().equals(digest)) {
                 throw new RefusedException(
                         Refusal.of(Reason.CONFLICT, "File " + name + " already exists and can't be replaced"));
             }

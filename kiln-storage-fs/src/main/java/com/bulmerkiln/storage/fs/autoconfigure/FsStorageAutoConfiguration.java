@@ -28,7 +28,7 @@ public class FsStorageAutoConfiguration {
 
             @Override
             public BlobStore create() throws IOException {
-                Path root = properties.root();
+                Path root = properties.getRoot();
                 if (root == null) {
                     throw new IllegalStateException("kiln.storage.fs.root must be set to the blob storage directory");
                 }

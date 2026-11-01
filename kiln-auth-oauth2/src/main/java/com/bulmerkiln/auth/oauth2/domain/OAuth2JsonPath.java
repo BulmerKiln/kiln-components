@@ -7,23 +7,27 @@ package com.bulmerkiln.auth.oauth2.domain;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
  * A dotted path into a parsed JSON object, such as {@code data.user.id}. Only object keys, no
  * array indexes or wildcards, so a path names exactly one value.
  */
-public record OAuth2JsonPath(List<String> keys) {
+@Value
+public final class OAuth2JsonPath {
+
+    private final List<String> keys;
 
     private static final Pattern KEY = Pattern.compile("[A-Za-z0-9_-]{1,64}");
     private static final int MAX_DEPTH = 8;
 
-    public OAuth2JsonPath {
-        keys = List.copyOf(keys);
-        if (keys.isEmpty() || keys.size() > MAX_DEPTH) {
+    public OAuth2JsonPath(List<String> keys) {
+        this.keys = List.copyOf(keys);
+        if (this.keys.isEmpty() || this.keys.size() > MAX_DEPTH) {
             throw new IllegalArgumentException("A JSON path has 1 to " + MAX_DEPTH + " keys");
         }
-        for (String key : keys) {
+        for (String key : this.keys) {
             if (!KEY.matcher(key).matches()) {
                 throw new IllegalArgumentException("Invalid JSON path key: " + key);
             }

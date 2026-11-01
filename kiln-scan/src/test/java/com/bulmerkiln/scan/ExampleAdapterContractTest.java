@@ -47,7 +47,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
 
         @Override
         public List<Finding> parse(ScanJob job, ToolRun run) {
-            JsonNode results = ToolOutputUtils.json(run.output()).required("results");
+            JsonNode results = ToolOutputUtils.json(run.getOutput()).required("results");
             if (!results.isArray()) {
                 throw new IllegalArgumentException("results is not a list");
             }
@@ -125,7 +125,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
                 return Collections.nCopies(ScanResult.MAX_FINDINGS + 1, f);
             }
         };
-        assertThat(ScannerAdapterRunner.run(flood, JOB, run(sampleOutput())).status())
+        assertThat(ScannerAdapterRunner.run(flood, JOB, run(sampleOutput())).getStatus())
                 .isEqualTo(ScanResult.Status.FAILED);
     }
 
@@ -138,7 +138,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
             }
         };
         ToolRun foundSomething = new ToolRun("1.4.2", "db", 1, sampleOutput(), false, null);
-        assertThat(ScannerAdapterRunner.run(grype, JOB, foundSomething).status())
+        assertThat(ScannerAdapterRunner.run(grype, JOB, foundSomething).getStatus())
                 .isEqualTo(ScanResult.Status.COMPLETE);
     }
 }

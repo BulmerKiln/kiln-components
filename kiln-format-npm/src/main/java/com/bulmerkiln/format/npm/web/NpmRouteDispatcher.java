@@ -37,20 +37,20 @@ public final class NpmRouteDispatcher {
                 case NpmRoute.Ping _ -> NpmPackageHandler.json(response, 200, "{}");
                 case NpmRoute.Whoami _ -> NpmMetaHandler.whoami(response, registry);
                 case NpmRoute.Packument p ->
-                    packages.packument(request, response, new NpmPackageRequest(p.name(), registry));
+                    packages.packument(request, response, new NpmPackageRequest(p.getName(), registry));
                 case NpmRoute.Version v ->
-                    packages.version(request, response, new NpmPackageRequest(v.name(), registry), v.version());
+                    packages.version(request, response, new NpmPackageRequest(v.getName(), registry), v.getVersion());
                 case NpmRoute.Tarball t ->
-                    packages.tarball(request, response, new NpmPackageRequest(t.name(), registry), t.file());
+                    packages.tarball(request, response, new NpmPackageRequest(t.getName(), registry), t.getFile());
                 case NpmRoute.DistTags t ->
-                    packages.distTags(request, response, new NpmPackageRequest(t.name(), registry));
+                    packages.distTags(request, response, new NpmPackageRequest(t.getName(), registry));
                 case NpmRoute.DistTag t ->
-                    packages.distTag(request, response, new NpmPackageRequest(t.name(), registry), t.tag());
+                    packages.distTag(request, response, new NpmPackageRequest(t.getName(), registry), t.getTag());
                 case NpmRoute.Revision r ->
-                    unpublish.revision(request, response, new NpmPackageRequest(r.name(), registry));
+                    unpublish.revision(request, response, new NpmPackageRequest(r.getName(), registry));
                 case NpmRoute.TarballRevision t ->
-                    unpublish.tarball(request, response, new NpmPackageRequest(t.name(), registry), t.file());
-                case NpmRoute.Unsupported u -> NpmMetaHandler.unsupported(response, u.endpoint());
+                    unpublish.tarball(request, response, new NpmPackageRequest(t.getName(), registry), t.getFile());
+                case NpmRoute.Unsupported u -> NpmMetaHandler.unsupported(response, u.getEndpoint());
             }
         });
     }

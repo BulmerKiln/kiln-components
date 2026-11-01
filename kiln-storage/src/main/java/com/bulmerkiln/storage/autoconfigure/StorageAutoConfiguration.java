@@ -28,6 +28,6 @@ public class StorageAutoConfiguration {
     @ConditionalOnMissingBean(StorageRouter.class)
     StorageRouter storageRouter(StorageProperties properties, List<StorageBackend> backends) throws IOException {
         return new SingleStoreRouter(
-                StorageBackendUtils.select(properties.type(), backends).create());
+                StorageBackendUtils.select(properties.getType(), backends).create());
     }
 }

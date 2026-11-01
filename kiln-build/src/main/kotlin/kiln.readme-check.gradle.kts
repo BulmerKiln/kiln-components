@@ -15,7 +15,8 @@ val readmeCheck = tasks.register<ReadmeCheck>("readmeCheck") {
     readmes.from(fileTree(rootDir) { include("kiln-*/README.md") })
     sources.from(fileTree(rootDir) {
         include("kiln-*/src/**/*.java", "kiln-*/**/*.gradle.kts", "kiln-build/src/**/*.kt", "gradle/libs.versions.toml")
-        exclude("**/build/**")
+        // Only the modules' output directories: kiln-build's own package is com/bulmerkiln/build.
+        exclude("kiln-*/build/**")
     })
     report = layout.buildDirectory.file("readme-check.txt")
 }

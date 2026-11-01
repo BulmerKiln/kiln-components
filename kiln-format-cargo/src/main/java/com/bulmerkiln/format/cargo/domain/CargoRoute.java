@@ -4,28 +4,54 @@
  */
 package com.bulmerkiln.format.cargo.domain;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.format.cargo.CargoException;
 import com.bulmerkiln.format.constant.Reason;
 import com.bulmerkiln.format.domain.SemanticVersion;
+import lombok.Value;
 
 /** A sparse-registry route below {@code /cargo/} (FMT-CARGO-7). */
 public sealed interface CargoRoute {
 
     /** {@code index/config.json}: where downloads and the API are, and that auth is required. */
-    record Config() implements CargoRoute {}
+    @Value
+    static final class Config implements CargoRoute {}
 
     /** One crate's index file, at the path the sparse index defines for its name. */
-    record Index(CargoCrateName name) implements CargoRoute {}
+    @Value
+    static final class Index implements CargoRoute {
 
-    record Publish() implements CargoRoute {}
+        private final CargoCrateName name;
+    }
 
-    record Download(CargoCrateName name, String version) implements CargoRoute {}
+    @Value
+    static final class Publish implements CargoRoute {}
+
+    @Value
+    static final class Download implements CargoRoute {
+
+        private final CargoCrateName name;
+
+        private final String version;
+    }
 
     /** {@code yank} or {@code unyank}. */
-    record Yank(CargoCrateName name, String version, boolean yanked) implements CargoRoute {}
+    @Value
+    static final class Yank implements CargoRoute {
+
+        private final CargoCrateName name;
+
+        private final String version;
+
+        private final boolean yanked;
+    }
 
     /** A Cargo command Kiln answers with guidance, such as {@code owner} or {@code search}. */
-    record Unsupported(String command) implements CargoRoute {}
+    @Value
+    static final class Unsupported implements CargoRoute {
+
+        private final String command;
+    }
 
     int MAX_LENGTH = 512;
 
@@ -59,6 +85,7 @@ public sealed interface CargoRoute {
     }
 
     /** A crate version: strict SemVer (FMT-13). */
+    @UntrustedInput
     static String version(String value) {
         if (!SemanticVersion.isValid(value)) {
             throw new CargoException(Reason.INVALID, "Invalid version");

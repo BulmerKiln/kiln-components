@@ -41,9 +41,9 @@ public final class OciTagHandler {
         }
         OciTagPageResponse page =
                 tags.tags(oci, OciHeaderUtils.pageSize(request.getParameter("n")), request.getParameter("last"));
-        String next = page.next();
+        String next = page.getNext();
         Map<String, String> headers = next == null ? Map.of() : Map.of("Link", "<" + next + ">; rel=\"next\"");
-        FormatRequests.write(response, new FormatResponse(200, "application/json", page.body(), headers));
+        FormatRequests.write(response, new FormatResponse(200, "application/json", page.getBody(), headers));
     }
 
     public void referrers(
@@ -53,7 +53,7 @@ public final class OciTagHandler {
             throw OciResponseUtils.unsupported();
         }
         OciReferrersResponse referrers = tags.referrers(oci, digest, request.getParameter("artifactType"));
-        Map<String, String> headers = referrers.filtered() ? Map.of("OCI-Filters-Applied", "artifactType") : Map.of();
-        FormatRequests.write(response, new FormatResponse(200, OciMediaTypes.OCI_INDEX, referrers.body(), headers));
+        Map<String, String> headers = referrers.isFiltered() ? Map.of("OCI-Filters-Applied", "artifactType") : Map.of();
+        FormatRequests.write(response, new FormatResponse(200, OciMediaTypes.OCI_INDEX, referrers.getBody(), headers));
     }
 }

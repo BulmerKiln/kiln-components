@@ -11,7 +11,7 @@ and refusals answered in each format's own error shape.
 | Artifact | `com.bulmerkiln:kiln-web` |
 | Runs in | Kiln's server |
 | Depends on | [`kiln-core`](../kiln-core), [`kiln-format`](../kiln-format), [`kiln-permissions`](../kiln-permissions) |
-| Used by | The `kiln-format-*` modules' controllers |
+| Used by | The `kiln-format-*` modules' controllers; [`kiln-auth`](../kiln-auth), which replaces the anonymous `PrincipalResolver` |
 | Status | M1, Experimental |
 
 ## Purpose
@@ -59,6 +59,9 @@ a refusal as a `500`, and the controllers stay thin translations of HTTP.
 | Property | Default | Description |
 |---|---|---|
 | `kiln.web.external-url` | none, required | The URL clients reach Kiln at, such as `https://pkg.example.com`; `Location` headers, token realms and links are built from it |
+| `kiln.web.cors.allowed-origins` | none | Origins allowed to make cross-origin requests, with credentials; none means same-origin only |
+| `kiln.web.cors.allowed-headers` | none | Headers allowed beyond Kiln's own (`Authorization`, `Kiln-Organization`, `Kiln-Format`, `Content-Type`) |
+| `kiln.web.cors.allowed-methods` | none | Methods allowed beyond Kiln's own (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`) |
 
 Organizations are resolved from the first path segment through the `OrganizationDirectory`.
 

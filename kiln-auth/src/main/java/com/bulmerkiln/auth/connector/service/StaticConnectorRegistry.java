@@ -31,14 +31,14 @@ public final class StaticConnectorRegistry implements ConnectorRegistry {
         for (IdentityConnector connector : connectors) {
             for (Map.Entry<String, URI> lookup : connector.lookups().entrySet()) {
                 if (!LOOKUP_NAME.matcher(lookup.getKey()).matches()) {
-                    throw new IllegalStateException("Connector " + connector.id() + " has an invalid lookup name");
+                    throw new IllegalStateException("Connector " + connector.getId() + " has an invalid lookup name");
                 }
                 EndpointUtils.requireSecure(
-                        lookup.getValue(), false, "Connector " + connector.id() + " lookup " + lookup.getKey());
+                        lookup.getValue(), false, "Connector " + connector.getId() + " lookup " + lookup.getKey());
             }
-            IdentityConnector previous = this.connectors.putIfAbsent(connector.id(), connector);
+            IdentityConnector previous = this.connectors.putIfAbsent(connector.getId(), connector);
             if (previous != null) {
-                throw new IllegalStateException("Connector ID " + connector.id() + " is used by both a "
+                throw new IllegalStateException("Connector ID " + connector.getId() + " is used by both a "
                         + previous.type() + " and a " + connector.type() + " connector");
             }
         }
@@ -58,7 +58,7 @@ public final class StaticConnectorRegistry implements ConnectorRegistry {
     public List<IdentityConnector> forDomain(String domain) {
         String lower = domain.toLowerCase(Locale.ROOT);
         return connectors.values().stream()
-                .filter(c -> c.domains().contains(lower))
+                .filter(c -> c.getDomains().contains(lower))
                 .toList();
     }
 }

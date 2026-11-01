@@ -23,8 +23,8 @@ class NpmFormatModuleTest extends FormatModuleContract {
     @Test
     void usesTheFormatsOwnErrorBody() {
         FormatResponse response = FormatResponse.refusal(module(), Refusal.of(Reason.NOT_FOUND, "no such package"));
-        assertThat(response.status()).isEqualTo(404);
-        assertThat(response.contentType()).isEqualTo("application/json");
-        assertThat(response.body()).isEqualTo("{\"error\":\"no such package\"}");
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getContentType()).isEqualTo("application/json");
+        assertThat(response.getBody()).isEqualTo("{\"error\":\"no such package\"}");
     }
 }

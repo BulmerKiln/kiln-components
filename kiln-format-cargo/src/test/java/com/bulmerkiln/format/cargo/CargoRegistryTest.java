@@ -83,7 +83,7 @@ class CargoRegistryTest {
         assertThat(first.get("vers").asString()).isEqualTo("1.0.0");
         assertThat(first.get("cksum").asString())
                 .isEqualTo(Digest.sha256("crate one".getBytes(StandardCharsets.UTF_8))
-                        .encoded());
+                        .getEncoded());
         assertThat(first.get("deps").get(0).get("req").asString()).isEqualTo("^1.0");
         assertThat(first.get("deps").get(1).get("name").asString()).isEqualTo("rt");
         assertThat(first.get("deps").get(1).get("package").asString()).isEqualTo("tokio");

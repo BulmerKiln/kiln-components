@@ -9,7 +9,7 @@ The Maven format: Maven and Gradle repositories, on `/maven/`.
 | Kind | Implementation of [`kiln-format`](../kiln-format) |
 | Artifact | `com.bulmerkiln:kiln-format-maven` |
 | Runs in | Kiln's server |
-| Depends on | [`kiln-format`](../kiln-format), [`kiln-web`](../kiln-web), [`kiln-registry`](../kiln-registry), [`kiln-database`](../kiln-database), [`kiln-storage`](../kiln-storage), [`kiln-permissions`](../kiln-permissions) |
+| Depends on | [`kiln-format`](../kiln-format), [`kiln-web`](../kiln-web), [`kiln-registry`](../kiln-registry), [`kiln-database`](../kiln-database), [`kiln-storage`](../kiln-storage) |
 | Used by | `kiln-oss-service` |
 | Status | M3, Experimental: path parsing, safe XML and errors; no endpoints yet |
 

@@ -8,6 +8,7 @@ import com.bulmerkiln.auth.oidc.OidcConnector;
 import com.bulmerkiln.auth.oidc.constant.OidcPreset;
 import java.net.URI;
 import java.util.List;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -16,7 +17,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * validated by {@link OidcConnector#from}.
  */
 @ConfigurationProperties("kiln.auth.oidc")
-public record OidcProperties(@Nullable List<Connector> connectors) {
+@Value
+public final class OidcProperties {
+
+    private final @Nullable List<Connector> connectors;
 
     public List<Connector> connectorList() {
         return connectors == null ? List.of() : connectors;
@@ -24,19 +28,30 @@ public record OidcProperties(@Nullable List<Connector> connectors) {
 
     /**
      * One connector.
-     *
-     * @param clientSecret a secret reference such as {@code env:KILN_OIDC_SECRET}, never the secret
-     * @param allowInsecureIssuer allows an {@code http} issuer, for a local IdP only
      */
-    public record Connector(
-            @Nullable String id,
-            @Nullable String displayName,
-            @Nullable OidcPreset preset,
-            @Nullable URI issuer,
-            @Nullable String clientId,
-            @Nullable String clientSecret,
-            @Nullable List<String> scopes,
-            @Nullable String groupsClaim,
-            @Nullable List<String> domains,
-            boolean allowInsecureIssuer) {}
+    @Value
+    public static final class Connector {
+
+        private final @Nullable String id;
+
+        private final @Nullable String displayName;
+
+        private final @Nullable OidcPreset preset;
+
+        private final @Nullable URI issuer;
+
+        private final @Nullable String clientId;
+
+        /** A secret reference such as {@code env:KILN_OIDC_SECRET}, never the secret. */
+        private final @Nullable String clientSecret;
+
+        private final @Nullable List<String> scopes;
+
+        private final @Nullable String groupsClaim;
+
+        private final @Nullable List<String> domains;
+
+        /** Allows an {@code http} issuer, for a local IdP only. */
+        private final boolean allowInsecureIssuer;
+    }
 }

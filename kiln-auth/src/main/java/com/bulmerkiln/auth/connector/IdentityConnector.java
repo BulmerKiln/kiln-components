@@ -19,16 +19,16 @@ import java.util.Set;
  */
 public interface IdentityConnector {
 
-    ConnectorId id();
+    ConnectorId getId();
 
     /** The protocol, such as {@code oidc} or {@code oauth2}, as stored in {@code connectors.type}. */
     String type();
 
     /** Shown on the sign-in page. */
-    String displayName();
+    String getDisplayName();
 
     /** The email domains this connector serves, for IdP discovery. Lowercase. */
-    Set<String> domains();
+    Set<String> getDomains();
 
     /**
      * Whether this connector can report groups. Without them, its people get no roles until an

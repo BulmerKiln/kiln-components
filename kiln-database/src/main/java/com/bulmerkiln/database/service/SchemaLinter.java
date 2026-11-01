@@ -19,8 +19,9 @@ import org.jooq.Record;
  *   <li>have row-level security enabled and forced
  *   <li>have only the organization policy as a permissive policy, for every command
  *   <li>lead every unique index, the primary key included, with {@code organization_id}
- *   <li>include {@code organization_id} in every foreign key, on both sides when it references
- *       another organization table
+ *   <li>include {@code organization_id} in every foreign key to {@code organizations} or another
+ *       organization table, on both sides for the latter; a key to another instance table, such as
+ *       {@code users}, names nothing that belongs to an organization
  * </ul>
  *
  * <p>Across the schema: no {@code SECURITY DEFINER} function, and every view created with {@code
@@ -37,6 +38,11 @@ public final class SchemaLinter {
             "flyway_schema_history",
             "organizations",
             "instance_connectors",
+            "users",
+            "user_identities",
+            "instance_admins",
+            "invitations",
+            "allowed_domains",
             "web_sessions",
             "instance_blocks",
             "leases",
@@ -141,8 +147,13 @@ public final class SchemaLinter {
             if (INSTANCE_TABLES.contains(table)) {
                 continue;
             }
-            boolean toOrganizationTable = !INSTANCE_TABLES.contains(key.get("target", String.class));
-            if (!key.get("from_has", Boolean.class) || (toOrganizationTable && !key.get("to_has", Boolean.class))) {
+            String target = key.get("target", String.class);
+            boolean toOrganizationTable = !INSTANCE_TABLES.contains(target);
+            // A key to an organization's own rows must go through organization_id; a key to another
+            // instance table, such as users, names nothing that belongs to an organization.
+            boolean scoped = toOrganizationTable || target.equals("organizations");
+            if ((scoped && !key.get("from_has", Boolean.class))
+                    || (toOrganizationTable && !key.get("to_has", Boolean.class))) {
                 problems.add(table + " has foreign key " + key.get("name", String.class)
                         + " that doesn't include organization_id");
             }

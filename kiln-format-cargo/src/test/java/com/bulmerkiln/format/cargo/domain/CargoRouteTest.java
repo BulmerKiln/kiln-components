@@ -65,4 +65,17 @@ class CargoRouteTest {
             assertThat(e.status()).isBetween(400, 499);
         }
     }
+
+    /** Whatever version a URL carries, validation fails only with CargoException. */
+    @FuzzTest
+    void versionFailsOnlyWithCargoException(String value) {
+        if (value == null) {
+            return;
+        }
+        try {
+            CargoRoute.version(value);
+        } catch (CargoException expected) {
+            // The only failure a crafted version may cause.
+        }
+    }
 }

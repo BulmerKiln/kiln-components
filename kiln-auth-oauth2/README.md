@@ -11,7 +11,7 @@ The generic OAuth2 connector for IdPs without OpenID Connect, with a GitHub pres
 | Runs in | Kiln's server |
 | Depends on | [`kiln-auth`](../kiln-auth) |
 | Used by | `kiln-oss-service` |
-| Status | M2, Experimental: settings, the GitHub preset and user mapping; no Spring Security wiring yet |
+| Status | M2, Experimental: settings, the GitHub preset, user mapping and Spring Security client registration |
 
 ## Purpose
 
@@ -113,5 +113,5 @@ No tests need Docker or external services.
 
 Implemented: AUTH-OAUTH2-1 to AUTH-OAUTH2-5.
 
-Planned (M2): Spring Security wiring; following GitHub's pagination for people in more than 100
-teams; a verified email from GitHub's `/user/emails`; lookups for generic connectors.
+Planned (M2): following GitHub's pagination for people in more than 100 teams; a verified email
+from GitHub's `/user/emails`; lookups for generic connectors.

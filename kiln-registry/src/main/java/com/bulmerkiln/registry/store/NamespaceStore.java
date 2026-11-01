@@ -31,14 +31,14 @@ public final class NamespaceStore {
                 "INSERT INTO namespaces (organization_id, id, name, visibility, oci_prefix, npm_scope, npm_prefixes,"
                         + " maven_group_prefixes, cargo_prefixes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 organization(),
-                namespace.id(),
-                namespace.name(),
-                namespace.visibility().name().toLowerCase(Locale.ROOT),
-                namespace.ociPrefix(),
-                namespace.npmScope(),
-                namespace.npmPrefixes().toArray(String[]::new),
-                namespace.mavenGroupPrefixes().toArray(String[]::new),
-                namespace.cargoPrefixes().toArray(String[]::new));
+                namespace.getId(),
+                namespace.getName(),
+                namespace.getVisibility().name().toLowerCase(Locale.ROOT),
+                namespace.getOciPrefix(),
+                namespace.getNpmScope(),
+                namespace.getNpmPrefixes().toArray(String[]::new),
+                namespace.getMavenGroupPrefixes().toArray(String[]::new),
+                namespace.getCargoPrefixes().toArray(String[]::new));
     }
 
     public static Optional<Namespace> byName(DSLContext tx, String name) {
@@ -124,6 +124,6 @@ public final class NamespaceStore {
     }
 
     static UUID organization() {
-        return OrganizationContext.current().id().value();
+        return OrganizationContext.current().getId().getValue();
     }
 }

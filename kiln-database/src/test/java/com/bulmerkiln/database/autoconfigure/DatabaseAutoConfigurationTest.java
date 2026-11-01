@@ -20,19 +20,31 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.transaction.PlatformTransactionManager;
 
 class DatabaseAutoConfigurationTest {
 
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(DatabaseAutoConfiguration.class));
 
-    /** DB-1, DB-3: migrations run, and only Database is a bean, never the pool. */
+    /**
+     * DB-1, DB-3: migrations run as the migration role; the runtime pool and the organization-binding
+     * transaction manager are the beans the data layer uses, and the pool is the runtime role's.
+     */
     @Test
-    void migratesAndOffersOnlyTheDatabase() {
+    void migratesAndOffersTheDataLayer() {
         String url = KilnPostgres.newDatabase();
 
         runner.withPropertyValues(properties(KilnPostgres.properties(url))).run(context -> {
-            assertThat(context).hasNotFailed().hasSingleBean(Database.class).doesNotHaveBean(DataSource.class);
+            assertThat(context)
+                    .hasNotFailed()
+                    .hasSingleBean(Database.class)
+                    .hasSingleBean(DataSource.class)
+                    .hasSingleBean(PlatformTransactionManager.class);
+            assertThat(context.getBean(DataSource.class))
+                    .isSameAs(context.getBean(Database.class).dataSource());
+            assertThat(context.getBean(PlatformTransactionManager.class))
+                    .isSameAs(context.getBean(Database.class).transactionManager());
             Database database = context.getBean(Database.class);
             int organizations = database.instanceTransaction(db -> db.fetchCount(db.selectFrom("organizations")));
             String role = database.instanceTransaction(

@@ -5,6 +5,17 @@
 package com.bulmerkiln.registry.entity;
 
 import java.util.UUID;
+import lombok.Value;
 
 /** A package, by the name it was first published under. */
-public record PackageEntity(UUID id, UUID namespaceId, String name, String metadata) {}
+@Value
+public final class PackageEntity {
+
+    private final UUID id;
+
+    private final UUID namespaceId;
+
+    private final String name;
+
+    private final String metadata;
+}

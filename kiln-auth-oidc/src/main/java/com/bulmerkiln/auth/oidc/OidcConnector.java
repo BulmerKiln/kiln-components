@@ -18,52 +18,80 @@ import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /** A validated OIDC connector. */
-public record OidcConnector(
-        ConnectorId id,
-        String displayName,
-        OidcPreset preset,
-        URI issuer,
-        String clientId,
-        SecretRef clientSecret,
-        List<String> scopes,
-        @Nullable String groupsClaim,
-        Set<String> domains)
-        implements IdentityConnector {
+@Value
+public final class OidcConnector implements IdentityConnector {
 
-    public OidcConnector {
+    private final ConnectorId id;
+
+    private final String displayName;
+
+    private final OidcPreset preset;
+
+    private final URI issuer;
+
+    private final String clientId;
+
+    private final SecretRef clientSecret;
+
+    private final List<String> scopes;
+
+    private final @Nullable String groupsClaim;
+
+    private final Set<String> domains;
+
+    public OidcConnector(
+            ConnectorId id,
+            String displayName,
+            OidcPreset preset,
+            URI issuer,
+            String clientId,
+            SecretRef clientSecret,
+            List<String> scopes,
+            @Nullable String groupsClaim,
+            Set<String> domains) {
         Objects.requireNonNull(id, "id");
-        scopes = List.copyOf(scopes);
-        domains = Set.copyOf(domains);
-        if (!scopes.contains("openid")) {
+        this.scopes = List.copyOf(scopes);
+        this.domains = Set.copyOf(domains);
+        if (!this.scopes.contains("openid")) {
             throw new IllegalArgumentException("Connector " + id + ": scopes must include openid");
         }
-        if (preset.requiresHostedDomain() && domains.isEmpty()) {
+        if (preset.requiresHostedDomain() && this.domains.isEmpty()) {
             throw new IllegalArgumentException("Connector " + id + ": the " + preset + " preset needs domains");
         }
+        this.id = id;
+        this.displayName = displayName;
+        this.preset = preset;
+        this.issuer = issuer;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+        this.groupsClaim = groupsClaim;
     }
 
     /** Validates a configured connector, naming the connector and setting in every error. */
     public static OidcConnector from(OidcProperties.Connector config) {
-        ConnectorId id = new ConnectorId(required(config.id(), "id", "?"));
-        OidcPreset preset = config.preset() == null ? OidcPreset.GENERIC : config.preset();
+        ConnectorId id = new ConnectorId(required(config.getId(), "id", "?"));
+        OidcPreset preset = config.getPreset() == null ? OidcPreset.GENERIC : config.getPreset();
         URI issuer = EndpointUtils.requireSecure(
-                required(config.issuer(), "issuer", id), config.allowInsecureIssuer(), "Connector " + id + " issuer");
+                required(config.getIssuer(), "issuer", id),
+                config.isAllowInsecureIssuer(),
+                "Connector " + id + " issuer");
         if (issuer.getRawQuery() != null) {
             throw new IllegalArgumentException("Connector " + id + " issuer must not have a query");
         }
         return new OidcConnector(
                 id,
-                config.displayName() == null ? id.value() : config.displayName(),
+                config.getDisplayName() == null ? id.getValue() : config.getDisplayName(),
                 preset,
                 issuer,
-                required(config.clientId(), "client-id", id),
-                SecretRef.parse(required(config.clientSecret(), "client-secret", id)),
-                config.scopes() == null ? preset.scopes() : config.scopes(),
-                config.groupsClaim() == null ? preset.groupsClaim() : config.groupsClaim(),
-                DomainUtils.normalize(config.domains() == null ? List.of() : config.domains()));
+                required(config.getClientId(), "client-id", id),
+                SecretRef.parse(required(config.getClientSecret(), "client-secret", id)),
+                config.getScopes() == null ? preset.scopes() : config.getScopes(),
+                config.getGroupsClaim() == null ? preset.groupsClaim() : config.getGroupsClaim(),
+                DomainUtils.normalize(config.getDomains() == null ? List.of() : config.getDomains()));
     }
 
     @Override
@@ -79,7 +107,7 @@ public record OidcConnector(
     /** Maps the verified ID token's claims; see {@link OidcClaimsMapper}. */
     @Override
     public ExternalIdentity identify(IdpResponse response) {
-        return OidcClaimsMapper.map(this, response.claims());
+        return OidcClaimsMapper.map(this, response.getClaims());
     }
 
     private static <T> T required(@Nullable T value, String setting, Object id) {

@@ -6,6 +6,7 @@ package com.bulmerkiln.core.organization;
 
 import java.util.Objects;
 import java.util.Optional;
+import lombok.Value;
 
 /**
  * Finds the organization a request is for, from the artifact path in its URL, such as {@code
@@ -19,10 +20,18 @@ public interface OrganizationResolver {
     Optional<Resolution> resolve(String path);
 
     /** An organization, and what's left of the path once the organization is taken from it. */
-    record Resolution(Organization organization, String path) {
-        public Resolution {
+    @Value
+    static final class Resolution {
+
+        private final Organization organization;
+
+        private final String path;
+
+        public Resolution(Organization organization, String path) {
             Objects.requireNonNull(organization, "organization");
             Objects.requireNonNull(path, "path");
+            this.organization = organization;
+            this.path = path;
         }
     }
 }

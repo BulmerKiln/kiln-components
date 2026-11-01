@@ -36,7 +36,7 @@ public final class OciFormatModule implements FormatModule {
     public RefusalResponse render(Refusal refusal) {
         OciErrorCode code = OciErrorCode.forRefusal(refusal);
         String body = FormatJsonUtils.write(
-                new OciErrorResponse(List.of(new OciErrorResponse.Item(code.name(), refusal.message()))));
+                new OciErrorResponse(List.of(new OciErrorResponse.Item(code.name(), refusal.getMessage()))));
         return new RefusalResponse("application/json", body, Map.of("Docker-Distribution-API-Version", "registry/2.0"));
     }
 }

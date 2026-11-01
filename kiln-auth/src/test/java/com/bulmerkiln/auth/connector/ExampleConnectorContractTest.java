@@ -21,7 +21,7 @@ class ExampleConnectorContractTest extends IdentityConnectorContract {
     private static IdentityConnector example(boolean groups) {
         return new IdentityConnector() {
             @Override
-            public ConnectorId id() {
+            public ConnectorId getId() {
                 return ID;
             }
 
@@ -31,12 +31,12 @@ class ExampleConnectorContractTest extends IdentityConnectorContract {
             }
 
             @Override
-            public String displayName() {
+            public String getDisplayName() {
                 return "Example";
             }
 
             @Override
-            public Set<String> domains() {
+            public Set<String> getDomains() {
                 return Set.of("acme.com");
             }
 
@@ -47,7 +47,7 @@ class ExampleConnectorContractTest extends IdentityConnectorContract {
 
             @Override
             public ExternalIdentity identify(IdpResponse response) {
-                Map<String, ?> c = response.claims();
+                Map<String, ?> c = response.getClaims();
                 String subject = IdentityUtils.subject(c.get("sub") instanceof String s ? s : null);
                 return new ExternalIdentity(
                         ID,

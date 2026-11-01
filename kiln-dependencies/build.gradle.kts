@@ -1,6 +1,6 @@
 // The release-train BOM (DEP-1): every kiln-* module and every third-party version Kiln uses.
 // Versions come from gradle/libs.versions.toml. Only the Spring Boot artifacts Kiln uses are
-// managed, with the families Boot aligns (Framework, Micrometer, Jackson, JUnit) imported at the
+// managed, with the families Boot aligns (Framework, Security, Data, Micrometer, Jackson, JUnit) imported at the
 // versions that Boot release declares.
 
 plugins {
@@ -16,6 +16,8 @@ javaPlatform {
 
 dependencies {
     api(platform(libs.spring.framework.bom))
+    api(platform(libs.spring.security.bom))
+    api(platform(libs.spring.data.bom))
     api(platform(libs.micrometer.bom))
     api(platform(libs.jackson.bom))
     api(platform(libs.junit.bom))
@@ -27,6 +29,7 @@ dependencies {
         api(project(":kiln-auth-oauth2"))
         api(project(":kiln-auth-oidc"))
         api(project(":kiln-core"))
+        api(project(":kiln-crypto"))
         api(project(":kiln-database"))
         api(project(":kiln-format"))
         api(project(":kiln-format-cargo"))
@@ -47,6 +50,12 @@ dependencies {
         api(project(":kiln-storage-s3"))
         api(project(":kiln-web"))
 
+        api(libs.tink)
+        api(libs.lombok)
+        api(libs.mapstruct)
+        api(libs.mapstruct.processor)
+        api(libs.lombok.mapstruct.binding)
+
         api(libs.spring.boot)
         api(libs.spring.boot.autoconfigure)
         api(libs.spring.boot.configuration.processor)
@@ -58,6 +67,8 @@ dependencies {
         api(libs.spring.boot.health)
         api(libs.spring.boot.micrometer.metrics)
         api(libs.spring.boot.starter.log4j2)
+        api(libs.spring.security.oauth2.client)
+        api(libs.spring.security.config)
         api(libs.tomcat.embed.core)
         api(libs.tomcat.embed.el)
         api(libs.tomcat.embed.websocket)
@@ -86,10 +97,6 @@ dependencies {
         api(libs.findsecbugs)
         api(libs.jacoco.agent)
         api(libs.jacoco.ant)
-        api(libs.pitest)
-        api(libs.pitest.command.line)
-        api(libs.pitest.entry)
-        api(libs.pitest.junit5.plugin)
         api(libs.jazzer.junit)
         api(libs.jqwik)
         api(libs.jspecify)

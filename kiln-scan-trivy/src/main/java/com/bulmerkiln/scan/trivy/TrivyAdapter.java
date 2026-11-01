@@ -4,6 +4,7 @@
  */
 package com.bulmerkiln.scan.trivy;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.domain.Finding;
 import com.bulmerkiln.scan.domain.ScanJob;
@@ -60,8 +61,9 @@ public final class TrivyAdapter implements ScannerAdapter {
     }
 
     @Override
+    @UntrustedInput
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutputUtils.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.getOutput());
         if (!root.isObject() || root.path("SchemaVersion").asInt(0) != 2) {
             throw new IllegalArgumentException("Not a Trivy schema 2 report");
         }

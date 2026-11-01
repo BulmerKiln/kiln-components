@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
@@ -28,8 +29,16 @@ import tools.jackson.databind.node.ObjectNode;
  * base64-encoded in {@code _attachments}. It's read as a stream, and each attachment's bytes are
  * decoded straight into the sink the caller provides (FMT-NPM-12).
  */
-public record NpmPublishRequest(
-        @Nullable String name, ObjectNode versions, ObjectNode distTags, List<String> attachments) {
+@Value
+public final class NpmPublishRequest {
+
+    private final @Nullable String name;
+
+    private final ObjectNode versions;
+
+    private final ObjectNode distTags;
+
+    private final List<String> attachments;
 
     /**
      * Reads a body of at most {@code maxLength} characters, decoding each attachment into a sink

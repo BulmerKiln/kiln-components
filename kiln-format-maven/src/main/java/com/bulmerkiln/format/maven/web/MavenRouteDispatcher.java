@@ -69,7 +69,7 @@ public final class MavenRouteDispatcher {
             return;
         }
         requireRead(method);
-        MavenChecksumAlgorithm checksum = file.checksum();
+        MavenChecksumAlgorithm checksum = file.getChecksum();
         if (checksum != null) {
             text(response, files.checksum(file, fileName, checksum));
             return;
@@ -77,7 +77,7 @@ public final class MavenRouteDispatcher {
         try (BlobRead read = files.download(file, fileName)) {
             response.setStatus(200);
             response.setContentType(MavenFileService.isPom(file) ? "text/xml" : "application/octet-stream");
-            response.setContentLengthLong(read.length());
+            response.setContentLengthLong(read.getLength());
             if ("GET".equals(method)) {
                 read.transferTo(Channels.newChannel(response.getOutputStream()));
             }
@@ -95,7 +95,7 @@ public final class MavenRouteDispatcher {
         }
         requireRead(request.getMethod());
         byte[] xml = metadata.read(m);
-        MavenChecksumAlgorithm checksum = m.checksum();
+        MavenChecksumAlgorithm checksum = m.getChecksum();
         if (checksum != null) {
             text(response, MavenFileStore.checksum(xml, checksum));
             return;

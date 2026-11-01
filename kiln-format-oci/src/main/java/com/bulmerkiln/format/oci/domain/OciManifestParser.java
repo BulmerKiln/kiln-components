@@ -4,8 +4,8 @@
  */
 package com.bulmerkiln.format.oci.domain;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.core.digest.InvalidDigestException;
 import com.bulmerkiln.format.oci.OciException;
 import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import com.bulmerkiln.format.oci.constant.OciMediaTypes;
@@ -15,7 +15,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -57,19 +56,20 @@ public final class OciManifestParser {
      * @param contentType the request's {@code Content-Type}, which must match the manifest's own
      *     {@code mediaType} when it has one
      */
+    @UntrustedInput
     public OciManifest parse(byte[] raw, @Nullable String contentType) {
         OciManifestRequest json = read(raw);
-        String mediaType = mediaType(json.mediaType(), contentType);
+        String mediaType = mediaType(json.getMediaType(), contentType);
         requireSchemaVersion2(json, mediaType);
-        List<OciDescriptor> blobs = blobs(json, mediaType);
-        OciDescriptorRequest subject = json.subject();
+        List<OciDescriptor> blobs = OciDescriptorReader.blobs(json, mediaType);
+        OciDescriptorRequest subject = json.getSubject();
         return new OciManifest(
                 Digest.sha256(raw),
                 mediaType,
-                json.artifactType(),
+                json.getArtifactType(),
                 blobs,
-                manifests(json, mediaType),
-                subject == null ? null : descriptor(subject));
+                OciDescriptorReader.manifests(json, mediaType),
+                subject == null ? null : OciDescriptorReader.descriptor(subject));
     }
 
     private OciManifestRequest read(byte[] raw) {
@@ -89,45 +89,12 @@ public final class OciManifestParser {
     }
 
     private static void requireSchemaVersion2(OciManifestRequest json, String mediaType) {
-        if (OciMediaTypes.DOCKER_SCHEMA1.contains(mediaType) || Objects.equals(json.schemaVersion(), 1)) {
+        if (OciMediaTypes.DOCKER_SCHEMA1.contains(mediaType) || Objects.equals(json.getSchemaVersion(), 1)) {
             throw new OciException(OciErrorCode.UNSUPPORTED, "Docker schema1 manifests are not supported");
         }
-        if (!Objects.equals(json.schemaVersion(), 2)) {
+        if (!Objects.equals(json.getSchemaVersion(), 2)) {
             throw invalid("schemaVersion must be 2");
         }
-    }
-
-    /** The config and layers of an image manifest; none for an index. Refuses other media types. */
-    private static List<OciDescriptor> blobs(OciManifestRequest json, String mediaType) {
-        if (OciMediaTypes.INDEXES.contains(mediaType)) {
-            if (json.manifests() == null || json.config() != null || json.layers() != null) {
-                throw invalid("An index has manifests and no config or layers");
-            }
-            return List.of();
-        }
-        if (!OciMediaTypes.IMAGE_MANIFESTS.contains(mediaType)) {
-            throw invalid("Unsupported manifest media type");
-        }
-        OciDescriptorRequest config = json.config();
-        if (config == null || json.manifests() != null) {
-            throw invalid("An image manifest has a config and no manifests");
-        }
-        List<OciDescriptor> blobs = new ArrayList<>();
-        blobs.add(descriptor(config));
-        for (OciDescriptorRequest layer : orEmpty(json.layers())) {
-            blobs.add(descriptor(layer));
-        }
-        return List.copyOf(blobs);
-    }
-
-    /** The child manifests of an index; none for an image manifest. */
-    private static List<OciDescriptor> manifests(OciManifestRequest json, String mediaType) {
-        if (!OciMediaTypes.INDEXES.contains(mediaType)) {
-            return List.of();
-        }
-        return orEmpty(json.manifests()).stream()
-                .map(OciManifestParser::descriptor)
-                .toList();
     }
 
     /**
@@ -169,31 +136,7 @@ public final class OciManifestParser {
         return (semicolon < 0 ? contentType : contentType.substring(0, semicolon)).strip();
     }
 
-    private static OciDescriptor descriptor(@Nullable OciDescriptorRequest json) {
-        if (json == null) {
-            throw invalid("A descriptor needs a mediaType, digest and size");
-        }
-        String mediaType = json.mediaType();
-        String digest = json.digest();
-        Long size = json.size();
-        if (mediaType == null || digest == null || size == null) {
-            throw invalid("A descriptor needs a mediaType, digest and size");
-        }
-        if (size < 0) {
-            throw invalid("A descriptor size must not be negative");
-        }
-        try {
-            return new OciDescriptor(mediaType, Digest.parse(digest), size, json.artifactType());
-        } catch (InvalidDigestException e) {
-            throw invalid("A descriptor has an invalid digest");
-        }
-    }
-
-    private static <T> List<T> orEmpty(@Nullable List<T> list) {
-        return list == null ? List.of() : list;
-    }
-
-    private static OciException invalid(String message) {
+    static OciException invalid(String message) {
         return new OciException(OciErrorCode.MANIFEST_INVALID, message);
     }
 }

@@ -29,6 +29,8 @@ subsystem can be replaced or tested on its own.
 - `OrganizationResolver`: which organization a request's artifact path is for, provided by the assembling service
 - `Digest`, `DigestAlgorithm`, `Digester`: content digests
 - `ArtifactFormat`: the open identifier formats use (`oci`, `npm`, ...)
+- `Lookup<K, V>`: an answer for every key, the shape of the ports modules provide one another (`of(key)`)
+- `@UntrustedInput`: marks a method that consumes untrusted input, requiring a fuzz target (BUILD-14)
 
 **Does not**
 

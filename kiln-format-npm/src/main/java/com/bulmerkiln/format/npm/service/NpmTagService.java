@@ -35,10 +35,10 @@ public final class NpmTagService {
         change(
                 request,
                 tags -> {
-                    tags.put(tag, version.value());
+                    tags.put(tag, version.getValue());
                     return true;
                 },
-                version.value());
+                version.getValue());
     }
 
     public void remove(NpmPackageRequest request, String tag) {
@@ -49,15 +49,16 @@ public final class NpmTagService {
     private void change(
             NpmPackageRequest request, Predicate<Map<String, String>> edit, @Nullable String requiredVersion) {
         database.run(tx -> {
-            NpmPackageEntity snapshot = NpmPackageStore.load(tx, request.name()).orElseThrow(NpmException::notFound);
+            NpmPackageEntity snapshot =
+                    NpmPackageStore.load(tx, request.getName()).orElseThrow(NpmException::notFound);
             if (requiredVersion != null) {
                 snapshot.version(requiredVersion);
             }
-            Map<String, String> tags = snapshot.distTags();
+            Map<String, String> tags = snapshot.getDistTags();
             if (!edit.test(tags)) {
                 throw NpmException.notFound();
             }
-            PackageStore.updateMetadata(tx, snapshot.entry().id(), NpmPackageStore.metadata(tags));
+            PackageStore.updateMetadata(tx, snapshot.getEntry().getId(), NpmPackageStore.metadata(tags));
         });
     }
 }

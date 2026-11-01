@@ -6,7 +6,7 @@
  * The permissions subsystem: what a principal may do. It never
  * asks how someone signed in. Authentication (kiln-auth) produces a
  * {@link com.bulmerkiln.permissions.domain.Principal}; this module decides with a
- * {@link com.bulmerkiln.permissions.PermissionPolicy}, which every implementation proves against
+ * {@link com.bulmerkiln.permissions.policy.PermissionPolicy}, which every implementation proves against
  * {@code PermissionPolicyContract}, the authorization matrix.
  *
  * <p>Nothing is granted by default. A member's teams come from IdP groups and explicit

@@ -57,14 +57,14 @@ public final class OciRouteDispatcher {
             OciRoute route = OciRoute.parse(path);
             String organization = rest.substring(0, rest.length() - path.length());
             OciRepositoryRequest oci = new OciRepositoryRequest(
-                    route.repository(), organization + route.repository().value(), requests.baseUrl());
+                    route.getRepository(), organization + route.getRepository().getValue(), requests.baseUrl());
             switch (route) {
-                case OciRoute.Manifest m -> manifests.handle(request, response, oci, m.reference());
-                case OciRoute.Blob b -> blobs.blob(request, response, oci, b.digest());
+                case OciRoute.Manifest m -> manifests.handle(request, response, oci, m.getReference());
+                case OciRoute.Blob b -> blobs.blob(request, response, oci, b.getDigest());
                 case OciRoute.Uploads _ -> blobs.start(request, response, oci, organization);
-                case OciRoute.Upload u -> blobs.upload(request, response, oci, u.session());
+                case OciRoute.Upload u -> blobs.upload(request, response, oci, u.getSession());
                 case OciRoute.Tags _ -> tags.tags(request, response, oci);
-                case OciRoute.Referrers r -> tags.referrers(request, response, oci, r.digest());
+                case OciRoute.Referrers r -> tags.referrers(request, response, oci, r.getDigest());
             }
         });
     }

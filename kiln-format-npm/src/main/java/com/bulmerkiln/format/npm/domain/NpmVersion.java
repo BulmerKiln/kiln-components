@@ -6,14 +6,19 @@ package com.bulmerkiln.format.npm.domain;
 
 import com.bulmerkiln.format.domain.SemanticVersion;
 import com.bulmerkiln.format.npm.NpmException;
+import lombok.Value;
 
 /** A package version: a strict SemVer 2.0.0 version (FMT-NPM-8, FMT-13). */
-public record NpmVersion(String value) {
+@Value
+public final class NpmVersion {
 
-    public NpmVersion {
+    private final String value;
+
+    public NpmVersion(String value) {
         if (!isVersion(value)) {
             throw NpmException.invalid("Invalid version");
         }
+        this.value = value;
     }
 
     static boolean isVersion(String value) {

@@ -51,7 +51,7 @@ class FormatRequestsTest {
 
         @Override
         public RefusalResponse render(Refusal refusal) {
-            return RefusalResponse.of("text/plain", "refused: " + refusal.message());
+            return RefusalResponse.of("text/plain", "refused: " + refusal.getMessage());
         }
     };
 

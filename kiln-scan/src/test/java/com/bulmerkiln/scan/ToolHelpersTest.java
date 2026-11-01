@@ -96,6 +96,16 @@ class ToolHelpersTest {
     void versionParsingNeverThrows(FuzzedDataProvider data) {
         String version = data.consumeRemainingAsString();
         ToolVersion.parse(version)
-                .ifPresent(parsed -> assertThat(parsed.major()).isNotNegative());
+                .ifPresent(parsed -> assertThat(parsed.getMajor()).isNotNegative());
+    }
+
+    /** Whatever a tool prints, parsing fails only with a RuntimeException. */
+    @FuzzTest
+    void toolOutputParsingFailsOnlyWithRuntimeException(FuzzedDataProvider data) {
+        try {
+            ToolOutputUtils.json(data.consumeRemainingAsString());
+        } catch (RuntimeException expected) {
+            // The only failure a crafted tool output may cause.
+        }
     }
 }

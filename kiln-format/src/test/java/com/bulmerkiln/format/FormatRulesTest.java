@@ -48,7 +48,7 @@ class FormatRulesTest {
             @Override
             public RefusalResponse render(Refusal refusal) {
                 return new RefusalResponse(
-                        "application/json", FormatJsonUtils.write(Map.of("error", refusal.message())), headers);
+                        "application/json", FormatJsonUtils.write(Map.of("error", refusal.getMessage())), headers);
             }
         };
     }
@@ -76,8 +76,8 @@ class FormatRulesTest {
                         "use the web app"));
         FormatResponse response = FormatResponse.refusal(sneaky, Refusal.of(Reason.BLOCKED, "blocked"));
 
-        assertThat(response.status()).isEqualTo(403);
-        assertThat(response.headers())
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getHeaders())
                 .containsEntry("X-Content-Type-Options", "nosniff")
                 .containsEntry("X-Npm-Notice", "use the web app")
                 .doesNotContainKey("WWW-Authenticate")
@@ -116,7 +116,7 @@ class FormatRulesTest {
                 .isThrownBy(() -> Refusal.of(Reason.INVALID, "m").withCode("lower"));
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> Refusal.of(Reason.INVALID, "m").withCode("A\nB"));
-        assertThat(Refusal.of(Reason.NOT_FOUND, "m").withCode("BLOB_UNKNOWN").code())
+        assertThat(Refusal.of(Reason.NOT_FOUND, "m").withCode("BLOB_UNKNOWN").getCode())
                 .isEqualTo("BLOB_UNKNOWN");
     }
 
@@ -160,8 +160,8 @@ class FormatRulesTest {
     @Test
     void artifactRefsHaveNoBlankParts() {
         ArtifactFormat npm = new ArtifactFormat("npm");
-        assertThat(new ArtifactRef(npm, "@acme", "ui", "1.0.0").version()).isEqualTo("1.0.0");
-        assertThat(new ArtifactRef(npm, "@acme", "ui", null).version()).isNull();
+        assertThat(new ArtifactRef(npm, "@acme", "ui", "1.0.0").getVersion()).isEqualTo("1.0.0");
+        assertThat(new ArtifactRef(npm, "@acme", "ui", null).getVersion()).isNull();
         assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactRef(npm, " ", "ui", null));
         assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactRef(npm, "@acme", "", null));
         assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactRef(npm, "@acme", "ui", ""));
@@ -192,16 +192,16 @@ class FormatRulesTest {
         Supplier<String> challenge = () -> "Bearer realm=\"https://pkg.example/token\"";
         assertThat(Access.ALLOW.toRefusal("x", challenge)).isEmpty();
         assertThat(Access.AUTHENTICATE.toRefusal("sign in", challenge)).get().satisfies(r -> {
-            assertThat(r.reason()).isEqualTo(Reason.UNAUTHORIZED);
-            assertThat(r.challenge()).startsWith("Bearer");
+            assertThat(r.getReason()).isEqualTo(Reason.UNAUTHORIZED);
+            assertThat(r.getChallenge()).startsWith("Bearer");
         });
         assertThat(Access.DENY.toRefusal("no", challenge))
                 .get()
-                .extracting(Refusal::reason)
+                .extracting(Refusal::getReason)
                 .isEqualTo(Reason.DENIED);
         assertThat(Access.HIDE.toRefusal("not found", challenge))
                 .get()
-                .extracting(Refusal::reason)
+                .extracting(Refusal::getReason)
                 .isEqualTo(Reason.NOT_FOUND);
     }
 

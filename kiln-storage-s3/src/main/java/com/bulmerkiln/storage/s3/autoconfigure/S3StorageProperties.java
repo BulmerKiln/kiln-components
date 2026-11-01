@@ -10,30 +10,40 @@ import com.bulmerkiln.storage.s3.util.S3KeyUtils;
 import java.net.URI;
 import java.time.Duration;
 import java.util.regex.Pattern;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Settings for the S3 store.
- *
- * @param endpoint for S3-compatible stores such as SeaweedFS or Ceph RGW; AWS when unset
- * @param pathStyle path-style addressing, which most S3-compatible stores need
- * @param prefix a key prefix within the bucket
- * @param redirect when downloads redirect to presigned URLs; {@code auto} by default
- * @param presignTtl how long a presigned URL lives: at most 60 s, the only window in which a
- *     blocked artifact can still be fetched
- * @param allowInsecureEndpoint allows an {@code http} endpoint, for a store on the same host
  */
 @ConfigurationProperties("kiln.storage.s3")
-public record S3StorageProperties(
-        @Nullable String bucket,
-        @Nullable String region,
-        @Nullable URI endpoint,
-        boolean pathStyle,
-        @Nullable String prefix,
-        @Nullable S3RedirectMode redirect,
-        @Nullable Duration presignTtl,
-        boolean allowInsecureEndpoint) {
+@Value
+public final class S3StorageProperties {
+
+    private final @Nullable String bucket;
+
+    private final @Nullable String region;
+
+    /** For S3-compatible stores such as SeaweedFS or Ceph RGW; AWS when unset. */
+    private final @Nullable URI endpoint;
+
+    /** Path-style addressing, which most S3-compatible stores need. */
+    private final boolean pathStyle;
+
+    /** A key prefix within the bucket. */
+    private final @Nullable String prefix;
+
+    /** When downloads redirect to presigned URLs; {@code auto} by default. */
+    private final @Nullable S3RedirectMode redirect;
+
+    /**
+     * How long a presigned URL lives: at most 60 s, the only window in which a blocked artifact can still be fetched.
+     */
+    private final @Nullable Duration presignTtl;
+
+    /** Allows an {@code http} endpoint, for a store on the same host. */
+    private final boolean allowInsecureEndpoint;
 
     public static final Duration MAX_PRESIGN_TTL = Duration.ofSeconds(60);
 

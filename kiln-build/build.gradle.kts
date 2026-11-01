@@ -71,7 +71,6 @@ dependencies {
     implementation("com.github.spotbugs.snom:spotbugs-gradle-plugin:6.5.13")
     implementation("com.autonomousapps:dependency-analysis-gradle-plugin:3.19.2")
     implementation("com.github.jk1:gradle-license-report:3.1.4")
-    implementation("info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.19.0")
 }
 
 // Lets the conventions find kiln-dependencies at the same version when applied outside the monorepo,
@@ -86,13 +85,11 @@ val generateBuildInfo = tasks.register("generateBuildInfo") {
     val trainVersion = version.toString()
     val findsecbugs = catalogVersion("findsecbugs")
     val jacoco = catalogVersion("jacoco")
-    val pitest = catalogVersion("pitest")
-    val pitestJunit5 = catalogVersion("pitest-junit5")
+    val postgresImage = "postgres:" + catalogVersion("postgres-image")
     inputs.property("version", trainVersion)
     inputs.property("findsecbugs", findsecbugs)
     inputs.property("jacoco", jacoco)
-    inputs.property("pitest", pitest)
-    inputs.property("pitestJunit5", pitestJunit5)
+    inputs.property("postgresImage", postgresImage)
     outputs.dir(output)
     doLast {
         val file = output.get().file("com/bulmerkiln/build/KilnBuildInfo.kt").asFile
@@ -107,8 +104,9 @@ val generateBuildInfo = tasks.register("generateBuildInfo") {
             |    /** spotbugsPlugins is non-transitive, so it can't take its version from kiln-dependencies. */
             |    const val FINDSECBUGS = "$findsecbugs"
             |    const val JACOCO = "$jacoco"
-            |    const val PITEST = "$pitest"
-            |    const val PITEST_JUNIT5 = "$pitestJunit5"
+            |
+            |    /** The image of the build's shared PostgreSQL server for tests. */
+            |    const val POSTGRES_IMAGE = "$postgresImage"
             |}
             |""".trimMargin(),
         )
@@ -118,6 +116,17 @@ val generateBuildInfo = tasks.register("generateBuildInfo") {
 // The Spring Boot plugin for kiln.service, at the Spring Boot version the release train uses.
 dependencies {
     implementation("org.springframework.boot:spring-boot-gradle-plugin:${catalogVersion("spring-boot")}")
+}
+
+// The checks' own tests, on the release train's JUnit.
+dependencies {
+    testImplementation(platform("org.junit:junit-bom:${catalogVersion("junit")}"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 kotlin.sourceSets.main {
