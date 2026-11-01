@@ -1,0 +1,2 @@
+com.bulmerkiln.web.autoconfigure.WebAutoConfiguration
+com.bulmerkiln.web.autoconfigure.WebTomcatAutoConfiguration

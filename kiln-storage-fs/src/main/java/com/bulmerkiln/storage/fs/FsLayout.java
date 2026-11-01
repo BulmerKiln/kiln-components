@@ -8,7 +8,7 @@ import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.DigestAlgorithm;
 import com.bulmerkiln.core.digest.InvalidDigestException;
 import com.bulmerkiln.core.organization.OrganizationContext;
-import com.bulmerkiln.storage.UploadId;
+import com.bulmerkiln.storage.domain.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -39,14 +39,14 @@ final class FsLayout {
     }
 
     Path blobPath(Digest digest) {
-        return blobDirectory(digest).resolve(digest.encoded());
+        return blobDirectory(digest).resolve(digest.getEncoded());
     }
 
     Path blobDirectory(Digest digest) {
         return organizationRoot()
                 .resolve("blobs")
-                .resolve(digest.algorithm().id())
-                .resolve(digest.encoded().substring(0, 2));
+                .resolve(digest.getAlgorithm().id())
+                .resolve(digest.getEncoded().substring(0, 2));
     }
 
     Path uploadsDirectory() {
@@ -78,7 +78,7 @@ final class FsLayout {
     }
 
     private Path organizationRoot() {
-        return root.resolve(OrganizationContext.current().id().toString());
+        return root.resolve(OrganizationContext.current().getId().toString());
     }
 
     /** {@code <algorithm>/<ab>/<hex>}, or empty for anything that isn't a blob. */

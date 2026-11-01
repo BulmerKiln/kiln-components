@@ -10,6 +10,16 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
+import com.bulmerkiln.format.autoconfigure.FormatAutoConfiguration;
+import com.bulmerkiln.format.constant.Access;
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.FormatResponse;
+import com.bulmerkiln.format.dto.RefusalResponse;
+import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.format.service.FormatRegistry;
+import com.bulmerkiln.format.util.FormatJsonUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +46,9 @@ class FormatRulesTest {
             }
 
             @Override
-            public RefusalBody render(Refusal refusal) {
-                return new RefusalBody(
-                        "application/json", FormatJson.write(Map.of("error", refusal.message())), headers);
+            public RefusalResponse render(Refusal refusal) {
+                return new RefusalResponse(
+                        "application/json", FormatJsonUtils.write(Map.of("error", refusal.getMessage())), headers);
             }
         };
     }
@@ -66,8 +76,8 @@ class FormatRulesTest {
                         "use the web app"));
         FormatResponse response = FormatResponse.refusal(sneaky, Refusal.of(Reason.BLOCKED, "blocked"));
 
-        assertThat(response.status()).isEqualTo(403);
-        assertThat(response.headers())
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getHeaders())
                 .containsEntry("X-Content-Type-Options", "nosniff")
                 .containsEntry("X-Npm-Notice", "use the web app")
                 .doesNotContainKey("WWW-Authenticate")
@@ -106,7 +116,7 @@ class FormatRulesTest {
                 .isThrownBy(() -> Refusal.of(Reason.INVALID, "m").withCode("lower"));
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> Refusal.of(Reason.INVALID, "m").withCode("A\nB"));
-        assertThat(Refusal.of(Reason.NOT_FOUND, "m").withCode("BLOB_UNKNOWN").code())
+        assertThat(Refusal.of(Reason.NOT_FOUND, "m").withCode("BLOB_UNKNOWN").getCode())
                 .isEqualTo("BLOB_UNKNOWN");
     }
 
@@ -150,8 +160,8 @@ class FormatRulesTest {
     @Test
     void artifactRefsHaveNoBlankParts() {
         ArtifactFormat npm = new ArtifactFormat("npm");
-        assertThat(new ArtifactRef(npm, "@acme", "ui", "1.0.0").version()).isEqualTo("1.0.0");
-        assertThat(new ArtifactRef(npm, "@acme", "ui", null).version()).isNull();
+        assertThat(new ArtifactRef(npm, "@acme", "ui", "1.0.0").getVersion()).isEqualTo("1.0.0");
+        assertThat(new ArtifactRef(npm, "@acme", "ui", null).getVersion()).isNull();
         assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactRef(npm, " ", "ui", null));
         assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactRef(npm, "@acme", "", null));
         assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactRef(npm, "@acme", "ui", ""));
@@ -182,16 +192,16 @@ class FormatRulesTest {
         Supplier<String> challenge = () -> "Bearer realm=\"https://pkg.example/token\"";
         assertThat(Access.ALLOW.toRefusal("x", challenge)).isEmpty();
         assertThat(Access.AUTHENTICATE.toRefusal("sign in", challenge)).get().satisfies(r -> {
-            assertThat(r.reason()).isEqualTo(Reason.UNAUTHORIZED);
-            assertThat(r.challenge()).startsWith("Bearer");
+            assertThat(r.getReason()).isEqualTo(Reason.UNAUTHORIZED);
+            assertThat(r.getChallenge()).startsWith("Bearer");
         });
         assertThat(Access.DENY.toRefusal("no", challenge))
                 .get()
-                .extracting(Refusal::reason)
+                .extracting(Refusal::getReason)
                 .isEqualTo(Reason.DENIED);
         assertThat(Access.HIDE.toRefusal("not found", challenge))
                 .get()
-                .extracting(Refusal::reason)
+                .extracting(Refusal::getReason)
                 .isEqualTo(Reason.NOT_FOUND);
     }
 
@@ -212,7 +222,7 @@ class FormatRulesTest {
         ArtifactEventListener b = listener("b", seen);
         ArtifactRef ref = new ArtifactRef(new ArtifactFormat("npm"), "@acme", "ui", "1.0.0");
 
-        ArtifactEvents events = new ArtifactEvents(List.of(a, b));
+        ArtifactEventService events = new ArtifactEventService(List.of(a, b));
         events.pushed(ref, 10);
         events.pulled(ref, 0);
 
@@ -231,23 +241,23 @@ class FormatRulesTest {
             @Override
             public void pulled(ArtifactRef artifact, long bytes) {}
         };
-        ArtifactEvents events = new ArtifactEvents(List.of(audit));
+        ArtifactEventService events = new ArtifactEventService(List.of(audit));
         assertThatIllegalStateException()
                 .isThrownBy(() -> events.pushed(new ArtifactRef(new ArtifactFormat("oci"), "acme", "app", "1"), 1));
     }
 
     @Test
     void thereAreNoEventsWithoutAListener() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactEvents(List.of()));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ArtifactEventService(List.of()));
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(FormatAutoConfiguration.class))
-                .run(context -> assertThatThrownBy(() -> context.getBean(ArtifactEvents.class))
+                .run(context -> assertThatThrownBy(() -> context.getBean(ArtifactEventService.class))
                         .hasRootCauseMessage("ArtifactEvents needs at least one listener"));
         List<String> seen = new ArrayList<>();
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(FormatAutoConfiguration.class))
                 .withBean(ArtifactEventListener.class, () -> listener("metrics", seen))
-                .run(context -> assertThat(context).hasSingleBean(ArtifactEvents.class));
+                .run(context -> assertThat(context).hasSingleBean(ArtifactEventService.class));
     }
 
     private static ArtifactEventListener listener(String name, List<String> seen) {

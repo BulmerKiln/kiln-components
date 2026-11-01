@@ -15,6 +15,8 @@ include(
     "kiln-dependencies",
     "kiln-architecture",
     "kiln-core",
+    "kiln-crypto",
+    "kiln-database",
     "kiln-auth",
     "kiln-auth-oidc",
     "kiln-auth-oauth2",
@@ -25,6 +27,7 @@ include(
     "kiln-format-oci",
     "kiln-observability",
     "kiln-permissions",
+    "kiln-registry",
     "kiln-scan",
     "kiln-scan-gitleaks",
     "kiln-scan-grype",
@@ -34,4 +37,5 @@ include(
     "kiln-storage",
     "kiln-storage-fs",
     "kiln-storage-s3",
+    "kiln-web",
 )

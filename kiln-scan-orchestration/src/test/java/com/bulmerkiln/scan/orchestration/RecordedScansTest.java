@@ -7,15 +7,17 @@ package com.bulmerkiln.scan.orchestration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.core.digest.Digest;
-import com.bulmerkiln.scan.Limits;
-import com.bulmerkiln.scan.ScanJob;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
-import com.bulmerkiln.scan.ScannerAdapters;
-import com.bulmerkiln.scan.Severity;
-import com.bulmerkiln.scan.ToolRun;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Limits;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ToolRun;
 import com.bulmerkiln.scan.grype.GrypeAdapter;
+import com.bulmerkiln.scan.orchestration.domain.MergedFinding;
+import com.bulmerkiln.scan.orchestration.domain.SeverityCounts;
 import com.bulmerkiln.scan.osv.OsvScannerAdapter;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
 import com.bulmerkiln.scan.trivy.TrivyAdapter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,18 +51,18 @@ class RecordedScansTest {
 
         // Trivy names each by CVE with a GHSA alias; Grype and OSV-Scanner the other way round.
         assertThat(merged).hasSize(5).allSatisfy(f -> {
-            assertThat(f.id()).startsWith("CVE-");
-            assertThat(f.aliases()).anyMatch(a -> a.startsWith("GHSA-"));
-            assertThat(f.reportedBy())
+            assertThat(f.getId()).startsWith("CVE-");
+            assertThat(f.getAliases()).anyMatch(a -> a.startsWith("GHSA-"));
+            assertThat(f.getReportedBy())
                     .containsExactlyInAnyOrder(TrivyAdapter.ID, GrypeAdapter.ID, OsvScannerAdapter.ID);
             assertThat(f.reportedByAll()).isTrue();
-            assertThat(f.fixedVersion()).isNotNull();
+            assertThat(f.getFixedVersion()).isNotNull();
         });
         assertThat(merged.stream()
-                        .filter(f -> f.id().equals("CVE-2021-23337"))
+                        .filter(f -> f.getId().equals("CVE-2021-23337"))
                         .findFirst()
                         .orElseThrow()
-                        .severity())
+                        .getSeverity())
                 .isEqualTo(Severity.HIGH);
         assertThat(SeverityCounts.of(merged).get(Severity.HIGH)).isEqualTo(2);
         assertThat(SeverityCounts.of(merged).get(Severity.MEDIUM)).isEqualTo(3);
@@ -70,8 +72,8 @@ class RecordedScansTest {
         try (InputStream in = getClass().getResourceAsStream(recording)) {
             String output = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             ScanResult result =
-                    ScannerAdapters.run(adapter, JOB, new ToolRun(version, "db", exitCode, output, false, null));
-            assertThat(result.status()).isEqualTo(ScanResult.Status.COMPLETE);
+                    ScannerAdapterRunner.run(adapter, JOB, new ToolRun(version, "db", exitCode, output, false, null));
+            assertThat(result.getStatus()).isEqualTo(ScanResult.Status.COMPLETE);
             return result;
         }
     }

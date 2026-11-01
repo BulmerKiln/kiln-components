@@ -11,7 +11,7 @@ enrichment and policy.
 | Artifact | `com.bulmerkiln:kiln-scan-orchestration` |
 | Runs in | Kiln's server only, never the worker |
 | Depends on | [`kiln-scan`](../kiln-scan) |
-| Used by | `kiln-oss-service`, `kiln-cloud-service` |
+| Used by | `kiln-oss-service` |
 | Status | M4, Experimental: merging and counts |
 
 ## Purpose

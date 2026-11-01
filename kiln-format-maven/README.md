@@ -9,8 +9,8 @@ The Maven format: Maven and Gradle repositories, on `/maven/`.
 | Kind | Implementation of [`kiln-format`](../kiln-format) |
 | Artifact | `com.bulmerkiln:kiln-format-maven` |
 | Runs in | Kiln's server |
-| Depends on | [`kiln-format`](../kiln-format) |
-| Used by | `kiln-oss-service`, `kiln-cloud-service` |
+| Depends on | [`kiln-format`](../kiln-format), [`kiln-web`](../kiln-web), [`kiln-registry`](../kiln-registry), [`kiln-database`](../kiln-database), [`kiln-storage`](../kiln-storage) |
+| Used by | `kiln-oss-service` |
 | Status | M3, Experimental: path parsing, safe XML and errors; no endpoints yet |
 
 ## Purpose
@@ -24,13 +24,15 @@ name one version's file as another's, and parses XML with every external-entity 
 **Does**
 
 - Parse repository paths into artifact files, metadata files and their checksum sidecars (`MavenPath`)
-- Parse untrusted XML safely (`SafeXml`)
+- Parse untrusted XML safely (`MavenSafeXmlUtils`)
 - Render refusals as plain text
+- Serve the `/maven/` repository while the format is enabled: deploys, downloads, server-computed
+  checksums, generated `maven-metadata.xml`, and snapshot resolution
 
 **Does not**
 
-- Serve HTTP yet: deploys, metadata regeneration, checksums and snapshots come next
-- Store files; it hands validated paths to the layers that do
+- Decide access or policy; it asks the `ArtifactAccess` and `ArtifactPolicy` ports first
+- Keep its own tables; artifacts, versions and files live in `kiln-registry`
 
 ## Requirements
 
@@ -43,8 +45,18 @@ Inherits every requirement of [`kiln-format`](../kiln-format#requirements), and 
 | FMT-MVN-3 | A classifier must be `[A-Za-z0-9_-]+`; an extension one or more dot-separated alphanumeric parts (`jar`, `tar.gz`, `jar.asc`, `module`); `.md5`, `.sha1`, `.sha256` and `.sha512` mark checksum sidecars | `MavenPathTest` |
 | FMT-MVN-4 | `maven-metadata.xml` must be recognised per artifact, and per version only for a `-SNAPSHOT` version | `MavenPathTest` |
 | FMT-MVN-5 | Errors must never echo the path | `MavenPathTest` |
-| FMT-MVN-6 | XML must be parsed with any `DOCTYPE` refused, external entities, external DTDs and XInclude off, and secure processing on, which also stops entity-expansion bombs. Parse errors are thrown, never printed | `SafeXmlTest` |
+| FMT-MVN-6 | XML must be parsed with any `DOCTYPE` refused, external entities, external DTDs and XInclude off, and secure processing on, which also stops entity-expansion bombs. Parse errors are thrown, never printed | `MavenSafeXmlUtilsTest` |
 | FMT-MVN-7 | Errors must be the message as `text/plain; charset=utf-8`, since Maven over HTTP/2 has no reason phrase and Maven and Gradle show the body | `MavenFormatModuleTest` |
+| FMT-MVN-8 | Every path below `/maven/` must take `GET`, `HEAD` and `PUT`; other methods are `405` in Maven's text, since deletes go through Kiln | `MavenAccessServiceTest` |
+| FMT-MVN-9 | Access must be decided before anything about the artifact is looked up. An artifact belongs to the namespace owning the longest prefix of its groupId, and deploying needs one | `MavenAccessServiceTest` |
+| FMT-MVN-10 | Files must stream into the blob store, hashed on the way, and come back as deployed; past `max-file-size` is `413` | `MavenRepositoryTest` |
+| FMT-MVN-11 | A stored file must never change: the same bytes again are a no-op, since clients retry; other bytes are `409`. A tombstoned version can't be deployed | `MavenRepositoryTest` |
+| FMT-MVN-12 | `.md5`, `.sha1`, `.sha256` and `.sha512` must be computed on the server for every file and metadata. A file's checksums are taken while it's deployed and kept with its blob, so a checksum request never reads the file again. An uploaded checksum must match its stored file, or `400` | `MavenRepositoryTest` |
+| FMT-MVN-13 | Anonymous callers must get `401` with `WWW-Authenticate: Basic`, since Maven sends credentials only after a challenge | `MavenAccessServiceTest` |
+| FMT-MVN-14 | A `-SNAPSHOT` file name must resolve to the latest timestamped build of the same classifier and extension; a timestamped name is served exactly | `MavenRepositoryTest` |
+| FMT-MVN-15 | `maven-metadata.xml` must be generated from the database; of uploads only plugin prefixes are kept (FMT-MVN-17): per artifact, the versions with a POM that no block refuses, with `latest` and `release`; per snapshot version, the latest build of each kind. A blocked version is `403`, with the reason in the body | `MavenRepositoryTest` |
+| FMT-MVN-16 | The `/maven/` routes must exist only in a web application while `kiln.format.maven.enabled` isn't `false`. POM deploys and downloads reach the event listeners | `MavenWebAutoConfigurationTest`, `MavenRepositoryTest` |
+| FMT-MVN-17 | Group-level metadata must list the group's plugins (`name`, `prefix`, `artifactId`), so `mvn <prefix>:<goal>` resolves. They come from the `<plugins>` of uploaded group metadata, parsed by `MavenSafeXmlUtils`, kept only for artifacts already deployed that the uploader may write, with a valid prefix and a bounded name. A path without a version is both artifact `g:a` and group `g.a`: either may be written, versions are listed to those who may read the artifact, and plugins to those who may read each plugin | `MavenRepositoryTest`, `MavenPluginMetadataTest` (fuzz target) |
 
 ## How it plugs in *(implementation only)*
 
@@ -55,7 +67,8 @@ Registers `MavenFormatModule` (format `maven`, route `/maven/`), switched by
 
 | Property | Default | Description |
 |---|---|---|
-| `kiln.format.maven.enabled` | `true` | Switches the format off |
+| `kiln.format.maven.enabled` | `true` | Switches the format off: its `/maven/` routes don't exist |
+| `kiln.format.maven.max-file-size` | 2 GiB | The largest file in bytes; larger is `413` |
 
 ## Usage
 
@@ -65,7 +78,7 @@ switch (MavenPath.parse(path)) {
     case MavenPath.Metadata metadata -> ...;
 }
 
-Document pom = SafeXml.parse(bytes);
+Document pom = MavenSafeXmlUtils.parse(bytes);
 ```
 
 ## Security
@@ -96,9 +109,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: FMT-MVN-1 to FMT-MVN-7.
+Implemented: FMT-MVN-1 to FMT-MVN-17.
 
-Planned (M3): `PUT`, `GET` and `HEAD` for every path, versions visible once their POM lands,
-`maven-metadata.xml` regenerated from the database, server-computed checksums (uploaded ones
-verified), snapshot resolution, immutable releases (`409` on redeploy), `.module` files, and
-`401` with `WWW-Authenticate: Basic` on protected reads.
+Planned (M3): checksums stored at deploy rather than computed per request, the sweep of
+half-deployed versions, and Maven and Gradle themselves as the acceptance test.

@@ -8,6 +8,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
+import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -23,7 +25,7 @@ class OrganizationTest {
     void organizationIdRoundTripsThroughItsString() {
         OrganizationId id = new OrganizationId(UUID.randomUUID());
         assertThat(OrganizationId.of(id.toString())).isEqualTo(id);
-        assertThat(id).hasToString(id.value().toString());
+        assertThat(id).hasToString(id.getValue().toString());
     }
 
     @Test
@@ -79,5 +81,21 @@ class OrganizationTest {
             })
     void refusesLookalikesAndEncodings(String slug) {
         assertThat(Organization.isValidSlug(slug)).isFalse();
+    }
+
+    /** Whatever string a URL or header carries, parsing it fails only with IllegalArgumentException. */
+    @FuzzTest
+    void organizationIdParsingFailsOnlyWithIllegalArgumentException(FuzzedDataProvider data) {
+        try {
+            OrganizationId.of(data.consumeString(128));
+        } catch (IllegalArgumentException expected) {
+            // The only failure a crafted ID string may cause.
+        }
+    }
+
+    /** Whatever string a URL path carries, slug validation never throws. */
+    @FuzzTest
+    void slugValidationNeverThrows(FuzzedDataProvider data) {
+        Organization.isValidSlug(data.consumeString(128));
     }
 }

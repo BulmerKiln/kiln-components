@@ -25,8 +25,12 @@ subsystem can be replaced or tested on its own.
 
 - `OrganizationContext`: the organization the current work runs for
 - `Organization`, `OrganizationId`: organizations and their slugs, including the reserved slugs
+- `OrganizationDirectory`: where organizations come from, provided by the assembling service
+- `OrganizationResolver`: which organization a request's artifact path is for, provided by the assembling service
 - `Digest`, `DigestAlgorithm`, `Digester`: content digests
 - `ArtifactFormat`: the open identifier formats use (`oci`, `npm`, ...)
+- `Lookup<K, V>`: an answer for every key, the shape of the ports modules provide one another (`of(key)`)
+- `@UntrustedInput`: marks a method that consumes untrusted input, requiring a fuzz target (BUILD-14)
 
 **Does not**
 

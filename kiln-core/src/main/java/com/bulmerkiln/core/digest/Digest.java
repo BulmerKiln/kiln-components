@@ -6,13 +6,19 @@ package com.bulmerkiln.core.digest;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import lombok.Value;
 
 /**
  * A content digest such as {@code sha256:6c3c...}, validated to the OCI image-spec grammar
  * (descriptor.md, "Digests"). Only registered algorithms are accepted, with their exact lowercase
  * hex encodings, so a {@code Digest} is always safe to use in a storage path.
  */
-public record Digest(DigestAlgorithm algorithm, String encoded) {
+@Value
+public final class Digest {
+
+    private final DigestAlgorithm algorithm;
+
+    private final String encoded;
 
     /** Longer than any registered digest; checked before matching so no input is unbounded. */
     private static final int MAX_LENGTH = 256;
@@ -26,11 +32,13 @@ public record Digest(DigestAlgorithm algorithm, String encoded) {
     private static final Pattern COMPONENT = Pattern.compile("[a-z0-9]+");
     private static final Pattern ENCODED = Pattern.compile("[a-zA-Z0-9=_-]+");
 
-    public Digest {
+    public Digest(DigestAlgorithm algorithm, String encoded) {
         Objects.requireNonNull(algorithm, "algorithm");
         if (!algorithm.isValidEncoding(encoded)) {
             throw new InvalidDigestException("Invalid " + algorithm.id() + " encoding");
         }
+        this.algorithm = algorithm;
+        this.encoded = encoded;
     }
 
     /**
@@ -40,6 +48,9 @@ public record Digest(DigestAlgorithm algorithm, String encoded) {
      * @throws InvalidDigestException if it's malformed
      */
     public static Digest parse(String value) {
+        if (value == null) {
+            throw new InvalidDigestException("Malformed digest");
+        }
         int colon = value.indexOf(':');
         if (value.length() > MAX_LENGTH
                 || colon < 0

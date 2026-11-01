@@ -5,19 +5,24 @@
 package com.bulmerkiln.auth.oidc;
 
 import com.bulmerkiln.auth.connector.ConnectorSource;
+import com.bulmerkiln.auth.oidc.autoconfigure.OidcProperties;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Value;
 
 /** Every OIDC connector from boot configuration, validated at startup. */
-public record OidcConnectors(List<OidcConnector> connectors) implements ConnectorSource {
+@Value
+public final class OidcConnectors implements ConnectorSource {
 
-    public OidcConnectors {
-        connectors = List.copyOf(connectors);
+    private final List<OidcConnector> connectors;
+
+    public OidcConnectors(List<OidcConnector> connectors) {
+        this.connectors = List.copyOf(connectors);
         Set<String> ids = new HashSet<>();
-        for (OidcConnector connector : connectors) {
-            if (!ids.add(connector.id().value())) {
-                throw new IllegalArgumentException("Duplicate connector ID: " + connector.id());
+        for (OidcConnector connector : this.connectors) {
+            if (!ids.add(connector.getId().getValue())) {
+                throw new IllegalArgumentException("Duplicate connector ID: " + connector.getId());
             }
         }
     }

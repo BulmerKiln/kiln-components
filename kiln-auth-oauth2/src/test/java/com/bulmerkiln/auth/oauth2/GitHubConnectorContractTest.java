@@ -8,7 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.auth.connector.IdentityConnector;
 import com.bulmerkiln.auth.connector.IdentityConnectorContract;
-import com.bulmerkiln.auth.connector.IdpResponse;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
+import com.bulmerkiln.auth.oauth2.constant.OAuth2Preset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,7 +76,7 @@ class GitHubConnectorContractTest extends IdentityConnectorContract {
 
     @Test
     void namesGroupsByOrganizationAndTeam() {
-        assertThat(github.identify(response(583231, null, List.of("Platform"))).groups())
+        assertThat(github.identify(response(583231, null, List.of("Platform"))).getGroups())
                 .containsExactlyInAnyOrder("acme", "acme/platform");
     }
 
@@ -86,11 +88,11 @@ class GitHubConnectorContractTest extends IdentityConnectorContract {
 
     @Test
     void aFailedTeamsLookupOnlyMeansFewerGroups() {
-        assertThat(github.identify(IdpResponse.of(Map.of("id", 583231))).groups())
+        assertThat(github.identify(IdpResponse.of(Map.of("id", 583231))).getGroups())
                 .isEmpty();
         assertThat(github.identify(new IdpResponse(
                                 Map.of("id", 583231), Map.of("teams", Map.of("message", "Bad credentials"))))
-                        .groups())
+                        .getGroups())
                 .isEmpty();
     }
 }

@@ -6,14 +6,14 @@ package com.bulmerkiln.storage.fs;
 
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.Digester;
-import com.bulmerkiln.storage.BlobInfo;
 import com.bulmerkiln.storage.BlobRead;
 import com.bulmerkiln.storage.BlobStore;
-import com.bulmerkiln.storage.ByteRange;
 import com.bulmerkiln.storage.DigestMismatchException;
-import com.bulmerkiln.storage.UploadId;
 import com.bulmerkiln.storage.UploadNotFoundException;
 import com.bulmerkiln.storage.UploadOffsetException;
+import com.bulmerkiln.storage.domain.BlobInfo;
+import com.bulmerkiln.storage.domain.ByteRange;
+import com.bulmerkiln.storage.domain.UploadId;
 import com.google.errorprone.annotations.MustBeClosed;
 import java.io.IOException;
 import java.io.InputStream;
@@ -129,7 +129,7 @@ public final class FsBlobStore implements BlobStore {
 
     /** Verifies the upload (STO-5), then renames it into place (STO-6). */
     private BlobInfo moveIntoPlace(FileChannel channel, Path source, Digest expected) throws IOException {
-        Digester digester = Digester.of(expected.algorithm());
+        Digester digester = Digester.of(expected.getAlgorithm());
         digester.update(Channels.newInputStream(channel.position(0)));
         Digest actual = digester.digest();
         if (!actual.equals(expected)) {
@@ -141,7 +141,7 @@ public final class FsBlobStore implements BlobStore {
         Path directory = Files.createDirectories(layout.blobDirectory(expected));
         try {
             // Replaces an existing blob on POSIX, which is safe: it's the same content.
-            Files.move(source, directory.resolve(expected.encoded()), StandardCopyOption.ATOMIC_MOVE);
+            Files.move(source, directory.resolve(expected.getEncoded()), StandardCopyOption.ATOMIC_MOVE);
         } catch (FileAlreadyExistsException e) {
             Files.deleteIfExists(source);
         }

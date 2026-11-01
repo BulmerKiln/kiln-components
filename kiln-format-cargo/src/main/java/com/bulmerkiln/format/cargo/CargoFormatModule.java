@@ -5,10 +5,10 @@
 package com.bulmerkiln.format.cargo;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
-import com.bulmerkiln.format.FormatJson;
 import com.bulmerkiln.format.FormatModule;
-import com.bulmerkiln.format.Refusal;
-import com.bulmerkiln.format.RefusalBody;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.RefusalResponse;
+import com.bulmerkiln.format.util.FormatJsonUtils;
 import java.util.List;
 import java.util.Map;
 
@@ -28,8 +28,9 @@ public final class CargoFormatModule implements FormatModule {
     }
 
     @Override
-    public RefusalBody render(Refusal refusal) {
-        return RefusalBody.of(
-                "application/json", FormatJson.write(Map.of("errors", List.of(Map.of("detail", refusal.message())))));
+    public RefusalResponse render(Refusal refusal) {
+        return RefusalResponse.of(
+                "application/json",
+                FormatJsonUtils.write(Map.of("errors", List.of(Map.of("detail", refusal.getMessage())))));
     }
 }

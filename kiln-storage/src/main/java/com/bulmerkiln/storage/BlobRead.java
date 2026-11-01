@@ -12,13 +12,13 @@ import java.nio.channels.WritableByteChannel;
 public interface BlobRead extends Closeable {
 
     /** The size of the whole blob. */
-    long blobSize();
+    long getBlobSize();
 
     /** Where the bytes being read start within the blob. */
-    long offset();
+    long getOffset();
 
     /** How many bytes are being read. */
-    long length();
+    long getLength();
 
     /**
      * Writes the bytes to {@code target}. Filesystem stores use zero-copy transfer, so the bytes

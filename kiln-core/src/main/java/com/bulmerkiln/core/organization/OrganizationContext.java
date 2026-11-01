@@ -41,9 +41,9 @@ public final class OrganizationContext {
     }
 
     private static ScopedValue.Carrier bind(Organization organization) {
-        if (CURRENT.isBound() && !CURRENT.get().id().equals(organization.id())) {
+        if (CURRENT.isBound() && !CURRENT.get().getId().equals(organization.getId())) {
             throw new IllegalStateException("Already running for organization "
-                    + CURRENT.get().slug() + "; refusing to switch to " + organization.slug());
+                    + CURRENT.get().getSlug() + "; refusing to switch to " + organization.getSlug());
         }
         return ScopedValue.where(CURRENT, organization);
     }

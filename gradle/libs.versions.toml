@@ -8,6 +8,8 @@
 [versions]
 spring-boot = "4.1.2"
 spring-framework = "7.0.10" # Boot
+spring-security = "7.1.0" # Boot
+spring-data = "2026.0.2" # Boot
 micrometer = "1.17.2" # Boot
 jackson = "3.1.7" # Boot
 junit = "6.0.3" # Boot
@@ -15,6 +17,24 @@ assertj = "3.27.7" # Boot
 byte-buddy = "1.18.15" # Boot
 jspecify = "1.0.1" # Boot
 commons-logging = "1.3.6" # Boot
+log4j = "2.25.5" # Boot
+tomcat = "11.0.27" # Boot
+flyway = "12.4.0" # Boot
+hikaricp = "7.0.2" # Boot
+jooq = "3.21.9" # Boot
+postgresql = "42.7.14" # Boot
+reactive-streams = "1.0.4" # Boot
+jakarta-xml-bind = "4.0.5" # Boot
+snakeyaml = "2.6" # Boot
+jakarta-servlet = "6.1.0" # Boot
+hamcrest = "3.0" # Boot
+json-path = "2.10.0" # Boot
+jsonassert = "1.5.3" # Boot
+testcontainers = "2.0.5" # Boot
+# The postgres image tag tests run against: kiln-build's shared server, and KilnPostgres's own.
+postgres-image = "17.11-alpine3.23"
+# 1.24.0 (2026-10-16) waits out the cooldown; 1.23.0 has the same license and dependencies.
+tink = "1.23.0"
 error-prone = "2.51.0"
 nullaway = "0.14.3"
 checkstyle = "14.3.0"
@@ -23,17 +43,52 @@ archunit = "1.5.1"
 spotbugs = "4.10.5"
 findsecbugs = "1.14.0"
 jacoco = "0.8.16"
-pitest = "1.30.1"
-pitest-junit5 = "1.2.3"
 jqwik = "1.10.2"
 jazzer = "0.30.0"
+lombok = "1.18.48"
+mapstruct = "1.6.3"
+lombok-mapstruct-binding = "0.2.0"
 
 [libraries]
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+lombok-mapstruct-binding = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombok-mapstruct-binding" }
 spring-boot = { module = "org.springframework.boot:spring-boot", version.ref = "spring-boot" }
 spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "spring-boot" }
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor", version.ref = "spring-boot" }
 spring-boot-test = { module = "org.springframework.boot:spring-boot-test", version.ref = "spring-boot" }
+spring-boot-webmvc = { module = "org.springframework.boot:spring-boot-webmvc", version.ref = "spring-boot" }
+spring-boot-tomcat = { module = "org.springframework.boot:spring-boot-tomcat", version.ref = "spring-boot" }
+spring-boot-actuator = { module = "org.springframework.boot:spring-boot-actuator", version.ref = "spring-boot" }
+spring-boot-actuator-autoconfigure = { module = "org.springframework.boot:spring-boot-actuator-autoconfigure", version.ref = "spring-boot" }
+spring-boot-health = { module = "org.springframework.boot:spring-boot-health", version.ref = "spring-boot" }
+spring-boot-micrometer-metrics = { module = "org.springframework.boot:spring-boot-micrometer-metrics", version.ref = "spring-boot" }
+spring-boot-starter-log4j2 = { module = "org.springframework.boot:spring-boot-starter-log4j2", version.ref = "spring-boot" }
+log4j-bom = { module = "org.apache.logging.log4j:log4j-bom", version.ref = "log4j" }
+tomcat-embed-core = { module = "org.apache.tomcat.embed:tomcat-embed-core", version.ref = "tomcat" }
+tomcat-embed-el = { module = "org.apache.tomcat.embed:tomcat-embed-el", version.ref = "tomcat" }
+tomcat-annotations-api = { module = "org.apache.tomcat:tomcat-annotations-api", version.ref = "tomcat" }
+tomcat-embed-websocket = { module = "org.apache.tomcat.embed:tomcat-embed-websocket", version.ref = "tomcat" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
+jooq = { module = "org.jooq:jooq", version.ref = "jooq" }
+tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+reactive-streams = { module = "org.reactivestreams:reactive-streams", version.ref = "reactive-streams" }
+jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api", version.ref = "jakarta-servlet" }
+json-path = { module = "com.jayway.jsonpath:json-path", version.ref = "json-path" }
+jsonassert = { module = "org.skyscreamer:jsonassert", version.ref = "jsonassert" }
+hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind" }
+testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
 spring-framework-bom = { module = "org.springframework:spring-framework-bom", version.ref = "spring-framework" }
+spring-security-bom = { module = "org.springframework.security:spring-security-bom", version.ref = "spring-security" }
+spring-data-bom = { module = "org.springframework.data:spring-data-bom", version.ref = "spring-data" }
+spring-security-oauth2-client = { module = "org.springframework.security:spring-security-oauth2-client", version.ref = "spring-security" }
+spring-security-config = { module = "org.springframework.security:spring-security-config", version.ref = "spring-security" }
 micrometer-bom = { module = "io.micrometer:micrometer-bom", version.ref = "micrometer" }
 jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
@@ -53,9 +108,5 @@ spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", ve
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 jacoco-agent = { module = "org.jacoco:org.jacoco.agent", version.ref = "jacoco" }
 jacoco-ant = { module = "org.jacoco:org.jacoco.ant", version.ref = "jacoco" }
-pitest = { module = "org.pitest:pitest", version.ref = "pitest" }
-pitest-command-line = { module = "org.pitest:pitest-command-line", version.ref = "pitest" }
-pitest-entry = { module = "org.pitest:pitest-entry", version.ref = "pitest" }
-pitest-junit5-plugin = { module = "org.pitest:pitest-junit5-plugin", version.ref = "pitest-junit5" }
 jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
 jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }

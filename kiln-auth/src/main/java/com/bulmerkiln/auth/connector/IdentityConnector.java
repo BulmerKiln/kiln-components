@@ -4,6 +4,10 @@
  */
 package com.bulmerkiln.auth.connector;
 
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.connector.util.IdentityUtils;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
@@ -15,16 +19,16 @@ import java.util.Set;
  */
 public interface IdentityConnector {
 
-    ConnectorId id();
+    ConnectorId getId();
 
     /** The protocol, such as {@code oidc} or {@code oauth2}, as stored in {@code connectors.type}. */
     String type();
 
     /** Shown on the sign-in page. */
-    String displayName();
+    String getDisplayName();
 
     /** The email domains this connector serves, for IdP discovery. Lowercase. */
-    Set<String> domains();
+    Set<String> getDomains();
 
     /**
      * Whether this connector can report groups. Without them, its people get no roles until an
@@ -42,7 +46,7 @@ public interface IdentityConnector {
     }
 
     /**
-     * Turns a verified IdP response into an identity, applying {@link IdentityRules}.
+     * Turns a verified IdP response into an identity, applying {@link IdentityUtils}.
      *
      * @throws InvalidIdentityException if the response doesn't identify anyone usable
      */

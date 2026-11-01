@@ -10,7 +10,7 @@ and the access decision.
 | Kind | Subsystem |
 | Artifact | `com.bulmerkiln:kiln-permissions` (plus a `test-fixtures` variant) |
 | Runs in | Kiln's server |
-| Depends on | Spring Boot auto-configuration; optionally [`kiln-format`](../kiln-format), to answer its `ArtifactAccess` port |
+| Depends on | [`kiln-core`](../kiln-core), for `Lookup`; Spring Boot auto-configuration; optionally [`kiln-format`](../kiln-format), to answer its `ArtifactAccess` port, and [`kiln-database`](../kiln-database), to keep role bindings |
 | Used by | The format subsystem, the API and web app, the token service |
 | Status | M1, Experimental |
 
@@ -26,7 +26,7 @@ it answers "you may not" with `404` wherever `403` would reveal that a private r
 
 - The roles and what each allows (`Role`, `Action`)
 - Role bindings at organization, namespace or repository level (`RoleBinding`, `Scope`)
-- Teams from IdP groups (`TeamMembership`)
+- Teams from IdP groups (`TeamMembershipService`)
 - The decision: allow, ask to sign in, deny or hide (`PermissionPolicy`, `RoleBasedPolicy`)
 - The current principal for each request (`CurrentPrincipal`)
 - `PermissionPolicyContract`, the authorization matrix every policy passes
@@ -34,7 +34,7 @@ it answers "you may not" with `404` wherever `403` would reveal that a private r
 **Does not**
 
 - Authenticate anyone; [`kiln-auth`](../kiln-auth) establishes the principal
-- Store bindings or visibility; the data layer implements `RoleBindingRepository` and `VisibilityLookup`
+- Store bindings or visibility; the data layer implements the role-binding and visibility `Lookup`s
 - Apply blocks, quotas or immutability; those are policy, behind `kiln-format`'s `ArtifactPolicy`
 
 ## Requirements
@@ -51,8 +51,9 @@ it answers "you may not" with `404` wherever `403` would reveal that a private r
 | PERM-8 | Bindings from the data layer must be rechecked against the principal, so a binding returned by mistake can't grant anything | `RoleBasedPolicyTest` |
 | PERM-9 | IdP groups must map to teams per connector and group name, matched exactly, so the same group name from two IdPs never means the same thing. Membership is recomputed at every sign-in; no mapped groups leaves only explicit teams | `RoleBasedPolicyTest` |
 | PERM-10 | The current principal must be bound for each request, explicitly as anonymous when there are no credentials. Reading it unbound fails, and a request can't switch principal | `RoleBasedPolicyTest` |
-| PERM-11 | There must be no default for stored bindings or visibility: without a `RoleBindingRepository`, or a `VisibilityLookup` when formats are present, the boot fails | `RoleBasedPolicyTest` |
+| PERM-11 | There must be no default for stored bindings or visibility: without a role-binding `Lookup<Principal, List<RoleBinding>>`, or a visibility `Lookup<Scope, Visibility>` when formats are present, the boot fails, and neither lookup stands in for the other | `RoleBasedPolicyTest` |
 | PERM-12 | When the format subsystem is present, this module must answer its `ArtifactAccess` port with the same decisions | `RoleBasedPolicyTest` |
+| PERM-13 | When the database module is present, role bindings must be kept there per organization, reading only the principal's own bindings and its teams'. Granting a binding that's held changes nothing. Workloads and anonymous callers read none | `StoredRoleBindingLookupTest` |
 
 ## Contract *(subsystem only)*
 
@@ -61,8 +62,8 @@ it answers "you may not" with `404` wherever `403` would reveal that a private r
 | `PermissionPolicy` | Decides: `allowed(principal, resource)` and `decide(principal, action, resource)` |
 | `Principal` | Member, service account, workload or anonymous |
 | `Role`, `Action`, `RoleBinding`, `Scope`, `Resource`, `Visibility`, `Decision` | The model |
-| `RoleBindingRepository` | Port: stored bindings, implemented by the data layer |
-| `VisibilityLookup` | Port: whether a namespace or repository is public, implemented by the data layer |
+| `Lookup<Principal, List<RoleBinding>>` (`kiln-core`) | Port: the stored bindings that may apply to a principal, implemented by the data layer (`StoredRoleBindingLookup` when the database module is present). Extra ones are harmless: each is rechecked |
+| `Lookup<Scope, Visibility>` (`kiln-core`) | Port: whether a namespace or repository is public, implemented by the data layer; unknown ones are private |
 | `CurrentPrincipal` | The principal bound for the current request |
 | `PermissionPolicyContract` *(test fixtures)* | The authorization matrix every policy extends |
 
@@ -111,7 +112,7 @@ CurrentPrincipal.run(principal, () -> {
 ./gradlew :kiln-permissions:test
 ```
 
-No tests need Docker or external services.
+`StoredRoleBindingLookupTest` needs Docker, for PostgreSQL through `kiln-database`'s `KilnPostgres`.
 
 ## Standards and references
 
@@ -121,8 +122,8 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: PERM-1 to PERM-12.
+Implemented: PERM-1 to PERM-13.
 
-Planned (M1): the Postgres-backed `RoleBindingRepository`, `VisibilityLookup` and team
+Planned (M1): team
 membership; the API and web-app endpoints' own authorization-matrix tests against every role and
 credential rung.

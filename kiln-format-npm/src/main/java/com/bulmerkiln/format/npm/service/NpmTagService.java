@@ -1,0 +1,63 @@
+/*
+ * Copyright The Bulmer Kiln Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package com.bulmerkiln.format.npm.service;
+
+import com.bulmerkiln.database.Database;
+import com.bulmerkiln.format.constant.Operation;
+import com.bulmerkiln.format.npm.NpmException;
+import com.bulmerkiln.format.npm.domain.NpmPackage;
+import com.bulmerkiln.format.npm.domain.NpmVersion;
+import com.bulmerkiln.format.npm.dto.NpmPackageRequest;
+import java.util.Map;
+import java.util.function.Predicate;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * {@code npm dist-tag add} and {@code rm}. A tag can only point at a version that exists; any tag,
+ * {@code latest} included, can be removed, as other npm registries allow (FMT-NPM-14).
+ */
+public final class NpmTagService {
+
+    private final Database database;
+    private final NpmAccessService access;
+    private final NpmPackageService packages;
+
+    public NpmTagService(Database database, NpmAccessService access, NpmPackageService packages) {
+        this.database = database;
+        this.access = access;
+        this.packages = packages;
+    }
+
+    public void set(NpmPackageRequest request, String tag, NpmVersion version) {
+        access.requireToWrite(request, Operation.PUSH);
+        change(
+                request,
+                tags -> {
+                    tags.put(tag, version.getValue());
+                    return true;
+                },
+                version.getValue());
+    }
+
+    public void remove(NpmPackageRequest request, String tag) {
+        access.requireToWrite(request, Operation.PUSH);
+        change(request, tags -> tags.remove(tag) != null, null);
+    }
+
+    private void change(
+            NpmPackageRequest request, Predicate<Map<String, String>> edit, @Nullable String requiredVersion) {
+        database.run(() -> {
+            NpmPackage snapshot = packages.load(request.getName()).orElseThrow(NpmException::notFound);
+            if (requiredVersion != null) {
+                snapshot.version(requiredVersion);
+            }
+            Map<String, String> tags = snapshot.getDistTags();
+            if (!edit.test(tags)) {
+                throw NpmException.notFound();
+            }
+            packages.setDistTags(snapshot.getStored().getId(), tags);
+        });
+    }
+}

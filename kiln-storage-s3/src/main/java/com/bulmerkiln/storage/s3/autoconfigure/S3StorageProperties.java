@@ -1,0 +1,99 @@
+/*
+ * Copyright The Bulmer Kiln Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package com.bulmerkiln.storage.s3.autoconfigure;
+
+import com.bulmerkiln.storage.s3.constant.S3RedirectMode;
+import com.bulmerkiln.storage.s3.domain.S3RedirectPolicy;
+import com.bulmerkiln.storage.s3.util.S3KeyUtils;
+import java.net.URI;
+import java.time.Duration;
+import java.util.regex.Pattern;
+import lombok.Value;
+import org.jspecify.annotations.Nullable;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * Settings for the S3 store.
+ */
+@ConfigurationProperties("kiln.storage.s3")
+@Value
+public final class S3StorageProperties {
+
+    private final @Nullable String bucket;
+
+    private final @Nullable String region;
+
+    /** For S3-compatible stores such as SeaweedFS or Ceph RGW; AWS when unset. */
+    private final @Nullable URI endpoint;
+
+    /** Path-style addressing, which most S3-compatible stores need. */
+    private final boolean pathStyle;
+
+    /** A key prefix within the bucket. */
+    private final @Nullable String prefix;
+
+    /** When downloads redirect to presigned URLs; {@code auto} by default. */
+    private final @Nullable S3RedirectMode redirect;
+
+    /**
+     * How long a presigned URL lives: at most 60 s, the only window in which a blocked artifact can still be fetched.
+     */
+    private final @Nullable Duration presignTtl;
+
+    /** Allows an {@code http} endpoint, for a store on the same host. */
+    private final boolean allowInsecureEndpoint;
+
+    public static final Duration MAX_PRESIGN_TTL = Duration.ofSeconds(60);
+
+    /** S3 bucket naming rules, minus the dotted names that break virtual-hosted TLS. */
+    private static final Pattern BUCKET = Pattern.compile("[a-z0-9][a-z0-9-]{1,61}[a-z0-9]");
+
+    /** Validates the settings, naming the setting at fault. */
+    public void validate() {
+        validateBucket();
+        validateEndpoint();
+        validatePresignTtl();
+        keys();
+    }
+
+    private void validateBucket() {
+        if (bucket == null
+                || !BUCKET.matcher(bucket).matches()
+                || bucket.startsWith("xn--")
+                || bucket.endsWith("-s3alias")) {
+            throw new IllegalArgumentException("kiln.storage.s3.bucket must be a valid S3 bucket name");
+        }
+    }
+
+    private void validateEndpoint() {
+        if (endpoint == null) {
+            return;
+        }
+        String scheme = endpoint.getScheme();
+        boolean secure = "https".equals(scheme) || (allowInsecureEndpoint && "http".equals(scheme));
+        if (!secure || endpoint.getHost() == null || endpoint.getRawUserInfo() != null) {
+            throw new IllegalArgumentException("kiln.storage.s3.endpoint must be an https URL without credentials");
+        }
+    }
+
+    private void validatePresignTtl() {
+        Duration ttl = presignTtlOrDefault();
+        if (ttl.isNegative() || ttl.isZero() || ttl.compareTo(MAX_PRESIGN_TTL) > 0) {
+            throw new IllegalArgumentException("kiln.storage.s3.presign-ttl must be between 1 and 60 seconds");
+        }
+    }
+
+    public Duration presignTtlOrDefault() {
+        return presignTtl == null ? MAX_PRESIGN_TTL : presignTtl;
+    }
+
+    public S3RedirectPolicy redirectPolicy() {
+        return new S3RedirectPolicy(redirect == null ? S3RedirectMode.AUTO : redirect);
+    }
+
+    public S3KeyUtils keys() {
+        return new S3KeyUtils(prefix == null ? "" : prefix);
+    }
+}

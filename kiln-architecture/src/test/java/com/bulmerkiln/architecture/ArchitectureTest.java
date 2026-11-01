@@ -13,12 +13,15 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.properties.HasName;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.GeneralCodingRules;
+import com.tngtech.archunit.library.dependencies.SliceAssignment;
+import com.tngtech.archunit.library.dependencies.SliceIdentifier;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -39,35 +42,45 @@ class ArchitectureTest {
      */
     static final Map<String, Set<String>> ALLOWED = Map.ofEntries(
             Map.entry("core", Set.of()),
+            Map.entry("crypto", Set.of("core")),
+            Map.entry("database", Set.of("core")),
             Map.entry("storage", Set.of("core")),
             Map.entry("storage.fs", Set.of("storage", "core")),
             Map.entry("storage.s3", Set.of("storage", "core")),
             Map.entry("format", Set.of("core")),
-            Map.entry("format.oci", Set.of("format", "core")),
-            Map.entry("format.npm", Set.of("format", "core")),
-            Map.entry("format.maven", Set.of("format", "core")),
-            Map.entry("format.cargo", Set.of("format", "core")),
-            Map.entry("auth", Set.of()),
+            Map.entry("format.oci", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry("format.npm", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry(
+                    "format.maven", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry(
+                    "format.cargo", Set.of("format", "web", "registry", "database", "storage", "permissions", "core")),
+            Map.entry("auth", Set.of("core", "database", "web", "permissions")),
             Map.entry("auth.oidc", Set.of("auth")),
             Map.entry("auth.oauth2", Set.of("auth")),
-            Map.entry("permissions", Set.of("format", "core")),
+            Map.entry("permissions", Set.of("format", "database", "core")),
+            Map.entry("registry", Set.of("format", "permissions", "database", "core")),
             Map.entry("scan", Set.of("core")),
             Map.entry("scan.orchestration", Set.of("scan", "core")),
             Map.entry("scan.trivy", Set.of("scan", "core")),
             Map.entry("scan.grype", Set.of("scan", "core")),
             Map.entry("scan.osv", Set.of("scan", "core")),
             Map.entry("scan.gitleaks", Set.of("scan", "core")),
-            Map.entry("observability", Set.of("format", "core")));
+            Map.entry("observability", Set.of("format", "core")),
+            Map.entry("web", Set.of("format", "permissions", "core")));
 
     /**
      * Dependencies in {@link #ALLOWED} that are optional: the module works without them, and reaches
      * them only through an auto-configuration annotated with {@code @ConditionalOnClass} (ARCH-11).
      */
     static final Map<String, Set<String>> OPTIONAL =
-            Map.of("permissions", Set.of("format"), "observability", Set.of("format"));
+            Map.of("permissions", Set.of("format", "database"), "observability", Set.of("format"));
 
     /** Each contract, and the suffix its implementations are named with (ARCH-10). */
     static final Map<String, String> CONTRACT_NAMES = Map.ofEntries(
+            Map.entry("com.bulmerkiln.core.organization.OrganizationDirectory", "Directory"),
+            Map.entry("com.bulmerkiln.core.organization.OrganizationResolver", "Resolver"),
+            Map.entry("com.bulmerkiln.core.lookup.Lookup", "Lookup"),
+            Map.entry("com.bulmerkiln.web.PrincipalResolver", "Resolver"),
             Map.entry("com.bulmerkiln.format.FormatModule", "FormatModule"),
             Map.entry("com.bulmerkiln.format.ArtifactAccess", "Access"),
             Map.entry("com.bulmerkiln.format.ArtifactEventListener", "Listener"),
@@ -76,8 +89,36 @@ class ArchitectureTest {
             Map.entry("com.bulmerkiln.auth.connector.IdentityConnector", "Connector"),
             Map.entry("com.bulmerkiln.auth.connector.ConnectorSource", "Connectors"),
             Map.entry("com.bulmerkiln.auth.connector.ConnectorRegistry", "Registry"),
-            Map.entry("com.bulmerkiln.permissions.PermissionPolicy", "Policy"),
+            Map.entry("com.bulmerkiln.crypto.KeyProvider", "KeyProvider"),
+            Map.entry("com.bulmerkiln.permissions.policy.PermissionPolicy", "Policy"),
             Map.entry("com.bulmerkiln.scan.ScannerAdapter", "Adapter"));
+
+    /**
+     * Modules not yet laid out by ARCH-13: interfaces in their root package, or other classes in
+     * {@code service}. Each comes off this list as the data access phase converts it.
+     */
+    static final Set<String> LAYOUT_PENDING = Set.of(
+            "auth",
+            "auth.oauth2",
+            "auth.oidc",
+            "crypto",
+            "database",
+            "format",
+            "observability",
+            "scan",
+            "storage",
+            "web");
+
+    /** kiln-database's own package: Kiln's transactions over Spring's transaction manager. */
+    static final String DATA_LAYER = "com.bulmerkiln.database";
+
+    /** The parts of Spring the data layer may use. */
+    static final String[] SPRING_DATA_ACCESS = {
+        "org.springframework.data..",
+        "org.springframework.jdbc..",
+        "org.springframework.transaction..",
+        "org.springframework.dao.."
+    };
 
     private static final String CONDITIONAL_ON_CLASS =
             "org.springframework.boot.autoconfigure.condition.ConditionalOnClass";
@@ -107,8 +148,10 @@ class ArchitectureTest {
                 .that()
                 .resideInAPackage("com.bulmerkiln.core..")
                 .should()
-                .onlyDependOnClassesThat()
-                .resideInAnyPackage("com.bulmerkiln.core..", "java..", "org.jspecify..")
+                .onlyDependOnClassesThat(
+                        JavaClass.Predicates.resideInAnyPackage("com.bulmerkiln.core..", "java..", "org.jspecify..")
+                                // Lombok marks the code it generates; the annotation does nothing at runtime.
+                                .or(HasName.Predicates.name("lombok.Generated")))
                 .check(KILN_CLASSES);
     }
 
@@ -119,7 +162,23 @@ class ArchitectureTest {
 
     @Test
     void subsystemsHaveNoCycles() {
-        slices().matching("com.bulmerkiln.(*)..").should().beFreeOfCycles().check(KILN_CLASSES);
+        // Per module, not per top-level package: kiln-format-oci may use kiln-web, which uses kiln-format.
+        slices().assignedFrom(new SliceAssignment() {
+                    @Override
+                    public SliceIdentifier getIdentifierOf(JavaClass javaClass) {
+                        return moduleOf(javaClass.getPackageName())
+                                .map(SliceIdentifier::of)
+                                .orElse(SliceIdentifier.ignore());
+                    }
+
+                    @Override
+                    public String getDescription() {
+                        return "Kiln modules";
+                    }
+                })
+                .should()
+                .beFreeOfCycles()
+                .check(KILN_CLASSES);
     }
 
     @Test
@@ -133,15 +192,65 @@ class ArchitectureTest {
     }
 
     @Test
-    void springIsOnlyInAutoConfigurationsAndProperties() {
+    void springIsOnlyInAutoConfigurationsPropertiesAndControllers() {
         noClasses()
                 .that()
                 .haveSimpleNameNotEndingWith("AutoConfiguration")
                 .and()
                 .haveSimpleNameNotEndingWith("Properties")
+                .and()
+                .haveSimpleNameNotEndingWith("Controller")
+                .and()
+                .haveSimpleNameNotEndingWith("Repository")
+                .and()
+                .haveSimpleNameNotEndingWith("Entity")
+                .and()
+                .resideOutsideOfPackage(DATA_LAYER)
                 .should()
                 .dependOnClassesThat()
                 .resideInAPackage("org.springframework..")
+                .check(KILN_CLASSES);
+    }
+
+    /**
+     * ARCH-5: repositories, entities and kiln-database's transactions use Spring's data access, and
+     * no other part of Spring.
+     */
+    @Test
+    void theDataLayerUsesOnlySpringsDataAccess() {
+        noClasses()
+                .that()
+                .haveSimpleNameEndingWith("Repository")
+                .or()
+                .haveSimpleNameEndingWith("Entity")
+                .or()
+                .resideInAPackage(DATA_LAYER)
+                .should()
+                .dependOnClassesThat(JavaClass.Predicates.resideInAPackage("org.springframework..")
+                        .and(DescribedPredicate.not(JavaClass.Predicates.resideInAnyPackage(SPRING_DATA_ACCESS))))
+                .check(KILN_CLASSES);
+    }
+
+    /**
+     * ARCH-12: connections and JDBC templates stay in kiln-database and the auto-configurations that
+     * publish them. Repository interfaces name the row-mapper types only through {@code @Query}'s
+     * members, and an interface can't hold a connection.
+     */
+    @Test
+    void onlyTheDataLayerReachesConnections() {
+        noClasses()
+                .that()
+                .resideOutsideOfPackage("com.bulmerkiln.database..")
+                .and()
+                .haveSimpleNameNotEndingWith("AutoConfiguration")
+                .and(DescribedPredicate.not(
+                        JavaClass.Predicates.INTERFACES.and(JavaClass.Predicates.simpleNameEndingWith("Repository"))))
+                .should()
+                .dependOnClassesThat()
+                .haveFullyQualifiedName("javax.sql.DataSource")
+                .orShould()
+                .dependOnClassesThat()
+                .resideInAnyPackage("org.springframework.jdbc.core..", "org.springframework.jdbc.datasource..")
                 .check(KILN_CLASSES);
     }
 
@@ -164,6 +273,56 @@ class ArchitectureTest {
                 .areAnnotatedWith(CONFIGURATION_PROPERTIES)
                 .should()
                 .haveSimpleNameEndingWith("Properties")
+                .check(KILN_CLASSES);
+    }
+
+    /**
+     * ARCH-13: a module's root package holds no interfaces, a {@code service} package holds only
+     * {@code *Service} classes, and policies live in a {@code policy} package. Other contracts and
+     * their implementations sit in a package named for their kind.
+     */
+    @Test
+    void servicesAndPoliciesHaveTheirOwnPackages() {
+        DescribedPredicate<JavaClass> pending = DescribedPredicate.describe(
+                "are in a module not yet converted",
+                javaClass -> moduleOf(javaClass.getPackageName())
+                        .filter(LAYOUT_PENDING::contains)
+                        .isPresent());
+        noClasses()
+                .that(DescribedPredicate.describe(
+                        "are in a module's root package",
+                        javaClass -> moduleOf(javaClass.getPackageName())
+                                .filter(module -> javaClass.getPackageName().equals(KILN + module))
+                                .isPresent()))
+                .and()
+                .areTopLevelClasses()
+                .and()
+                .haveSimpleNameNotEndingWith("package-info")
+                .and(DescribedPredicate.not(pending))
+                .should()
+                .beInterfaces()
+                .check(KILN_CLASSES);
+        classes()
+                .that()
+                .resideInAPackage("..service")
+                .and()
+                .areTopLevelClasses()
+                .and()
+                .haveSimpleNameNotEndingWith("package-info")
+                .and(DescribedPredicate.not(pending))
+                .should()
+                .haveSimpleNameEndingWith("Service")
+                .check(KILN_CLASSES);
+        classes()
+                .that()
+                .areAssignableTo("com.bulmerkiln.permissions.policy.PermissionPolicy")
+                .or()
+                .areAssignableTo("com.bulmerkiln.format.ArtifactPolicy")
+                .and()
+                .areNotInterfaces()
+                .and(DescribedPredicate.not(pending))
+                .should()
+                .resideInAPackage("..policy")
                 .check(KILN_CLASSES);
     }
 

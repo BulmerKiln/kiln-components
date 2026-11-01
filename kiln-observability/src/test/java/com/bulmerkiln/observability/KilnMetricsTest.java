@@ -11,9 +11,14 @@ import com.bulmerkiln.core.artifact.ArtifactFormat;
 import com.bulmerkiln.core.organization.Organization;
 import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.core.organization.OrganizationId;
-import com.bulmerkiln.format.ArtifactEvents;
-import com.bulmerkiln.format.ArtifactRef;
-import com.bulmerkiln.format.FormatAutoConfiguration;
+import com.bulmerkiln.format.autoconfigure.FormatAutoConfiguration;
+import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.observability.autoconfigure.FormatMetricsAutoConfiguration;
+import com.bulmerkiln.observability.autoconfigure.ObservabilityAutoConfiguration;
+import com.bulmerkiln.observability.autoconfigure.ObservabilityProperties;
+import com.bulmerkiln.observability.constant.AuthFailureReason;
+import com.bulmerkiln.observability.service.MetricsEventListener;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
@@ -156,7 +161,7 @@ class KilnMetricsTest {
                 .withPropertyValues("kiln.observability.organization-label=true")
                 .run(context -> {
                     assertThat(context).hasSingleBean(KilnMetrics.class);
-                    assertThat(context.getBean(ObservabilityProperties.class).organizationLabel())
+                    assertThat(context.getBean(ObservabilityProperties.class).isOrganizationLabel())
                             .isTrue();
                 });
     }
@@ -164,7 +169,8 @@ class KilnMetricsTest {
     @Test
     void countsEveryFormatsPushesAndPullsThroughTheEventsPort() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        ArtifactEvents events = new ArtifactEvents(List.of(new MetricsEventListener(new KilnMetrics(registry, false))));
+        ArtifactEventService events =
+                new ArtifactEventService(List.of(new MetricsEventListener(new KilnMetrics(registry, false))));
         events.pushed(new ArtifactRef(NPM, "@acme", "ui", "1.0.0"), 2048);
         events.pulled(new ArtifactRef(OCI, "acme", "app", "sha256:abc"), 4096);
         events.pulled(new ArtifactRef(OCI, "acme", "app", null), 0);
@@ -200,8 +206,8 @@ class KilnMetricsTest {
                 .run(context -> {
                     assertThat(context)
                             .hasSingleBean(MetricsEventListener.class)
-                            .hasSingleBean(ArtifactEvents.class);
-                    context.getBean(ArtifactEvents.class).pushed(new ArtifactRef(OCI, "acme", "app", "1"), 1);
+                            .hasSingleBean(ArtifactEventService.class);
+                    context.getBean(ArtifactEventService.class).pushed(new ArtifactRef(OCI, "acme", "app", "1"), 1);
                     assertThat(context.getBean(MeterRegistry.class)
                                     .get("kiln.pushes")
                                     .counter()

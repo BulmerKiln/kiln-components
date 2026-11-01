@@ -11,6 +11,8 @@ tasks.matching { it.name.startsWith("publish") }.configureEach {
 
 dependencies {
     testImplementation(project(":kiln-core"))
+    testImplementation(project(":kiln-crypto"))
+    testImplementation(project(":kiln-database"))
     testImplementation(project(":kiln-auth"))
     testImplementation(project(":kiln-auth-oidc"))
     testImplementation(project(":kiln-auth-oauth2"))
@@ -21,6 +23,7 @@ dependencies {
     testImplementation(project(":kiln-format-oci"))
     testImplementation(project(":kiln-observability"))
     testImplementation(project(":kiln-permissions"))
+    testImplementation(project(":kiln-registry"))
     testImplementation(project(":kiln-scan"))
     testImplementation(project(":kiln-scan-gitleaks"))
     testImplementation(project(":kiln-scan-grype"))
@@ -30,5 +33,6 @@ dependencies {
     testImplementation(project(":kiln-storage"))
     testImplementation(project(":kiln-storage-fs"))
     testImplementation(project(":kiln-storage-s3"))
+    testImplementation(project(":kiln-web"))
     testImplementation("com.tngtech.archunit:archunit")
 }

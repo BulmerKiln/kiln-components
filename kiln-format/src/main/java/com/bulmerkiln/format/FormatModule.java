@@ -5,6 +5,9 @@
 package com.bulmerkiln.format;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.RefusalResponse;
+import com.bulmerkiln.format.service.FormatRegistry;
 
 /**
  * A registry format. A module implementing it, registered as a bean by its auto-configuration, is
@@ -22,6 +25,6 @@ public interface FormatModule {
      */
     String pathSegment();
 
-    /** Renders a refusal in this format's error body. Must escape {@link Refusal#message()}. */
-    RefusalBody render(Refusal refusal);
+    /** Renders a refusal in this format's error body. Must escape {@code Refusal.message()}. */
+    RefusalResponse render(Refusal refusal);
 }

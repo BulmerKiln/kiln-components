@@ -63,7 +63,7 @@ abstract class ReadmeCheck : DefaultTask() {
             }
         }
 
-        val classes = sources.files.filter { it.extension == "java" }.map { it.nameWithoutExtension }.toSet()
+        val classes = sources.files.filter { it.extension == "java" || it.extension == "kt" }.map { it.nameWithoutExtension }.toSet()
         for ((test, where) in testsNamed.toSortedMap()) {
             if (test !in classes) problems += "$where names $test, which doesn't exist"
         }

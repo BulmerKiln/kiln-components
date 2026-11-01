@@ -7,6 +7,9 @@ package com.bulmerkiln.format.cargo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bulmerkiln.format.cargo.domain.CargoCrateName;
+import com.bulmerkiln.format.cargo.domain.CargoIndexEntry;
+import com.bulmerkiln.format.cargo.dto.CargoPublishRequest;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.io.ByteArrayOutputStream;
@@ -31,13 +34,15 @@ class CargoTest {
         "tokio-util, to/ki/tokio-util"
     })
     void computesSparseIndexPaths(String name, String path) {
-        assertThat(new CrateName(name).indexPath()).isEqualTo(path);
+        assertThat(new CargoCrateName(name).indexPath()).isEqualTo(path);
     }
 
     @Test
     void namesCollideIgnoringCaseAndSeparators() {
-        assertThat(new CrateName("Serde_JSON").canonical()).isEqualTo(new CrateName("serde-json").canonical());
-        assertThat(new CrateName("serde_json").canonical()).isNotEqualTo(new CrateName("serdejson").canonical());
+        assertThat(new CargoCrateName("Serde_JSON").canonical())
+                .isEqualTo(new CargoCrateName("serde-json").canonical());
+        assertThat(new CargoCrateName("serde_json").canonical())
+                .isNotEqualTo(new CargoCrateName("serdejson").canonical());
     }
 
     @ParameterizedTest
@@ -66,30 +71,34 @@ class CargoTest {
                 "test"
             })
     void refusesInvalidAndReservedNames(String name) {
-        assertThatThrownBy(() -> new CrateName(name))
+        assertThatThrownBy(() -> new CargoCrateName(name))
                 .isInstanceOfSatisfying(
                         CargoException.class, e -> assertThat(e.status()).isEqualTo(400));
     }
 
     @Test
     void limitsNameLength() {
-        assertThat(new CrateName("a".repeat(64))).isNotNull();
-        assertThatThrownBy(() -> new CrateName("a".repeat(65))).isInstanceOf(CargoException.class);
+        assertThat(new CargoCrateName("a".repeat(64))).isNotNull();
+        assertThatThrownBy(() -> new CargoCrateName("a".repeat(65))).isInstanceOf(CargoException.class);
     }
 
     @Test
     void parsesAPublishBody() {
         byte[] json = "{\"name\":\"kiln\",\"vers\":\"0.1.0\"}".getBytes(StandardCharsets.UTF_8);
         byte[] crate = {1, 2, 3, 4};
-        PublishBody body = PublishBody.parse(body(json, crate), PublishBody.DEFAULT_MAX_METADATA, 100);
+        CargoPublishRequest body =
+                CargoPublishRequest.parse(body(json, crate), CargoPublishRequest.DEFAULT_MAX_METADATA, 100);
 
-        assertThat(body).isEqualTo(new PublishBody(json, crate)).hasSameHashCodeAs(new PublishBody(json, crate));
+        assertThat(body)
+                .isEqualTo(new CargoPublishRequest(json, crate))
+                .hasSameHashCodeAs(new CargoPublishRequest(json, crate));
         assertThat(body.toString()).doesNotContain("kiln");
     }
 
     @Test
     void acceptsEmptyParts() {
-        assertThat(PublishBody.parse(body(new byte[0], new byte[0]), 10, 10).crate())
+        assertThat(CargoPublishRequest.parse(body(new byte[0], new byte[0]), 10, 10)
+                        .crate())
                 .isEmpty();
     }
 
@@ -98,7 +107,7 @@ class CargoTest {
         byte[] full = body(new byte[] {'{', '}'}, new byte[] {9, 9});
         for (int length = 0; length < full.length; length++) {
             byte[] truncated = Arrays.copyOf(full, length);
-            assertThatThrownBy(() -> PublishBody.parse(truncated, 100, 100))
+            assertThatThrownBy(() -> CargoPublishRequest.parse(truncated, 100, 100))
                     .as("length " + length)
                     .isInstanceOf(CargoException.class);
         }
@@ -108,15 +117,15 @@ class CargoTest {
     void refusesTrailingBytes() {
         byte[] body = body(new byte[] {'{', '}'}, new byte[] {9});
         byte[] trailing = Arrays.copyOf(body, body.length + 1);
-        assertThatThrownBy(() -> PublishBody.parse(trailing, 100, 100)).hasMessageContaining("after the crate");
+        assertThatThrownBy(() -> CargoPublishRequest.parse(trailing, 100, 100)).hasMessageContaining("after the crate");
     }
 
     @Test
     void refusesLengthsOverTheLimitsBeforeAllocating() {
-        assertThatThrownBy(() -> PublishBody.parse(body(new byte[11], new byte[0]), 10, 10))
+        assertThatThrownBy(() -> CargoPublishRequest.parse(body(new byte[11], new byte[0]), 10, 10))
                 .isInstanceOfSatisfying(
                         CargoException.class, e -> assertThat(e.status()).isEqualTo(413));
-        assertThatThrownBy(() -> PublishBody.parse(body(new byte[1], new byte[11]), 10, 10))
+        assertThatThrownBy(() -> CargoPublishRequest.parse(body(new byte[1], new byte[11]), 10, 10))
                 .isInstanceOfSatisfying(
                         CargoException.class, e -> assertThat(e.status()).isEqualTo(413));
     }
@@ -129,16 +138,16 @@ class CargoTest {
                 .putInt(0)
                 .putInt(-1)
                 .array();
-        assertThatThrownBy(() -> PublishBody.parse(huge, 10, Long.MAX_VALUE))
+        assertThatThrownBy(() -> CargoPublishRequest.parse(huge, 10, Long.MAX_VALUE))
                 .isInstanceOfSatisfying(
                         CargoException.class, e -> assertThat(e.status()).isEqualTo(400))
                 .hasMessageContaining("shorter");
-        assertThatThrownBy(() -> PublishBody.parse(huge, 10, 10))
+        assertThatThrownBy(() -> CargoPublishRequest.parse(huge, 10, 10))
                 .isInstanceOfSatisfying(
                         CargoException.class, e -> assertThat(e.status()).isEqualTo(413));
         byte[] hugeMetadata =
                 ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(-1).array();
-        assertThatThrownBy(() -> PublishBody.parse(hugeMetadata, Integer.MAX_VALUE, 10))
+        assertThatThrownBy(() -> CargoPublishRequest.parse(hugeMetadata, Integer.MAX_VALUE, 10))
                 .isInstanceOfSatisfying(
                         CargoException.class, e -> assertThat(e.status()).isEqualTo(413));
     }
@@ -146,14 +155,24 @@ class CargoTest {
     @FuzzTest
     void parsingOnlyFailsWithCargoErrors(FuzzedDataProvider data) {
         try {
-            PublishBody.parse(data.consumeRemainingAsBytes(), 1 << 16, 1 << 20);
+            CargoPublishRequest.parse(data.consumeRemainingAsBytes(), 1 << 16, 1 << 20);
         } catch (CargoException expected) {
             // The only failure a body may cause.
         }
         try {
-            new CrateName(data.consumeRemainingAsString());
+            new CargoCrateName(data.consumeRemainingAsString());
         } catch (CargoException expected) {
             // Same for names.
+        }
+    }
+
+    /** Whatever metadata cargo publish sends, parsing fails only with CargoException. */
+    @FuzzTest
+    void indexEntryParsingFailsOnlyWithCargoException(FuzzedDataProvider data) {
+        try {
+            CargoIndexEntry.fromPublish(data.consumeRemainingAsBytes(), data.consumeString(64));
+        } catch (CargoException expected) {
+            // The only failure a crafted metadata body may cause.
         }
     }
 

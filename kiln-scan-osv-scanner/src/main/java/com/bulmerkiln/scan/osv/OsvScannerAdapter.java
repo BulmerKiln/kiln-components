@@ -4,16 +4,17 @@
  */
 package com.bulmerkiln.scan.osv;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanJob;
+import com.bulmerkiln.core.annotation.UntrustedInput;
 import com.bulmerkiln.scan.ScannerAdapter;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severities;
-import com.bulmerkiln.scan.Severity;
-import com.bulmerkiln.scan.ToolOutput;
-import com.bulmerkiln.scan.ToolRun;
-import com.bulmerkiln.scan.ToolText;
-import com.bulmerkiln.scan.ToolVersion;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.domain.ToolVersion;
+import com.bulmerkiln.scan.util.SeverityUtils;
+import com.bulmerkiln.scan.util.ToolOutputUtils;
+import com.bulmerkiln.scan.util.ToolTextUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,8 +65,9 @@ public final class OsvScannerAdapter implements ScannerAdapter {
     }
 
     @Override
+    @UntrustedInput
     public List<Finding> parse(ScanJob job, ToolRun run) {
-        JsonNode root = ToolOutput.json(run.output());
+        JsonNode root = ToolOutputUtils.json(run.getOutput());
         JsonNode results = root.path("results");
         if (!root.isObject() || !results.isArray()) {
             throw new IllegalArgumentException("Not an OSV-Scanner report");
@@ -96,7 +98,7 @@ public final class OsvScannerAdapter implements ScannerAdapter {
                 ? Severity.CRITICAL
                 : groupSeverity.getOrDefault(
                         id,
-                        Severities.named(vulnerability
+                        SeverityUtils.named(vulnerability
                                 .path("database_specific")
                                 .path("severity")
                                 .asString(null)));
@@ -107,7 +109,7 @@ public final class OsvScannerAdapter implements ScannerAdapter {
                 purl,
                 severity,
                 fixedVersion(vulnerability),
-                ToolText.clean(vulnerability.path("summary").asString(null), 512));
+                ToolTextUtils.clean(vulnerability.path("summary").asString(null), 512));
     }
 
     /** The CVSS score OSV-Scanner computed for each group of aliases, as {@code max_severity}. */
@@ -116,7 +118,7 @@ public final class OsvScannerAdapter implements ScannerAdapter {
         for (JsonNode group : list(groups)) {
             Severity severity;
             try {
-                severity = Severities.cvss(
+                severity = SeverityUtils.cvss(
                         Double.parseDouble(group.path("max_severity").asString("")));
             } catch (NumberFormatException e) {
                 continue;
@@ -136,7 +138,7 @@ public final class OsvScannerAdapter implements ScannerAdapter {
             for (JsonNode range : list(affected.path("ranges"))) {
                 for (JsonNode event : list(range.path("events"))) {
                     if (event.path("fixed").isString()) {
-                        return ToolText.clean(event.path("fixed").asString(), 255);
+                        return ToolTextUtils.clean(event.path("fixed").asString(), 255);
                     }
                 }
             }

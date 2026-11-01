@@ -1,1 +1,1 @@
-com.bulmerkiln.storage.fs.FsStorageAutoConfiguration
+com.bulmerkiln.storage.fs.autoconfigure.FsStorageAutoConfiguration

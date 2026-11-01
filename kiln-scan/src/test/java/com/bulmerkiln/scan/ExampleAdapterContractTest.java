@@ -6,6 +6,16 @@ package com.bulmerkiln.scan;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.domain.ToolRun;
+import com.bulmerkiln.scan.domain.ToolVersion;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
+import com.bulmerkiln.scan.util.SeverityUtils;
+import com.bulmerkiln.scan.util.ToolOutputUtils;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -37,7 +47,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
 
         @Override
         public List<Finding> parse(ScanJob job, ToolRun run) {
-            JsonNode results = ToolOutput.json(run.output()).required("results");
+            JsonNode results = ToolOutputUtils.json(run.getOutput()).required("results");
             if (!results.isArray()) {
                 throw new IllegalArgumentException("results is not a list");
             }
@@ -50,7 +60,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
                         node.required("id").asString(),
                         List.of(),
                         purl,
-                        Severities.named(node.required("severity").asString()),
+                        SeverityUtils.named(node.required("severity").asString()),
                         null,
                         null));
             }
@@ -101,7 +111,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
                         "Found " + PLANTED_SECRET));
             }
         };
-        ScanResult result = ScannerAdapters.run(copying, JOB, run(outputWithSecret(PLANTED_SECRET)));
+        ScanResult result = ScannerAdapterRunner.run(copying, JOB, run(outputWithSecret(PLANTED_SECRET)));
         assertThat(new String(ScanProtocol.write(result), StandardCharsets.UTF_8))
                 .contains(PLANTED_SECRET);
     }
@@ -115,7 +125,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
                 return Collections.nCopies(ScanResult.MAX_FINDINGS + 1, f);
             }
         };
-        assertThat(ScannerAdapters.run(flood, JOB, run(sampleOutput())).status())
+        assertThat(ScannerAdapterRunner.run(flood, JOB, run(sampleOutput())).getStatus())
                 .isEqualTo(ScanResult.Status.FAILED);
     }
 
@@ -128,6 +138,7 @@ class ExampleAdapterContractTest extends ScannerAdapterContract {
             }
         };
         ToolRun foundSomething = new ToolRun("1.4.2", "db", 1, sampleOutput(), false, null);
-        assertThat(ScannerAdapters.run(grype, JOB, foundSomething).status()).isEqualTo(ScanResult.Status.COMPLETE);
+        assertThat(ScannerAdapterRunner.run(grype, JOB, foundSomething).getStatus())
+                .isEqualTo(ScanResult.Status.COMPLETE);
     }
 }

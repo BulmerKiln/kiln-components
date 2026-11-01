@@ -1,6 +1,6 @@
 // The release-train BOM (DEP-1): every kiln-* module and every third-party version Kiln uses.
 // Versions come from gradle/libs.versions.toml. Only the Spring Boot artifacts Kiln uses are
-// managed, with the families Boot aligns (Framework, Micrometer, Jackson, JUnit) imported at the
+// managed, with the families Boot aligns (Framework, Security, Data, Micrometer, Jackson, JUnit) imported at the
 // versions that Boot release declares.
 
 plugins {
@@ -16,15 +16,21 @@ javaPlatform {
 
 dependencies {
     api(platform(libs.spring.framework.bom))
+    api(platform(libs.spring.security.bom))
+    api(platform(libs.spring.data.bom))
     api(platform(libs.micrometer.bom))
     api(platform(libs.jackson.bom))
     api(platform(libs.junit.bom))
+    api(platform(libs.log4j.bom))
+    api(platform(libs.testcontainers.bom))
 
     constraints {
         api(project(":kiln-auth"))
         api(project(":kiln-auth-oauth2"))
         api(project(":kiln-auth-oidc"))
         api(project(":kiln-core"))
+        api(project(":kiln-crypto"))
+        api(project(":kiln-database"))
         api(project(":kiln-format"))
         api(project(":kiln-format-cargo"))
         api(project(":kiln-format-maven"))
@@ -32,6 +38,7 @@ dependencies {
         api(project(":kiln-format-oci"))
         api(project(":kiln-observability"))
         api(project(":kiln-permissions"))
+        api(project(":kiln-registry"))
         api(project(":kiln-scan"))
         api(project(":kiln-scan-gitleaks"))
         api(project(":kiln-scan-grype"))
@@ -41,11 +48,44 @@ dependencies {
         api(project(":kiln-storage"))
         api(project(":kiln-storage-fs"))
         api(project(":kiln-storage-s3"))
+        api(project(":kiln-web"))
+
+        api(libs.tink)
+        api(libs.lombok)
+        api(libs.mapstruct)
+        api(libs.mapstruct.processor)
+        api(libs.lombok.mapstruct.binding)
 
         api(libs.spring.boot)
         api(libs.spring.boot.autoconfigure)
         api(libs.spring.boot.configuration.processor)
         api(libs.spring.boot.test)
+        api(libs.spring.boot.webmvc)
+        api(libs.spring.boot.tomcat)
+        api(libs.spring.boot.actuator)
+        api(libs.spring.boot.actuator.autoconfigure)
+        api(libs.spring.boot.health)
+        api(libs.spring.boot.micrometer.metrics)
+        api(libs.spring.boot.starter.log4j2)
+        api(libs.spring.security.oauth2.client)
+        api(libs.spring.security.config)
+        api(libs.tomcat.embed.core)
+        api(libs.tomcat.embed.el)
+        api(libs.tomcat.embed.websocket)
+        api(libs.tomcat.annotations.api)
+
+        api(libs.flyway.core)
+        api(libs.flyway.database.postgresql)
+        api(libs.hikaricp)
+        api(libs.jooq)
+        api(libs.postgresql)
+        api(libs.reactive.streams)
+        api(libs.jakarta.xml.bind.api)
+        api(libs.snakeyaml)
+        api(libs.jakarta.servlet.api)
+        api(libs.hamcrest)
+        api(libs.json.path)
+        api(libs.jsonassert)
 
         api(libs.archunit)
         api(libs.assertj.core)
@@ -57,10 +97,6 @@ dependencies {
         api(libs.findsecbugs)
         api(libs.jacoco.agent)
         api(libs.jacoco.ant)
-        api(libs.pitest)
-        api(libs.pitest.command.line)
-        api(libs.pitest.entry)
-        api(libs.pitest.junit5.plugin)
         api(libs.jazzer.junit)
         api(libs.jqwik)
         api(libs.jspecify)

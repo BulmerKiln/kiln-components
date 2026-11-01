@@ -1,2 +1,3 @@
-com.bulmerkiln.permissions.PermissionsAutoConfiguration
-com.bulmerkiln.permissions.FormatAccessAutoConfiguration
+com.bulmerkiln.permissions.autoconfigure.PermissionsAutoConfiguration
+com.bulmerkiln.permissions.autoconfigure.FormatAccessAutoConfiguration
+com.bulmerkiln.permissions.autoconfigure.StoredPermissionsAutoConfiguration

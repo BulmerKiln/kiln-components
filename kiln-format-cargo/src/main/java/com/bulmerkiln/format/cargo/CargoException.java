@@ -4,9 +4,9 @@
  */
 package com.bulmerkiln.format.cargo;
 
-import com.bulmerkiln.format.Reason;
-import com.bulmerkiln.format.Refusal;
 import com.bulmerkiln.format.RefusedException;
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.Refusal;
 
 /** A request the registry refuses, rendered by {@link CargoFormatModule} as Cargo's error body. */
 public class CargoException extends RefusedException {

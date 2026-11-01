@@ -4,8 +4,9 @@
  */
 package com.bulmerkiln.format.oci;
 
-import com.bulmerkiln.format.Refusal;
 import com.bulmerkiln.format.RefusedException;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.oci.constant.OciErrorCode;
 
 /**
  * A request the registry refuses, with its spec error code. Rendered by {@link OciFormatModule}.

@@ -8,6 +8,9 @@ import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.digest.Digester;
 import com.bulmerkiln.core.organization.OrganizationContext;
 import com.bulmerkiln.core.organization.OrganizationId;
+import com.bulmerkiln.storage.domain.BlobInfo;
+import com.bulmerkiln.storage.domain.ByteRange;
+import com.bulmerkiln.storage.domain.UploadId;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
+import lombok.Value;
 
 /**
  * A {@link BlobStore} in memory, for tests of the layers above storage. It passes the same
@@ -32,7 +36,13 @@ public final class InMemoryBlobStore implements BlobStore {
         private final Map<Key<UploadId>, Upload> uploads = new ConcurrentHashMap<>();
     }
 
-    record Key<T>(OrganizationId organization, T id) {}
+    @Value
+    static final class Key<T> {
+
+        private final OrganizationId organization;
+
+        private final T id;
+    }
 
     static final class Upload {
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -96,7 +106,7 @@ public final class InMemoryBlobStore implements BlobStore {
                 throw new UploadNotFoundException();
             }
             byte[] content = session.bytes.toByteArray();
-            Digester digester = Digester.of(expected.algorithm());
+            Digester digester = Digester.of(expected.getAlgorithm());
             digester.update(content, 0, content.length);
             Digest actual = digester.digest();
             if (!actual.equals(expected)) {
@@ -123,10 +133,10 @@ public final class InMemoryBlobStore implements BlobStore {
         if (content == null) {
             return Optional.empty();
         }
-        if (range != null && range.last() >= content.length) {
+        if (range != null && range.getLast() >= content.length) {
             throw new RangeNotSatisfiableException(content.length);
         }
-        long offset = range == null ? 0 : range.first();
+        long offset = range == null ? 0 : range.getFirst();
         long length = range == null ? content.length : range.length();
         return Optional.of(new Read(content, offset, length));
     }
@@ -138,10 +148,10 @@ public final class InMemoryBlobStore implements BlobStore {
 
     @Override
     public Stream<Digest> list() {
-        OrganizationId organization = OrganizationContext.current().id();
+        OrganizationId organization = OrganizationContext.current().getId();
         List<Digest> digests = state.blobs.keySet().stream()
-                .filter(k -> k.organization().equals(organization))
-                .map(Key::id)
+                .filter(k -> k.getOrganization().equals(organization))
+                .map(Key::getId)
                 .toList();
         return digests.stream();
     }
@@ -155,7 +165,7 @@ public final class InMemoryBlobStore implements BlobStore {
     }
 
     private static <T> Key<T> key(T id) {
-        return new Key<>(OrganizationContext.current().id(), id);
+        return new Key<>(OrganizationContext.current().getId(), id);
     }
 
     private static final class Read implements BlobRead {
@@ -171,17 +181,17 @@ public final class InMemoryBlobStore implements BlobStore {
         }
 
         @Override
-        public long blobSize() {
+        public long getBlobSize() {
             return content.length;
         }
 
         @Override
-        public long offset() {
+        public long getOffset() {
             return offset;
         }
 
         @Override
-        public long length() {
+        public long getLength() {
             return length;
         }
 

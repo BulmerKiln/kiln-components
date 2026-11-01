@@ -5,10 +5,10 @@
 package com.bulmerkiln.format.npm;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
-import com.bulmerkiln.format.FormatJson;
 import com.bulmerkiln.format.FormatModule;
-import com.bulmerkiln.format.Refusal;
-import com.bulmerkiln.format.RefusalBody;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.RefusalResponse;
+import com.bulmerkiln.format.util.FormatJsonUtils;
 import java.util.Map;
 
 /** The npm registry, on {@code /npm/}. Errors are npm's {@code {"error": ...}} body. */
@@ -27,7 +27,7 @@ public final class NpmFormatModule implements FormatModule {
     }
 
     @Override
-    public RefusalBody render(Refusal refusal) {
-        return RefusalBody.of("application/json", FormatJson.write(Map.of("error", refusal.message())));
+    public RefusalResponse render(Refusal refusal) {
+        return RefusalResponse.of("application/json", FormatJsonUtils.write(Map.of("error", refusal.getMessage())));
     }
 }

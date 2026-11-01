@@ -4,6 +4,8 @@
  */
 package com.bulmerkiln.permissions;
 
+import com.bulmerkiln.permissions.domain.Principal;
+
 /**
  * The principal the current request acts as, bound by authentication. Like the organization
  * context, reading it outside a scope fails: an unauthenticated request is bound as

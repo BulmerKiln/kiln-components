@@ -1,1 +1,5 @@
-com.bulmerkiln.auth.connector.ConnectorAutoConfiguration
+com.bulmerkiln.auth.autoconfigure.ConnectorAutoConfiguration
+com.bulmerkiln.auth.session.autoconfigure.SessionAutoConfiguration
+com.bulmerkiln.auth.user.autoconfigure.SignUpAutoConfiguration
+com.bulmerkiln.auth.user.autoconfigure.UserAutoConfiguration
+com.bulmerkiln.auth.web.SecurityAutoConfiguration

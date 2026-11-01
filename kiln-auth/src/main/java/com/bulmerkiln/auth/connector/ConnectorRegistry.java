@@ -4,12 +4,13 @@
  */
 package com.bulmerkiln.auth.connector;
 
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * The connectors people can sign in with: from boot configuration in kiln-oss, and per
- * organization in kiln-cloud (AUTH-13).
+ * The connectors people can sign in with: from boot configuration by default, or from an
+ * assembly's own registry (AUTH-13).
  */
 public interface ConnectorRegistry {
 

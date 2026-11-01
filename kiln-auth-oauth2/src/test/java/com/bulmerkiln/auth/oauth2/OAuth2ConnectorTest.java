@@ -8,18 +8,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.bulmerkiln.auth.connector.ExternalIdentity;
 import com.bulmerkiln.auth.connector.InvalidIdentityException;
+import com.bulmerkiln.auth.connector.SignInClientDirectory;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.SignInClient;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2AutoConfiguration;
+import com.bulmerkiln.auth.oauth2.autoconfigure.OAuth2Properties;
+import com.bulmerkiln.auth.oauth2.constant.OAuth2Preset;
+import com.bulmerkiln.auth.oauth2.domain.OAuth2JsonPath;
+import com.bulmerkiln.auth.oauth2.service.OAuth2UserMapper;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.math.BigInteger;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -27,14 +37,17 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class OAuth2ConnectorTest {
 
+    @TempDir
+    Path dir;
+
     private final OAuth2Connector github = OAuth2Connector.from(github(null));
 
     @Test
     void theGitHubPresetFillsEverything() {
-        assertThat(github.issuer()).isEqualTo("https://github.com");
-        assertThat(github.urls().token()).hasToString("https://github.com/login/oauth/access_token");
-        assertThat(github.paths().userId()).hasToString("id");
-        assertThat(github.scopes()).containsExactly("read:user", "user:email", "read:org");
+        assertThat(github.getIssuer()).isEqualTo("https://github.com");
+        assertThat(github.getUrls().getToken()).hasToString("https://github.com/login/oauth/access_token");
+        assertThat(github.getPaths().getUserId()).hasToString("id");
+        assertThat(github.getScopes()).containsExactly("read:user", "user:email", "read:org");
         assertThat(github.type()).isEqualTo("oauth2");
     }
 
@@ -56,8 +69,8 @@ class OAuth2ConnectorTest {
                 "env:S",
                 null);
         OAuth2Connector ghe = OAuth2Connector.from(config);
-        assertThat(ghe.issuer()).isEqualTo("https://github.acme.com");
-        assertThat(ghe.urls().userInfo()).hasToString("https://github.acme.com/api/v3/user");
+        assertThat(ghe.getIssuer()).isEqualTo("https://github.acme.com");
+        assertThat(ghe.getUrls().getUserInfo()).hasToString("https://github.acme.com/api/v3/user");
     }
 
     @Test
@@ -106,20 +119,20 @@ class OAuth2ConnectorTest {
         Map<String, Object> user = Map.of("id", 583231, "login", "octocat", "email", "octocat@github.com");
         ExternalIdentity identity = OAuth2UserMapper.map(github, user, Set.of());
 
-        assertThat(identity.issuer()).isEqualTo("https://github.com");
-        assertThat(identity.subject()).isEqualTo("583231");
+        assertThat(identity.getIssuer()).isEqualTo("https://github.com");
+        assertThat(identity.getSubject()).isEqualTo("583231");
         // GitHub's /user email isn't marked verified, so it isn't trusted.
-        assertThat(identity.email()).isNull();
+        assertThat(identity.getEmail()).isNull();
     }
 
     @Test
     void acceptsLongAndBigIntegerIds() {
         assertThat(OAuth2UserMapper.map(github, Map.of("id", 9_000_000_000L), Set.of())
-                        .subject())
+                        .getSubject())
                 .isEqualTo("9000000000");
         assertThat(OAuth2UserMapper.map(
                                 github, Map.of("id", new BigInteger("123456789012345678901234567890")), Set.of())
-                        .subject())
+                        .getSubject())
                 .isEqualTo("123456789012345678901234567890");
     }
 
@@ -147,18 +160,18 @@ class OAuth2ConnectorTest {
         OAuth2Connector generic = generic("email", "email_verified", "groups");
         assertThat(OAuth2UserMapper.map(
                                 generic, Map.of("sub", "u1", "email", "a@acme.com", "email_verified", true), Set.of())
-                        .email())
+                        .getEmail())
                 .isEqualTo("a@acme.com");
         for (Object verified : new Object[] {false, "true", 1}) {
             Map<String, Object> user = Map.of("sub", "u1", "email", "a@acme.com", "email_verified", verified);
-            assertThat(OAuth2UserMapper.map(generic, user, Set.of()).email()).isNull();
+            assertThat(OAuth2UserMapper.map(generic, user, Set.of()).getEmail()).isNull();
         }
         OAuth2Connector noVerifiedPath = generic("email", null, null);
         assertThat(OAuth2UserMapper.map(
                                 noVerifiedPath,
                                 Map.of("sub", "u1", "email", "a@acme.com", "email_verified", true),
                                 Set.of())
-                        .email())
+                        .getEmail())
                 .isNull();
     }
 
@@ -184,8 +197,8 @@ class OAuth2ConnectorTest {
                 Map.of("data", Map.of("user", Map.of("id", "u-7"), "groups", List.of("dev", 3, "", "ops")));
 
         ExternalIdentity identity = OAuth2UserMapper.map(corp, user, Set.of("extra"));
-        assertThat(identity.subject()).isEqualTo("u-7");
-        assertThat(identity.groups()).containsExactlyInAnyOrder("dev", "ops", "extra");
+        assertThat(identity.getSubject()).isEqualTo("u-7");
+        assertThat(identity.getGroups()).containsExactlyInAnyOrder("dev", "ops", "extra");
     }
 
     @Test
@@ -216,37 +229,38 @@ class OAuth2ConnectorTest {
 
     @Test
     void jsonPathsNameExactlyOneValue() {
-        assertThat(JsonPath.parse("a.b").read(Map.of("a", Map.of("b", 1)))).isEqualTo(1);
-        assertThat(JsonPath.parse("a.b").read(Map.of("a", List.of(Map.of("b", 1)))))
+        assertThat(OAuth2JsonPath.parse("a.b").read(Map.of("a", Map.of("b", 1))))
+                .isEqualTo(1);
+        assertThat(OAuth2JsonPath.parse("a.b").read(Map.of("a", List.of(Map.of("b", 1)))))
                 .isNull();
-        assertThat(JsonPath.parse("a.b").read(Map.of("a", "b"))).isNull();
-        assertThat(JsonPath.parse("a").read(Map.of())).isNull();
+        assertThat(OAuth2JsonPath.parse("a.b").read(Map.of("a", "b"))).isNull();
+        assertThat(OAuth2JsonPath.parse("a").read(Map.of())).isNull();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", ".", "a.", ".a", "a..b", "a[0]", "a.*", "$.a", "a b", "a.b.c.d.e.f.g.h.i"})
     void refusesAmbiguousJsonPaths(String path) {
-        assertThatIllegalArgumentException().isThrownBy(() -> JsonPath.parse(path));
+        assertThatIllegalArgumentException().isThrownBy(() -> OAuth2JsonPath.parse(path));
     }
 
     @Test
-    void autoConfiguresTheGitHubPreset() {
+    void autoConfiguresTheGitHubPreset() throws Exception {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(OAuth2AutoConfiguration.class))
                 .withPropertyValues(
                         "kiln.auth.oauth2.connectors[0].id=github",
                         "kiln.auth.oauth2.connectors[0].preset=github",
                         "kiln.auth.oauth2.connectors[0].client-id=Iv1.abc",
-                        "kiln.auth.oauth2.connectors[0].client-secret=env:KILN_GITHUB_SECRET")
+                        "kiln.auth.oauth2.connectors[0].client-secret=" + secretFile())
                 .run(context -> assertThat(context.getBean(OAuth2Connectors.class)
-                                .connectors()
+                                .getConnectors()
                                 .getFirst()
-                                .preset())
+                                .getPreset())
                         .isEqualTo(OAuth2Preset.GITHUB));
     }
 
     @Test
-    void bindsNestedUrlsAndPaths() {
+    void bindsNestedUrlsAndPaths() throws Exception {
         new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(OAuth2AutoConfiguration.class))
                 .withPropertyValues(
@@ -258,14 +272,43 @@ class OAuth2ConnectorTest {
                         "kiln.auth.oauth2.connectors[0].paths.user-id=data.id",
                         "kiln.auth.oauth2.connectors[0].paths.groups=data.groups",
                         "kiln.auth.oauth2.connectors[0].client-id=kiln",
-                        "kiln.auth.oauth2.connectors[0].client-secret=env:KILN_CORP_SECRET")
+                        "kiln.auth.oauth2.connectors[0].client-secret=" + secretFile())
                 .run(context -> {
-                    OAuth2Connector corp =
-                            context.getBean(OAuth2Connectors.class).connectors().getFirst();
-                    assertThat(corp.urls().userInfo()).hasToString("https://corp.example/me");
-                    assertThat(corp.paths().userId()).hasToString("data.id");
+                    OAuth2Connector corp = context.getBean(OAuth2Connectors.class)
+                            .getConnectors()
+                            .getFirst();
+                    assertThat(corp.getUrls().getUserInfo()).hasToString("https://corp.example/me");
+                    assertThat(corp.getPaths().getUserId()).hasToString("data.id");
                     assertThat(corp.providesGroups()).isTrue();
+                    SignInClient client = context.getBean(SignInClientDirectory.class)
+                            .find("corp")
+                            .orElseThrow();
+                    assertThat(client.getAuthorizationUri()).hasToString("https://corp.example/auth");
+                    assertThat(client.getUserInfoUri()).hasToString("https://corp.example/me");
+                    assertThat(client.getClientSecret()).isEqualTo("s3cret");
                 });
+    }
+
+    /** AUTH-19: a client secret that can't be read stops the boot, naming the connector. */
+    @Test
+    void stopsTheBootOnAnUnreadableSecret() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(OAuth2AutoConfiguration.class))
+                .withPropertyValues(
+                        "kiln.auth.oauth2.connectors[0].id=github",
+                        "kiln.auth.oauth2.connectors[0].preset=github",
+                        "kiln.auth.oauth2.connectors[0].client-id=Iv1.abc",
+                        "kiln.auth.oauth2.connectors[0].client-secret=env:KILN_DEFINITELY_NOT_SET_VAR_XYZ")
+                .run(context -> assertThat(context)
+                        .hasFailed()
+                        .getFailure()
+                        .hasStackTraceContaining("Connector github: client-secret"));
+    }
+
+    private String secretFile() throws Exception {
+        Path file = dir.resolve("secret");
+        Files.writeString(file, "s3cret");
+        return "file:" + file;
     }
 
     private static OAuth2Properties.Connector github(String id) {
@@ -303,8 +346,8 @@ class OAuth2ConnectorTest {
     @FuzzTest
     void jsonPathParsingOnlyFailsWithIllegalArgument(FuzzedDataProvider data) {
         try {
-            JsonPath path = JsonPath.parse(data.consumeRemainingAsString());
-            assertThat(JsonPath.parse(path.toString())).isEqualTo(path);
+            OAuth2JsonPath path = OAuth2JsonPath.parse(data.consumeRemainingAsString());
+            assertThat(OAuth2JsonPath.parse(path.toString())).isEqualTo(path);
         } catch (IllegalArgumentException expected) {
             // The only failure a configured path may cause.
         }

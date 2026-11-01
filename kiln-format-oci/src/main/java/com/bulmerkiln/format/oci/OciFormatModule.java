@@ -5,10 +5,12 @@
 package com.bulmerkiln.format.oci;
 
 import com.bulmerkiln.core.artifact.ArtifactFormat;
-import com.bulmerkiln.format.FormatJson;
 import com.bulmerkiln.format.FormatModule;
-import com.bulmerkiln.format.Refusal;
-import com.bulmerkiln.format.RefusalBody;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.RefusalResponse;
+import com.bulmerkiln.format.oci.constant.OciErrorCode;
+import com.bulmerkiln.format.oci.dto.OciErrorResponse;
+import com.bulmerkiln.format.util.FormatJsonUtils;
 import java.util.List;
 import java.util.Map;
 
@@ -31,15 +33,10 @@ public final class OciFormatModule implements FormatModule {
     }
 
     @Override
-    public RefusalBody render(Refusal refusal) {
+    public RefusalResponse render(Refusal refusal) {
         OciErrorCode code = OciErrorCode.forRefusal(refusal);
-        String body = FormatJson.write(new Envelope(List.of(new Envelope.Item(code.name(), refusal.message()))));
-        return new RefusalBody("application/json", body, Map.of("Docker-Distribution-API-Version", "registry/2.0"));
-    }
-
-    /** The spec's error envelope; records keep the field order clients expect. */
-    private record Envelope(List<Item> errors) {
-
-        private record Item(String code, String message) {}
+        String body = FormatJsonUtils.write(
+                new OciErrorResponse(List.of(new OciErrorResponse.Item(code.name(), refusal.getMessage()))));
+        return new RefusalResponse("application/json", body, Map.of("Docker-Distribution-API-Version", "registry/2.0"));
     }
 }

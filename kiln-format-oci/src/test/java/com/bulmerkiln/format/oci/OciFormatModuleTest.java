@@ -8,9 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bulmerkiln.format.FormatModule;
 import com.bulmerkiln.format.FormatModuleContract;
-import com.bulmerkiln.format.FormatResponse;
-import com.bulmerkiln.format.Reason;
-import com.bulmerkiln.format.Refusal;
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.FormatResponse;
+import com.bulmerkiln.format.oci.constant.OciErrorCode;
 import org.junit.jupiter.api.Test;
 
 class OciFormatModuleTest extends FormatModuleContract {
@@ -26,10 +27,10 @@ class OciFormatModuleTest extends FormatModuleContract {
     void usesTheSpecEnvelopeAndVersionHeader() {
         FormatResponse response =
                 FormatResponse.refusal(oci, new OciException(OciErrorCode.MANIFEST_UNKNOWN, "no such tag").refusal());
-        assertThat(response.status()).isEqualTo(404);
-        assertThat(response.body())
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getBody())
                 .isEqualTo("{\"errors\":[{\"code\":\"MANIFEST_UNKNOWN\",\"message\":\"no such tag\"}]}");
-        assertThat(response.headers()).containsEntry("Docker-Distribution-API-Version", "registry/2.0");
+        assertThat(response.getHeaders()).containsEntry("Docker-Distribution-API-Version", "registry/2.0");
     }
 
     @Test

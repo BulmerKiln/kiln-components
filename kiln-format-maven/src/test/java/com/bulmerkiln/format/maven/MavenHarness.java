@@ -1,0 +1,198 @@
+/*
+ * Copyright The Bulmer Kiln Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package com.bulmerkiln.format.maven;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+
+import com.bulmerkiln.core.organization.Organization;
+import com.bulmerkiln.core.organization.OrganizationContext;
+import com.bulmerkiln.core.organization.OrganizationResolver;
+import com.bulmerkiln.database.Database;
+import com.bulmerkiln.database.KilnPostgres;
+import com.bulmerkiln.format.ArtifactEventListener;
+import com.bulmerkiln.format.domain.ArtifactRef;
+import com.bulmerkiln.format.maven.repository.MavenPluginRepository;
+import com.bulmerkiln.format.maven.service.MavenAccessService;
+import com.bulmerkiln.format.maven.service.MavenFileService;
+import com.bulmerkiln.format.maven.service.MavenFileStorageService;
+import com.bulmerkiln.format.maven.service.MavenMetadataService;
+import com.bulmerkiln.format.maven.web.MavenController;
+import com.bulmerkiln.format.maven.web.MavenRouteDispatcher;
+import com.bulmerkiln.format.service.ArtifactEventService;
+import com.bulmerkiln.permissions.access.FormatAccess;
+import com.bulmerkiln.permissions.constant.Role;
+import com.bulmerkiln.permissions.constant.Visibility;
+import com.bulmerkiln.permissions.domain.Ids.MemberId;
+import com.bulmerkiln.permissions.domain.Principal;
+import com.bulmerkiln.permissions.domain.RoleBinding;
+import com.bulmerkiln.permissions.domain.Scope;
+import com.bulmerkiln.permissions.lookup.StoredRoleBindingLookup;
+import com.bulmerkiln.permissions.mapper.RoleBindingMapperImpl;
+import com.bulmerkiln.permissions.policy.RoleBasedPolicy;
+import com.bulmerkiln.permissions.repository.RoleBindingRepository;
+import com.bulmerkiln.registry.KilnRegistry;
+import com.bulmerkiln.registry.domain.Namespace;
+import com.bulmerkiln.registry.domain.NamespaceClaim;
+import com.bulmerkiln.storage.StorageRouter;
+import com.bulmerkiln.storage.fs.FsBlobStore;
+import com.bulmerkiln.storage.service.SingleStoreRouter;
+import com.bulmerkiln.web.FormatRequests;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.springframework.http.HttpMethod;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+/**
+ * The Maven routes wired to real services: PostgreSQL with every migration, a filesystem blob store,
+ * stored role bindings, and a caller the test chooses. Namespace {@code acme} (private) owns group
+ * {@code org.acme}; {@code pub} (public) owns {@code org.pub}.
+ */
+public final class MavenHarness implements AutoCloseable {
+
+    public static final Principal WRITER = new Principal.Member(new MemberId(UUID.randomUUID()), Set.of());
+    public static final Principal ADMIN = new Principal.Member(new MemberId(UUID.randomUUID()), Set.of());
+    public static final Principal STRANGER = new Principal.Member(new MemberId(UUID.randomUUID()), Set.of());
+    public static final Principal ANONYMOUS = new Principal.Anonymous();
+
+    private final Database database;
+    private final Organization acme;
+    private final KilnRegistry registry;
+    private final MockMvc mvc;
+    private final List<String> events = new ArrayList<>();
+    private Principal caller = WRITER;
+
+    public MavenHarness(Path blobs, String prefix) throws IOException {
+        database = KilnPostgres.database();
+        acme = KilnPostgres.organization(database, "acme");
+        registry = KilnRegistry.of(database);
+        StoredRoleBindingLookup bindings = new StoredRoleBindingLookup(
+                database, KilnPostgres.repository(database, RoleBindingRepository.class), new RoleBindingMapperImpl());
+        OrganizationContext.run(acme, () -> {
+            database.run(() -> {
+                namespace("acme", Visibility.PRIVATE, "org.acme");
+                namespace("pub", Visibility.PUBLIC, "org.pub");
+            });
+            bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("acme")));
+            bindings.add(new RoleBinding(member(WRITER), Role.WRITER, Scope.namespace("pub")));
+            bindings.add(new RoleBinding(member(ADMIN), Role.ADMIN, Scope.organization()));
+        });
+        OrganizationResolver organizations = path -> path.startsWith(prefix)
+                ? Optional.of(new OrganizationResolver.Resolution(acme, path.substring(prefix.length())))
+                : Optional.empty();
+        MavenAccessService access = new MavenAccessService(
+                database,
+                registry.getNamespaces(),
+                registry.getBlocks(),
+                new FormatAccess(new RoleBasedPolicy(bindings), registry.getVisibility()),
+                registry.getPolicy());
+        ArtifactEventService recorded = new ArtifactEventService(List.of(new ArtifactEventListener() {
+            @Override
+            public void pushed(ArtifactRef artifact, long bytes) {
+                events.add("pushed " + artifact.getName() + " " + artifact.getVersion());
+            }
+
+            @Override
+            public void pulled(ArtifactRef artifact, long bytes) {
+                events.add("pulled " + artifact.getName() + " " + artifact.getVersion());
+            }
+        }));
+        StorageRouter storage = new SingleStoreRouter(new FsBlobStore(blobs));
+        mvc = MockMvcBuilders.standaloneSetup(new MavenController(new MavenRouteDispatcher(
+                        new FormatRequests(organizations, request -> caller, "http://localhost"),
+                        new MavenFileService(
+                                database,
+                                access,
+                                registry.getPackages(),
+                                registry.getBlobs(),
+                                new MavenFileStorageService(database, registry.getBlobs(), storage, 64),
+                                recorded),
+                        new MavenMetadataService(
+                                database,
+                                access,
+                                registry.getPackages(),
+                                KilnPostgres.repository(database, MavenPluginRepository.class)),
+                        access)))
+                .build();
+    }
+
+    public MockMvc mvc() {
+        return mvc;
+    }
+
+    Database database() {
+        return database;
+    }
+
+    Organization acme() {
+        return acme;
+    }
+
+    List<String> events() {
+        return events;
+    }
+
+    public void callAs(Principal principal) {
+        caller = principal;
+    }
+
+    /** A request for exactly this path. */
+    public static MockHttpServletRequestBuilder at(HttpMethod method, String path) {
+        return request(method, URI.create(path));
+    }
+
+    /** Deploys one file and returns the status. */
+    public int deploy(String path, String content) throws Exception {
+        return mvc.perform(at(HttpMethod.PUT, "/maven/" + path).content(content.getBytes(StandardCharsets.UTF_8)))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+    }
+
+    static String sha1(String content) {
+        return HexFormat.of().formatHex(hash("SHA-1", content.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Override
+    public void close() {
+        database.close();
+    }
+
+    private static byte[] hash(String algorithm, byte[] bytes) {
+        try {
+            return MessageDigest.getInstance(algorithm).digest(bytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** A namespace claiming a groupId prefix: {@code org.acme} owns {@code org.acme.core}. */
+    private void namespace(String name, Visibility visibility, String groupPrefix) {
+        registry.getNamespaces()
+                .create(
+                        new Namespace(UUID.randomUUID(), name, visibility),
+                        List.of(new NamespaceClaim(MavenFormatModule.FORMAT, groupPrefix, ".")));
+    }
+
+    /** The registry's services over this harness's database. */
+    KilnRegistry registry() {
+        return registry;
+    }
+
+    private static RoleBinding.Subject member(Principal principal) {
+        return new RoleBinding.Subject.Member(((Principal.Member) principal).getId());
+    }
+}

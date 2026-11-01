@@ -9,5 +9,5 @@ import java.util.List;
 /** A module's connectors, such as every OIDC connector in boot configuration. */
 public interface ConnectorSource {
 
-    List<? extends IdentityConnector> connectors();
+    List<? extends IdentityConnector> getConnectors();
 }

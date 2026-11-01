@@ -27,7 +27,7 @@ possible, so a new format gets them for free and can't get them wrong.
 
 - Define `FormatModule`, and collect the enabled formats into a `FormatRegistry`
 - Define `Refusal`, whose `Reason` fixes the HTTP status, and build every refusal response
-- Define the ports formats use: `ArtifactAccess`, `ArtifactPolicy` and `ArtifactEvents`
+- Define the ports formats use: `ArtifactAccess`, `ArtifactPolicy` and `ArtifactEventService`
 - Provide `FormatModuleContract`, the suite every format passes
 
 **Does not**
@@ -39,7 +39,7 @@ possible, so a new format gets them for free and can't get them wrong.
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| FMT-1 | A refusal's HTTP status must come only from its `Reason`, never from a format: `INVALID` 400, `UNAUTHORIZED` 401, `DENIED` 403, `BLOCKED` 403, `OVER_QUOTA` 403, `NOT_FOUND` 404, `UNSUPPORTED` 405, `CONFLICT` 409, `TOO_LARGE` 413, `RATE_LIMITED` 429. A block is never `404`, or containerd mirrors and some npm and Maven setups fall through to a registry that may serve it. Nothing is a `5xx`, which docker and npm retry endlessly; over quota is `403`, not `507`, for the same reason | `FormatRulesTest`, `FormatModuleContract` |
+| FMT-1 | A refusal's HTTP status must come only from its `Reason`, never from a format: `INVALID` 400, `UNAUTHORIZED` 401, `DENIED` 403, `BLOCKED` 403, `OVER_QUOTA` 403, `NOT_FOUND` 404, `UNSUPPORTED` 405, `CONFLICT` 409, `TOO_LARGE` 413, `RANGE_NOT_SATISFIABLE` 416, `RATE_LIMITED` 429. A block is never `404`, or containerd mirrors and some npm and Maven setups fall through to a registry that may serve it. Nothing is a `5xx`, which docker and npm retry endlessly; over quota is `403`, not `507`, for the same reason | `FormatRulesTest`, `FormatModuleContract` |
 | FMT-2 | Every refusal must carry `X-Content-Type-Options: nosniff`, and `WWW-Authenticate` exactly when it's a `401`. A format's own headers can't replace or misspell either | `FormatRulesTest`, `FormatModuleContract` |
 | FMT-3 | No header value may contain CR, LF or other control characters, from a format or a challenge | `FormatRulesTest` |
 | FMT-4 | Every format's error body must carry the refusal's message exactly, escaped so quotes, markup, line separators and control characters can't break out of it | `FormatModuleContract` |
@@ -51,6 +51,7 @@ possible, so a new format gets them for free and can't get them wrong.
 | FMT-10 | Listeners must be collected however their modules' auto-configurations are ordered, and with no listener at all the first format to need events fails the boot rather than dropping them | `FormatRulesTest`, `KilnMetricsTest` in kiln-observability |
 | FMT-11 | The ports must have no allow-everything default: an assembly without an `ArtifactAccess` or `ArtifactPolicy` implementation fails to start rather than serving unchecked | By design: no default implementation exists |
 | FMT-12 | Every format must pass `FormatModuleContract` | `OciFormatModuleTest`, `NpmFormatModuleTest`, `MavenFormatModuleTest`, `CargoFormatModuleTest` |
+| FMT-13 | Versions of the formats that use SemVer (npm, Cargo) must be strict SemVer 2.0.0: no leading zeros, non-empty dot-separated labels of ASCII letters, digits and hyphens, at most 256 characters, checked without backtracking | `SemanticVersionTest` |
 
 ## Contract *(subsystem only)*
 
@@ -58,12 +59,12 @@ possible, so a new format gets them for free and can't get them wrong.
 |---|---|
 | `FormatModule` | A format: its `ArtifactFormat`, its route segment, and how it renders a refusal |
 | `Refusal`, `Reason`, `RefusedException` | A format-neutral refusal and the exception that carries it |
-| `RefusalBody`, `FormatResponse` | A format's rendering, and the complete response built from it |
+| `RefusalResponse`, `FormatResponse` | A format's rendering, and the complete response built from it |
 | `FormatRegistry` | The enabled formats, by ID and by route |
 | `ArtifactAccess` | Port: may the current caller do this? Implemented by `kiln-permissions` |
 | `ArtifactPolicy` | Port: blocks, tombstones, immutability and quotas. Implemented by the policy and quota subsystems |
-| `ArtifactEventListener`, `ArtifactEvents` | Port: pushes and pulls, delivered to every listener |
-| `FormatJson` | Writes error bodies as escaped JSON |
+| `ArtifactEventListener`, `ArtifactEventService` | Port: pushes and pulls, delivered to every listener |
+| `FormatJsonUtils` | Writes error bodies as escaped JSON |
 | `FormatModuleContract` *(test fixtures)* | The suite every format extends |
 
 **Rules enforced here**: statuses fixed by reason (FMT-1); security headers formats can't touch
@@ -74,7 +75,7 @@ defaults on the ports (FMT-10, FMT-11).
 
 1. Create `kiln-format-<name>` and depend on `kiln-format`.
 2. Implement `FormatModule`: define `public static final ArtifactFormat FORMAT` and render
-   refusals in the format's own error body, using `FormatJson` for JSON.
+   refusals in the format's own error body, using `FormatJsonUtils` for JSON.
 3. Make the route segment a reserved slug; reserve it in `Organization.RESERVED_SLUGS` first if it's new.
 4. Register the module as a `FormatModule` bean from a Spring Boot auto-configuration.
 5. Throw `RefusedException` (or a subclass) to refuse; never write a status of your own.
@@ -128,7 +129,7 @@ No tests need Docker or external services.
 
 ## Status
 
-Implemented: FMT-1 to FMT-12.
+Implemented: FMT-1 to FMT-13.
 
 Planned: the HTTP routing that dispatches requests to formats by segment (M1); the policy
 implementation of `ArtifactPolicy` (M1 immutability, M4 blocks and quotas).

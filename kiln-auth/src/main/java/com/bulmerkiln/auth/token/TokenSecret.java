@@ -55,7 +55,9 @@ public final class TokenSecret {
 
     /** Accepts a presented token only if it has a known prefix, the right shape and a valid checksum. */
     public static Optional<TokenSecret> parse(String presented) {
-        if (presented.length() != LENGTH || !PATTERN.matcher(presented).matches()) {
+        if (presented == null
+                || presented.length() != LENGTH
+                || !PATTERN.matcher(presented).matches()) {
             return Optional.empty();
         }
         TokenKind kind = presented.startsWith(TokenKind.PERSONAL.prefix()) ? TokenKind.PERSONAL : TokenKind.SERVICE;

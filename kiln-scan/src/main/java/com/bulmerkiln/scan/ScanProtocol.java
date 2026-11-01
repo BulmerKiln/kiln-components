@@ -4,6 +4,9 @@
  */
 package com.bulmerkiln.scan;
 
+import com.bulmerkiln.core.annotation.UntrustedInput;
+import com.bulmerkiln.scan.domain.ScanJob;
+import com.bulmerkiln.scan.domain.ScanResult;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;
@@ -35,15 +38,17 @@ public final class ScanProtocol {
         return MAPPER.writeValueAsBytes(message);
     }
 
+    @UntrustedInput
     public static ScanJob readJob(byte[] json) {
         return read(json, ScanJob.class);
     }
 
+    @UntrustedInput
     public static ScanResult readResult(byte[] json) {
         return read(json, ScanResult.class);
     }
 
-    static void requireVersion(int protocol) {
+    public static void requireVersion(int protocol) {
         if (protocol != VERSION) {
             throw new UnsupportedProtocolException(protocol);
         }

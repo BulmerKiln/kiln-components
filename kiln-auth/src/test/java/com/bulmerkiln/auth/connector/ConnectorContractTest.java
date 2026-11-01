@@ -8,6 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bulmerkiln.auth.connector.domain.ConnectorId;
+import com.bulmerkiln.auth.connector.domain.ExternalIdentity;
+import com.bulmerkiln.auth.connector.domain.SecretRef;
+import com.bulmerkiln.auth.connector.util.DomainUtils;
+import com.bulmerkiln.auth.connector.util.EndpointUtils;
+import com.bulmerkiln.auth.connector.util.IdentityUtils;
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.net.URI;
@@ -41,8 +47,8 @@ class ConnectorContractTest {
         ExternalIdentity identity = new ExternalIdentity(GITHUB, "https://github.com", "123", null, groups);
         groups.add("acme/admins");
 
-        assertThat(identity.groups()).containsExactly("acme/platform");
-        assertThatThrownBy(() -> identity.groups().add("x")).isInstanceOf(UnsupportedOperationException.class);
+        assertThat(identity.getGroups()).containsExactly("acme/platform");
+        assertThatThrownBy(() -> identity.getGroups().add("x")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -100,11 +106,11 @@ class ConnectorContractTest {
     @Test
     void endpointsMustBeHttps() {
         URI issuer = URI.create("https://idp.example.com/realms/acme");
-        assertThat(Endpoints.requireSecure(issuer, false, "issuer")).isEqualTo(issuer);
-        assertThat(Endpoints.requireSecure(URI.create("http://dex:5556/dex"), true, "issuer"))
+        assertThat(EndpointUtils.requireSecure(issuer, false, "issuer")).isEqualTo(issuer);
+        assertThat(EndpointUtils.requireSecure(URI.create("http://dex:5556/dex"), true, "issuer"))
                 .isNotNull();
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Endpoints.requireSecure(URI.create("http://idp.example.com"), false, "issuer"))
+                .isThrownBy(() -> EndpointUtils.requireSecure(URI.create("http://idp.example.com"), false, "issuer"))
                 .withMessageContaining("issuer");
     }
 
@@ -121,12 +127,12 @@ class ConnectorContractTest {
             })
     void refusesUnsafeEndpoints(String uri) {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Endpoints.requireSecure(URI.create(uri), true, "endpoint"));
+                .isThrownBy(() -> EndpointUtils.requireSecure(URI.create(uri), true, "endpoint"));
     }
 
     @Test
     void normalizesDomains() {
-        assertThat(Domains.normalize(List.of("Acme.COM", "eu.acme.com", "xn--bcher-kva.example")))
+        assertThat(DomainUtils.normalize(List.of("Acme.COM", "eu.acme.com", "xn--bcher-kva.example")))
                 .containsExactlyInAnyOrder("acme.com", "eu.acme.com", "xn--bcher-kva.example");
     }
 
@@ -148,7 +154,7 @@ class ConnectorContractTest {
                 "a_b.com"
             })
     void refusesDomainsThatAreNotPlainHostnames(String domain) {
-        assertThatIllegalArgumentException().isThrownBy(() -> Domains.normalize(List.of(domain)));
+        assertThatIllegalArgumentException().isThrownBy(() -> DomainUtils.normalize(List.of(domain)));
     }
 
     @FuzzTest
@@ -157,6 +163,32 @@ class ConnectorContractTest {
             SecretRef.parse(data.consumeRemainingAsString());
         } catch (IllegalArgumentException expected) {
             // The only failure a configured reference may cause.
+        }
+    }
+
+    /** Whatever the IdP sends as a subject, validation fails only with InvalidIdentityException. */
+    @FuzzTest
+    void subjectValidationFailsOnlyWithInvalidIdentity(FuzzedDataProvider data) {
+        try {
+            IdentityUtils.subject(data.consumeString(512));
+        } catch (InvalidIdentityException expected) {
+            // The only failure a crafted subject may cause.
+        }
+    }
+
+    /** Whatever the IdP sends as an email claim, validation never throws. */
+    @FuzzTest
+    void emailValidationNeverThrows(FuzzedDataProvider data) {
+        IdentityUtils.verifiedEmail(data.consumeString(512), true);
+    }
+
+    /** Whatever the IdP sends as a groups claim, validation fails only with InvalidIdentityException. */
+    @FuzzTest
+    void groupsValidationFailsOnlyWithInvalidIdentity(FuzzedDataProvider data) {
+        try {
+            IdentityUtils.groups(data.consumeString(512));
+        } catch (InvalidIdentityException expected) {
+            // The only failure a crafted groups claim may cause.
         }
     }
 }

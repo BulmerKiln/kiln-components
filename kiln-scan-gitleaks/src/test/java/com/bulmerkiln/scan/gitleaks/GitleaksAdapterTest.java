@@ -6,12 +6,14 @@ package com.bulmerkiln.scan.gitleaks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.bulmerkiln.scan.Finding;
 import com.bulmerkiln.scan.ScanProtocol;
-import com.bulmerkiln.scan.ScanResult;
 import com.bulmerkiln.scan.ScannerAdapter;
 import com.bulmerkiln.scan.ScannerAdapterContract;
-import com.bulmerkiln.scan.ScannerAdapters;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.service.ScannerAdapterRunner;
+import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.code_intelligence.jazzer.junit.FuzzTest;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -50,11 +52,11 @@ class GitleaksAdapterTest extends ScannerAdapterContract {
 
     @Test
     void reportsTheRuleNotTheLeak() {
-        ScanResult result = ScannerAdapters.run(adapter(), JOB, run(outputWithSecret(PLANTED_SECRET)));
-        assertThat(result.findings()).singleElement().satisfies(f -> {
-            assertThat(f.kind()).isEqualTo(Finding.Kind.SECRET);
-            assertThat(f.id()).isEqualTo("aws-access-token");
-            assertThat(f.title()).startsWith("Identified a pattern that may indicate AWS credentials");
+        ScanResult result = ScannerAdapterRunner.run(adapter(), JOB, run(outputWithSecret(PLANTED_SECRET)));
+        assertThat(result.getFindings()).singleElement().satisfies(f -> {
+            assertThat(f.getKind()).isEqualTo(Finding.Kind.SECRET);
+            assertThat(f.getId()).isEqualTo("aws-access-token");
+            assertThat(f.getTitle()).startsWith("Identified a pattern that may indicate AWS credentials");
         });
         String json = new String(ScanProtocol.write(result), StandardCharsets.UTF_8);
         assertThat(json).doesNotContain(PLANTED_SECRET).doesNotContain("config.env");
@@ -63,5 +65,15 @@ class GitleaksAdapterTest extends ScannerAdapterContract {
     @Test
     void alwaysAsksGitleaksToRedact() {
         assertThat(adapter().command(JOB, Path.of("/workspace/job/content"))).contains("--redact");
+    }
+
+    /** Whatever the tool outputs, parsing fails only with a RuntimeException. */
+    @FuzzTest
+    void parsingFailsOnlyWithRuntimeException(FuzzedDataProvider data) {
+        try {
+            adapter().parse(JOB, run(data.consumeRemainingAsString()));
+        } catch (RuntimeException expected) {
+            // The only failure a crafted tool output may cause.
+        }
     }
 }

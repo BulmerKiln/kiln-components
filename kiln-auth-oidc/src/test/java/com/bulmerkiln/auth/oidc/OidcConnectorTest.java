@@ -7,7 +7,9 @@ package com.bulmerkiln.auth.oidc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
-import com.bulmerkiln.auth.connector.SecretRef;
+import com.bulmerkiln.auth.connector.domain.SecretRef;
+import com.bulmerkiln.auth.oidc.autoconfigure.OidcProperties;
+import com.bulmerkiln.auth.oidc.constant.OidcPreset;
 import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,23 +17,23 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class OidcConnectorTest {
+public class OidcConnectorTest {
 
     @Test
     void appliesPresetDefaults() {
         OidcConnector connector = OidcConnector.from(config("okta", OidcPreset.OKTA, "https://acme.okta.com", null));
 
-        assertThat(connector.displayName()).isEqualTo("okta");
+        assertThat(connector.getDisplayName()).isEqualTo("okta");
         assertThat(connector.type()).isEqualTo("oidc");
-        assertThat(connector.scopes()).containsExactly("openid", "profile", "email", "groups");
-        assertThat(connector.groupsClaim()).isEqualTo("groups");
-        assertThat(connector.clientSecret()).isEqualTo(new SecretRef.Env("KILN_OIDC_SECRET"));
+        assertThat(connector.getScopes()).containsExactly("openid", "profile", "email", "groups");
+        assertThat(connector.getGroupsClaim()).isEqualTo("groups");
+        assertThat(connector.getClientSecret()).isEqualTo(new SecretRef.Env("KILN_OIDC_SECRET"));
     }
 
     @Test
     void defaultsToTheGenericPreset() {
         OidcConnector connector = OidcConnector.from(config("sso", null, "https://sso.acme.com", null));
-        assertThat(connector.preset()).isEqualTo(OidcPreset.GENERIC);
+        assertThat(connector.getPreset()).isEqualTo(OidcPreset.GENERIC);
     }
 
     @Test
@@ -49,10 +51,10 @@ class OidcConnectorTest {
                 false);
         OidcConnector connector = OidcConnector.from(config);
 
-        assertThat(connector.displayName()).isEqualTo("Acme SSO");
-        assertThat(connector.scopes()).containsExactly("openid", "roles");
-        assertThat(connector.groupsClaim()).isEqualTo("realm_groups");
-        assertThat(connector.domains()).containsExactly("acme.com");
+        assertThat(connector.getDisplayName()).isEqualTo("Acme SSO");
+        assertThat(connector.getScopes()).containsExactly("openid", "roles");
+        assertThat(connector.getGroupsClaim()).isEqualTo("realm_groups");
+        assertThat(connector.getDomains()).containsExactly("acme.com");
     }
 
     @ParameterizedTest
@@ -72,7 +74,7 @@ class OidcConnectorTest {
                                 OidcPreset.GOOGLE_WORKSPACE,
                                 "https://accounts.google.com",
                                 List.of("acme.com")))
-                        .groupsClaim())
+                        .getGroupsClaim())
                 .isNull();
     }
 
@@ -162,7 +164,7 @@ class OidcConnectorTest {
                 null,
                 null,
                 true);
-        assertThat(OidcConnector.from(config).issuer()).hasToString("http://dex:5556/dex");
+        assertThat(OidcConnector.from(config).getIssuer()).hasToString("http://dex:5556/dex");
     }
 
     @Test
@@ -174,7 +176,7 @@ class OidcConnectorTest {
                 .withMessageContaining("sso");
     }
 
-    static OidcProperties.Connector config(String id, OidcPreset preset, String issuer, List<String> domains) {
+    public static OidcProperties.Connector config(String id, OidcPreset preset, String issuer, List<String> domains) {
         return new OidcProperties.Connector(
                 id, null, preset, URI.create(issuer), "kiln", "env:KILN_OIDC_SECRET", null, null, domains, false);
     }

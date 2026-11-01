@@ -10,7 +10,11 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import com.bulmerkiln.core.digest.Digest;
 import com.bulmerkiln.core.organization.OrganizationId;
-import com.bulmerkiln.storage.UploadId;
+import com.bulmerkiln.storage.domain.UploadId;
+import com.bulmerkiln.storage.s3.autoconfigure.S3StorageProperties;
+import com.bulmerkiln.storage.s3.constant.S3RedirectMode;
+import com.bulmerkiln.storage.s3.domain.S3RedirectPolicy;
+import com.bulmerkiln.storage.s3.util.S3KeyUtils;
 import java.net.URI;
 import java.time.Duration;
 import java.util.UUID;
@@ -25,19 +29,19 @@ class S3StorageTest {
 
     @Test
     void laysOutKeysLikeTheFilesystemStore() {
-        assertThat(new S3Keys("").blob(ORGANIZATION, EMPTY))
-                .isEqualTo(ORGANIZATION + "/blobs/sha256/e3/" + EMPTY.encoded());
-        assertThat(new S3Keys("kiln/prod").blob(ORGANIZATION, EMPTY))
+        assertThat(new S3KeyUtils("").blob(ORGANIZATION, EMPTY))
+                .isEqualTo(ORGANIZATION + "/blobs/sha256/e3/" + EMPTY.getEncoded());
+        assertThat(new S3KeyUtils("kiln/prod").blob(ORGANIZATION, EMPTY))
                 .startsWith("kiln/prod/" + ORGANIZATION + "/blobs/");
         UploadId upload = UploadId.random();
-        assertThat(new S3Keys("").upload(ORGANIZATION, upload)).isEqualTo(ORGANIZATION + "/_uploads/" + upload);
-        assertThat(new S3Keys("kiln").organization(ORGANIZATION)).isEqualTo("kiln/" + ORGANIZATION + "/");
+        assertThat(new S3KeyUtils("").upload(ORGANIZATION, upload)).isEqualTo(ORGANIZATION + "/_uploads/" + upload);
+        assertThat(new S3KeyUtils("kiln").organization(ORGANIZATION)).isEqualTo("kiln/" + ORGANIZATION + "/");
     }
 
     @Test
     void organizationsNeverShareAKey() {
         OrganizationId other = new OrganizationId(UUID.randomUUID());
-        S3Keys keys = new S3Keys("");
+        S3KeyUtils keys = new S3KeyUtils("");
         assertThat(keys.blob(ORGANIZATION, EMPTY)).isNotEqualTo(keys.blob(other, EMPTY));
         assertThat(keys.blob(other, EMPTY)).doesNotStartWith(keys.organization(ORGANIZATION));
     }
@@ -46,7 +50,7 @@ class S3StorageTest {
     @ValueSource(
             strings = {"/kiln", "kiln/", "kiln//prod", "../kiln", "kiln/../x", "Kiln", "kiln prod", "kiln/.x", "-kiln"})
     void refusesUnsafePrefixes(String prefix) {
-        assertThatIllegalArgumentException().isThrownBy(() -> new S3Keys(prefix));
+        assertThatIllegalArgumentException().isThrownBy(() -> new S3KeyUtils(prefix));
     }
 
     @ParameterizedTest
@@ -63,7 +67,7 @@ class S3StorageTest {
                 "oras/1.2.0"
             })
     void autoRedirectsKnownGoodClients(String userAgent) {
-        assertThat(new RedirectPolicy(RedirectMode.AUTO).shouldRedirect(userAgent))
+        assertThat(new S3RedirectPolicy(S3RedirectMode.AUTO).shouldRedirect(userAgent))
                 .isTrue();
     }
 
@@ -85,16 +89,17 @@ class S3StorageTest {
                 "helm/3.15.3"
             })
     void autoProxiesEveryoneElse(String userAgent) {
-        assertThat(new RedirectPolicy(RedirectMode.AUTO).shouldRedirect(userAgent))
+        assertThat(new S3RedirectPolicy(S3RedirectMode.AUTO).shouldRedirect(userAgent))
                 .isFalse();
-        assertThat(new RedirectPolicy(RedirectMode.AUTO).shouldRedirect(null)).isFalse();
+        assertThat(new S3RedirectPolicy(S3RedirectMode.AUTO).shouldRedirect(null))
+                .isFalse();
     }
 
     @Test
     void alwaysAndNeverOverrideTheAllowlist() {
-        assertThat(new RedirectPolicy(RedirectMode.ALWAYS).shouldRedirect("curl/8"))
+        assertThat(new S3RedirectPolicy(S3RedirectMode.ALWAYS).shouldRedirect("curl/8"))
                 .isTrue();
-        assertThat(new RedirectPolicy(RedirectMode.NEVER).shouldRedirect("docker/27"))
+        assertThat(new S3RedirectPolicy(S3RedirectMode.NEVER).shouldRedirect("docker/27"))
                 .isFalse();
     }
 
@@ -103,7 +108,7 @@ class S3StorageTest {
         S3StorageProperties properties = properties("kiln-blobs", null, null);
         assertThatCode(properties::validate).doesNotThrowAnyException();
         assertThat(properties.presignTtlOrDefault()).isEqualTo(Duration.ofSeconds(60));
-        assertThat(properties.redirectPolicy().mode()).isEqualTo(RedirectMode.AUTO);
+        assertThat(properties.redirectPolicy().getMode()).isEqualTo(S3RedirectMode.AUTO);
     }
 
     @ParameterizedTest

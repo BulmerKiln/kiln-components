@@ -7,6 +7,10 @@ package com.bulmerkiln.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.bulmerkiln.format.constant.Reason;
+import com.bulmerkiln.format.domain.Refusal;
+import com.bulmerkiln.format.dto.FormatResponse;
+import com.bulmerkiln.format.service.FormatRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -39,10 +43,10 @@ public abstract class FormatModuleContract {
     void rendersEveryReasonWithItsFixedStatus(Reason reason) {
         FormatResponse response = FormatResponse.refusal(module(), refusal(reason, "refused for testing"));
 
-        assertThat(response.status()).isEqualTo(reason.status()).isBetween(400, 499);
-        assertThat(response.contentType()).isNotBlank();
-        assertThat(response.body()).isNotBlank();
-        assertThat(response.headers()).containsEntry("X-Content-Type-Options", "nosniff");
+        assertThat(response.getStatus()).isEqualTo(reason.status()).isBetween(400, 499);
+        assertThat(response.getContentType()).isNotBlank();
+        assertThat(response.getBody()).isNotBlank();
+        assertThat(response.getHeaders()).containsEntry("X-Content-Type-Options", "nosniff");
     }
 
     @ParameterizedTest
@@ -66,13 +70,13 @@ public abstract class FormatModuleContract {
     void sendsTheChallengeOnUnauthorized() {
         FormatResponse response =
                 FormatResponse.refusal(module(), Refusal.unauthorized("authentication required", CHALLENGE));
-        assertThat(response.headers()).containsEntry("WWW-Authenticate", CHALLENGE);
+        assertThat(response.getHeaders()).containsEntry("WWW-Authenticate", CHALLENGE);
     }
 
     @ParameterizedTest
     @EnumSource(value = Reason.class, names = "UNAUTHORIZED", mode = EnumSource.Mode.EXCLUDE)
     void sendsNoChallengeOtherwise(Reason reason) {
-        assertThat(FormatResponse.refusal(module(), refusal(reason, "no")).headers())
+        assertThat(FormatResponse.refusal(module(), refusal(reason, "no")).getHeaders())
                 .doesNotContainKey("WWW-Authenticate");
     }
 
@@ -90,11 +94,11 @@ public abstract class FormatModuleContract {
      * body otherwise. JSON must parse strictly.
      */
     protected List<String> messagesIn(FormatResponse response) {
-        String type = response.contentType();
+        String type = response.getContentType();
         if (!type.startsWith("application/json") && !type.contains("+json")) {
-            return List.of(response.body());
+            return List.of(response.getBody());
         }
-        JsonNode root = JsonMapper.builder().build().readTree(response.body());
+        JsonNode root = JsonMapper.builder().build().readTree(response.getBody());
         List<String> strings = new ArrayList<>();
         collect(root, strings);
         return strings;

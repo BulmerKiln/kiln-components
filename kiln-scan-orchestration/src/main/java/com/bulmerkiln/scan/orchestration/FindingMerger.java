@@ -4,10 +4,11 @@
  */
 package com.bulmerkiln.scan.orchestration;
 
-import com.bulmerkiln.scan.Finding;
-import com.bulmerkiln.scan.ScanResult;
-import com.bulmerkiln.scan.ScannerId;
-import com.bulmerkiln.scan.Severity;
+import com.bulmerkiln.scan.constant.Severity;
+import com.bulmerkiln.scan.domain.Finding;
+import com.bulmerkiln.scan.domain.ScanResult;
+import com.bulmerkiln.scan.domain.ScannerId;
+import com.bulmerkiln.scan.orchestration.domain.MergedFinding;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import lombok.Value;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -36,21 +38,21 @@ public final class FindingMerger {
      * @throws IllegalArgumentException if the results belong to different jobs
      */
     public static List<MergedFinding> merge(List<ScanResult> results) {
-        if (results.stream().map(ScanResult::jobId).distinct().count() > 1) {
+        if (results.stream().map(ScanResult::getJobId).distinct().count() > 1) {
             throw new IllegalArgumentException("Results from different jobs can't be merged");
         }
         Set<ScannerId> ran = new TreeSet<>();
         Map<GroupKey, List<Reported>> byPackage = new HashMap<>();
         for (ScanResult result : results) {
-            if (result.status() == ScanResult.Status.FAILED) {
+            if (result.getStatus() == ScanResult.Status.FAILED) {
                 continue;
             }
-            ran.add(result.scanner());
-            for (Finding finding : result.findings()) {
+            ran.add(result.getScanner());
+            for (Finding finding : result.getFindings()) {
                 byPackage
                         .computeIfAbsent(
-                                new GroupKey(finding.kind(), packageKey(finding.purl())), k -> new ArrayList<>())
-                        .add(new Reported(result.scanner(), finding));
+                                new GroupKey(finding.getKind(), packageKey(finding.getPurl())), k -> new ArrayList<>())
+                        .add(new Reported(result.getScanner(), finding));
             }
         }
         List<MergedFinding> merged = new ArrayList<>();
@@ -59,7 +61,7 @@ public final class FindingMerger {
                 merged.add(combine(group, ran.size()));
             }
         }
-        merged.sort(Comparator.comparing(MergedFinding::severity).thenComparing(MergedFinding::id));
+        merged.sort(Comparator.comparing(MergedFinding::getSeverity).thenComparing(MergedFinding::getId));
         return List.copyOf(merged);
     }
 
@@ -67,14 +69,14 @@ public final class FindingMerger {
     private static List<List<Reported>> groupByIdentifier(List<Reported> reports) {
         Map<String, String> parent = new HashMap<>();
         for (Reported report : reports) {
-            String first = report.finding().id();
-            for (String identifier : identifiers(report.finding())) {
+            String first = report.getFinding().getId();
+            for (String identifier : identifiers(report.getFinding())) {
                 union(parent, first, identifier);
             }
         }
         Map<String, List<Reported>> groups = new HashMap<>();
         for (Reported report : reports) {
-            groups.computeIfAbsent(find(parent, report.finding().id()), k -> new ArrayList<>())
+            groups.computeIfAbsent(find(parent, report.getFinding().getId()), k -> new ArrayList<>())
                     .add(report);
         }
         return List.copyOf(groups.values());
@@ -85,22 +87,30 @@ public final class FindingMerger {
         Set<ScannerId> reportedBy = new TreeSet<>();
         Severity severity = Severity.UNKNOWN;
         // Fixed version and title come from the first reporter in scanner ID order, so output is stable.
-        group.sort(Comparator.comparing(Reported::scanner));
+        group.sort(Comparator.comparing(Reported::getScanner));
         String fixedVersion = null;
         String title = null;
         for (Reported report : group) {
-            identifiers.addAll(identifiers(report.finding()));
-            reportedBy.add(report.scanner());
-            severity = severity.max(report.finding().severity());
+            identifiers.addAll(identifiers(report.getFinding()));
+            reportedBy.add(report.getScanner());
+            severity = severity.max(report.getFinding().getSeverity());
             fixedVersion =
-                    fixedVersion != null ? fixedVersion : report.finding().fixedVersion();
-            title = title != null ? title : report.finding().title();
+                    fixedVersion != null ? fixedVersion : report.getFinding().getFixedVersion();
+            title = title != null ? title : report.getFinding().getTitle();
         }
         String id = preferred(identifiers);
         identifiers.remove(id);
-        Finding first = group.getFirst().finding();
+        Finding first = group.getFirst().getFinding();
         return new MergedFinding(
-                first.kind(), id, identifiers, first.purl(), severity, fixedVersion, title, reportedBy, scannersRun);
+                first.getKind(),
+                id,
+                identifiers,
+                first.getPurl(),
+                severity,
+                fixedVersion,
+                title,
+                reportedBy,
+                scannersRun);
     }
 
     private static String preferred(Set<String> identifiers) {
@@ -116,8 +126,8 @@ public final class FindingMerger {
 
     private static Set<String> identifiers(Finding finding) {
         Set<String> all = new LinkedHashSet<>();
-        all.add(finding.id());
-        all.addAll(finding.aliases());
+        all.add(finding.getId());
+        all.addAll(finding.getAliases());
         return all;
     }
 
@@ -158,7 +168,19 @@ public final class FindingMerger {
         return purl.substring(0, end);
     }
 
-    private record GroupKey(Finding.Kind kind, @Nullable String purl) {}
+    @Value
+    private static final class GroupKey {
 
-    private record Reported(ScannerId scanner, Finding finding) {}
+        private final Finding.Kind kind;
+
+        private final @Nullable String purl;
+    }
+
+    @Value
+    private static final class Reported {
+
+        private final ScannerId scanner;
+
+        private final Finding finding;
+    }
 }

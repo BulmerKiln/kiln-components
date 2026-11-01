@@ -6,7 +6,9 @@ package com.bulmerkiln.auth.oidc;
 
 import com.bulmerkiln.auth.connector.IdentityConnector;
 import com.bulmerkiln.auth.connector.IdentityConnectorContract;
-import com.bulmerkiln.auth.connector.IdpResponse;
+import com.bulmerkiln.auth.connector.domain.IdpResponse;
+import com.bulmerkiln.auth.oidc.autoconfigure.OidcProperties;
+import com.bulmerkiln.auth.oidc.constant.OidcPreset;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;

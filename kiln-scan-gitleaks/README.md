@@ -57,7 +57,7 @@ None: the worker provides the database and the input.
 ## Usage
 
 ```java
-ScanResult result = ScannerAdapters.run(new GitleaksAdapter(), job, toolRun);
+ScanResult result = ScannerAdapterRunner.run(new GitleaksAdapter(), job, toolRun);
 ```
 
 ## Security
